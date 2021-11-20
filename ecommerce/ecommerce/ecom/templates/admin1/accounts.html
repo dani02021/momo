@@ -1,0 +1,337 @@
+{% extends 'admin1/base.html' %}
+{% load static %}
+{% block content %}
+{% for message in messages %}
+{% if message|stringformat:'s' == 'account_exists' %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+  <strong>Account already exists!</strong>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+{% if message|stringformat:'s' == 'account_created' %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+  <strong>Account is created!</strong>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+{% if message|stringformat:'s' == 'account_deleted' %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+  <strong>Selected accounts are deleted!</strong>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+{% if message|stringformat:'s' == 'account_edited' %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+  <strong>Account is edited!</strong>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+{% endfor %}
+<div class="container mt-5">
+  <div class="row tm-content-row">
+    <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
+      <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 850px;">
+        <h2 class="tm-block-title">Accounts</h2>
+        <div class="container">
+          <form action="/administration/accounts/" method="get" onsubmit="checkAccountFilter(this);">
+            <div class="row">
+              <div class="col-sm-3">
+                <input class="form-universal" name="user" placeholder="Username">
+              </div>
+              <div class="col-sm-3">
+                <input name="email" class="form-universal" placeholder="E-mail">
+              </div>
+              <div class="col-sm-3">
+                <input name="country" class="form-universal" placeholder="Country">
+              </div>
+              <div class="col-sm-1">
+                <input name="staff" class="form-universal" type="checkbox">
+                <label style="color: white;">Staff</label>
+              </div>
+              <div class="col-sm-1">
+                <input name="active" class="form-universal" type="checkbox">
+                <label style="color: white;">Active</label>
+              </div>
+            </div>
+            <div class="row" style="margin-bottom: 12px;">
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
+                <a href="/administration/accounts/" class="btn btn-primary text-uppercase">Clear filters</a>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="tm-product-table-container">
+          <table id="table1" class="table table-hover tm-table-small tm-product-table">
+            <thead>
+              <tr>
+                <th scope="col">&nbsp;</th>
+                <th scope="col">ACCOUNT NO.</th>
+                <th scope="col">USERNAME</th>
+                <th scope="col">FULL NAME</th>
+                <th scope="col">COUNTRY</th>
+                <th scope="col">ADDRESS</th>
+                <th scope="col">EMAIL</th>
+                <th scope="col">CREATED</th>
+                <th scope="col">ACTION</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in items %}
+              <tr>
+                <th scope="row"><input type="checkbox" /></th>
+                <td><b>#{{ item.id }}</b></td>
+                <td><b>{{ item.user.username }}</b></td>
+                <td><b>{{ item.user.first_name|add:' '|add:item.user.last_name }}</b></td>
+                <td><b>{{ item.country }}</b></td>
+                <td><b>{{ item.address }}</b></td>
+                <td><b>{{ item.user.email }}</b></td>
+                <td><b>{{ item.created_at }}</b></td>
+                <td><a href="/administration/accounts/edit/{{ item.id }}/" class="tm-order-edit-link">
+                    <i class="far fa-edit tm-order-edit-icon"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <!-- table container -->
+        <div class="d-grid gap-2">
+          <a href="#" class="btn btn-primary text-uppercase mb-3" data-bs-target="#add-account" data-bs-toggle="modal"
+            data-bs-dismiss="modal">Add new account</a>
+          <button class="btn btn-primary text-uppercase" data-bs-target="#rem-account" data-bs-toggle="modal"
+            data-bs-dismiss="modal">
+            Delete selected accounts
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Pagination Start -->
+{% if paginator %}
+<div class="col-md-12">
+  <nav>
+    <ul class="pagination justify-content-center">
+      {% if page.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'-1'}});">Previous</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled">
+        <a class="page-link" href="" tabindex="-1">Previous</a>
+      </li>
+      {% endif %}
+      {% for pag in paginator.page_range %}
+      {% if page.number == pag %}
+      <li class="page-item active"><a class="page-link" href="">{{ pag }}</a></li>
+      {% else %}
+      <li class="page-item"><a class="page-link" href="javascript:moveToPage({{ pag }});">
+          {{ pag }}</a></li>
+      {% endif %}
+      {% endfor %}
+      {% if page.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'1'}});">Next</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled">
+        <a class="page-link" href="">Next</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
+<!-- Modal -->
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-account" tabindex="-1"
+  aria-labelledby="add-account" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Order</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="add-account-form" action="/administration/accounts/add/" onsubmit="selectAll();" method="post">
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-5 mx-auto">
+              <label>Userame:</label>
+              <div>
+                <input name="username" required></input>
+              </div>
+            </div>
+            <div class="col-md-5 mx-auto">
+              <label>E-mail</label>
+              <div>
+                <input name="email" required></input>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-5 mx-auto">
+              <label>First name</label>
+              <div>
+                <input name="firstname" required></input>
+              </div>
+            </div>
+            <div class="col-md-5 mx-auto">
+              <label>Last name</label>
+              <div>
+                <input name="lastname" required></input>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-5 mx-auto">
+              <label>Select image:</label>
+              <div>
+                <select name="country" required>
+                  {% for country in countries %}
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-5 mx-auto">
+              <label>Category:</label>
+              <div>
+                <select name="category" id="category">
+                  {% for category in categories %}
+                  <option value="{{ category.id }}">{{ category.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-11 mx-auto">
+              <label>Description:</label>
+              <div>
+                <textarea name="description" id="description" cols="47" rows="10"
+                  style="min-height: 200px; height: 200px;" placeholder="Description"></textarea>
+              </div>
+            </div>
+          </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary">Add</button>
+        </div>
+      </form>
+    </div>
+</div>
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-accounts-accountsitem" tabindex="-1"
+  aria-labelledby="add-account-accountitem" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="remove-cat-title">Add Account</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label>Product:</label>
+        <div>
+          <select id="accountitem-select" name="items">
+            {% for product in products %}
+            <option value="{{ product.id }}">{{ product.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <label>Quantity:</label>
+        <div>
+          <input type="number" id="orderitem-quantity" name="orderitem-quantity" placeholder="Quantity">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-target="#add-order" data-bs-toggle="modal"
+          data-bs-dismiss="modal" data-bs-dismiss="modal">Back</button>
+        <button type="button" data-bs-target="#add-order" data-bs-toggle="modal" data-bs-dismiss="modal"
+          onclick="addOrderItemModal(this);" class="btn btn-primary">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="rem-account tabindex="-1"
+  aria-labelledby="rem-account" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="remove-cat-title">Delete Accounts</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <h4><b>Are you sure?</b></h4>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+        <form id="rem-account-form" action="/administration/accounts/del/" method="post"
+          onsubmit="return deleteAccounts(this);">
+          {% csrf_token %}
+          <button type="submit" data-bs-dismiss="modal" class="btn btn-primary">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function addOrderItemModal(elem) {
+    option = document.createElement('option');
+    e = document.getElementById('orderitem-select');
+    q = document.getElementById('orderitem-quantity');
+    items = document.getElementById('add-order-items');
+
+    for (var i = 0; i < items.length; i++) {
+      if (items.options[i].text.startsWith(e.options[e.selectedIndex].text)) {
+        items.options[i].text = e.options[e.selectedIndex].text + ', ' + (parseInt(items.options[i].text.split(', ')[1]) + parseInt(q.value));
+        items.options[i].value = e.options[e.selectedIndex].value + ', ' + items.options[i].text.split(', ')[1];
+        return;
+      }
+    }
+
+    option.text = e.options[e.selectedIndex].text + ', ' + q.value;
+    option.value = e.options[e.selectedIndex].value + ', ' + q.value;
+    option.selected = 'true'
+    document.getElementById('add-order-items').add(option);
+  }
+
+  function selectAll() {
+    options = document.getElementById('add-order-items').getElementsByTagName('option');
+    for (i = 0; i < options.length; i++) {
+      options[i].selected = 'true';
+    }
+  }
+
+  function deleteAccounts(elem) {
+    var table = document.getElementById('table1');
+    var ok = false;
+
+    for (const inp of table.getElementsByTagName('input')) {
+      if (!inp.checked)
+        continue;
+
+      var row = inp.parentElement.parentElement;
+      var id = row.getElementsByTagName('td')[0].innerText.match(/\d+/)[0];
+
+      input = document.createElement('input');
+      input.hidden = 'hidden';
+      input.type = 'number';
+      input.defaultValue = id;
+      input.name = 'id';
+      document.getElementById('rem-account-form').appendChild(input);
+      ok = true;
+    }
+
+    return ok;
+  }
+
+  function checkAccountFilter(form) {
+    for (const elem of form.elements) {
+      if (elem.value === '')
+        elem.disabled = true;
+    }
+  }
+</script>
+
+{% endblock %}

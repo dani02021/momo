@@ -1,0 +1,170 @@
+{% extends 'admin1/base.html' %}
+{% load static %}
+{% block content %}
+
+    <div class="container tm-mt-big tm-mb-big">
+      <div class="row">
+        <div class="col-xl-9 col-lg-10 col-md-12 col-sm-12 mx-auto">
+          <div class="tm-bg-primary-dark tm-block tm-block-h-auto">
+            <div class="row">
+              <div class="col-12">
+                <h2 class="tm-block-title d-inline-block">Edit Product #{{ product.id }}</h2>
+              </div>
+            </div>
+            <form id="edit-form" action="" enctype="multipart/form-data" onsubmit="return false;" method="post" class="tm-edit-product-form">
+              <div class="row tm-edit-product-row">
+                <div class="col-xl-6 col-lg-6 col-md-12">
+                    {% csrf_token %}
+                    <div class="form-group mb-3">
+                      <label
+                        for="name"
+                        >Product Name
+                      </label>
+                      <input
+                        id="name"
+                        name="name"
+                        type="text"
+                        value="{{ product.name }}"
+                        class="form-control validate"
+                        required
+                      />
+                    </div>
+                    <div class="form-group mb-3">
+                      <label
+                      for="price"
+                      >Price (USD)</label>
+                      <input id="price" type="number" class="form-control validate" name="price" value="{{ product.price }}" required>
+                    </div>
+                    <div class="form-group mb-3">
+                      <label
+                      for="add-image"
+                      >Select image</label>
+                      <input id="add-image" type="file" class="btn btn-primary btn-block form-control validate" name="image" value="{{ product.image }}" accept="image/*">
+                    </div>
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-12 mx-auto mb-4">
+                  <div class="form-group mb-3">
+                      <label
+                        for="category"
+                        >Category</label>
+                      <select
+                        class="custom-select tm-select-accounts"
+                        name="category"
+                        id="category"
+                        required>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if product.category.id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                        {% endfor %}
+                      </select>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label
+                    for="discount-price"
+                    >Discount Price (USD)</label>
+                    <input id="discount-price" type="number" class="form-control validate" name="discount-price" value="{{ product.discount_price }}">
+                  </div>
+                  <div class="form-group mb-3">
+                    <label
+                    for="qty"
+                    >Quantity</label>
+                    <input id="qty" type="number" name="quantity" class="form-control validate" value="{{ product.quantity }}" required>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="form-group mb-3">
+                    <label
+                    for="description"
+                    >Description</label>
+                  <textarea id="description" name="description" class="form-control validate tm-small" rows="5" placeholder="Description" style="min-height: 200px; height: 200px;" required>{{ product.description }}</textarea>
+                  </div>
+                  <div class="form-group mb-3">
+                    <input type="checkbox" name="hide" id="hide" style="bottom: auto;top: 6px;margin-right: 5px;" {% if product.hide %} checked {% endif %}>
+                    <label
+                    for="hide"
+                    >Hide</label>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <button type="submit" class="btn btn-primary btn-block" data-bs-target="#update-order" data-bs-toggle="modal">Update</button>
+                </div>
+              </div>
+            </div>
+            </form>
+        </div>
+      </div>
+    </div>
+    <!-- Modal -->
+    <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-order-orderitem" tabindex="-1" aria-labelledby="add-order-orderitem" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="remove-cat-title">Add Order</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label>Product:</label>
+        <div>
+          <select id="orderitem-select" name="items">
+            {% for product in products %}
+            <option value="{{ product.id }}">{{ product.name }}</option>
+            {% endfor %}
+          </select>
+          </div>
+          <label>Quantity:</label>
+          <div>
+          <input type="number" id="orderitem-quantity" name="orderitem-quantity" placeholder="Quantity">
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-target="#add-order" data-bs-toggle="modal" data-bs-dismiss="modal" data-bs-dismiss="modal">Back</button>
+        <button type="button" onclick="addOrderItemModal(this);" class="btn btn-primary" data-bs-dismiss="modal" >Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="update-order" tabindex="-1" aria-labelledby="update-order" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="remove-cat-title">Update Order</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+      <h4><b>Are you sure?</b></h4>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+        <button type="submit" data-bs-dismiss="modal" class="btn btn-primary" onclick="editOrder(this);">Update</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+    <script>
+
+    function addOrderItemModal(elem) {
+    option = document.createElement( 'option' );
+    e = document.getElementById('orderitem-select');
+    q = document.getElementById('orderitem-quantity');
+    items = document.getElementById('edit-order-items');
+
+    for (var i=0; i<items.length; i++) {
+    if (items.options[i].text.startsWith(e.options[e.selectedIndex].text)) {
+      items.options[i].text = e.options[e.selectedIndex].text + ', ' + (parseInt(items.options[i].text.split(', ')[1]) + parseInt(q.value));
+      items.options[i].value = e.options[e.selectedIndex].value + ', ' + items.options[i].text.split(', ')[1];
+      return;
+    }
+    }
+
+    option.text = e.options[e.selectedIndex].text + ', ' + q.value;
+    option.value = e.options[e.selectedIndex].value + ', ' + q.value;
+    option.selected = 'true'
+    items.add(option);
+  }
+
+  function editOrder(elem) {
+    document.getElementById('edit-form').action = '/administration/products/edit/{{ product.id }}/';
+    document.getElementById('edit-form').submit();
+  }
+    </script>
+{% endblock %}

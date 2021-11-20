@@ -1,0 +1,161 @@
+<html>
+<head>
+<title>Otse4ki</title>
+</head>
+<body>
+    <label for="n">n:</label><br>
+<input id="n" type="number" placeholder="n"><br>
+<label for="a">a:</label><br>
+<input id="a" type="number" placeholder="a"><br>
+<label for="b">b:</label><br>
+<input id="b" type="number" placeholder="b"><br>
+<label for="c">c:</label><br>
+<input id="c" type="text" placeholder="c"><br>
+<button type="button" id="btn">Generate</button><br><br>
+<label id="count" type="number">Length: 0 meters</label><br><br>
+<canvas id="canvas"></canvas>
+</body>
+
+<script>
+document.getElementById("btn").onclick = function() {
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+
+  var n = parseInt(document.getElementById('n').value)
+  var a = parseInt(document.getElementById('a').value)
+  var b = parseInt(document.getElementById('b').value)
+  var c = parseInt(document.getElementById('c').value)
+
+  var w = canvas.width = 1000;
+  var h = canvas.height = 500;
+  var x0 = w/2;
+  var starti = 0;
+  var endi = n;
+  var interval = 40;
+  var endcoef = 1.5;
+  var step = 2;
+  var steps = 5;
+  
+  function drawOperation(x, step, steps) {
+    drawPoint(x);
+    drawPoint(x+steps*step*interval);
+  }
+
+  function drawPoint(x1) {
+      ctx.beginPath();
+      ctx.arc(x1,h/2,2,0,2*Math.PI);
+      ctx.fill();
+      ctx.stroke();
+  }
+  
+  function getPosition(e) {
+    var x = e.clientX;
+    var xe = x-x%interval+10;
+    if(x0===0){  
+      drawPoint(xe);
+      x0=xe;
+    }
+    else{
+      drawPoint(xe);
+      drawCurve(x0,xe);
+      x0=xe;
+    }
+    
+  }
+  function drawCurve(x1,x2) {
+    ctx.moveTo(x1,h/2);
+    ctx.quadraticCurveTo(x1+(x2-x1)/2,h/2-Math.abs(x2-x1),x2,h/2);
+    var text;
+    var s = (x2 - x1)/interval;
+    if(s>0){
+      text="+" +s.toString();
+    }
+    else {
+      text = (x2 - x1)/interval;
+    }
+    ctx.fillText(text,x1+(x2-x1)/2,h/2-Math.abs(x2-x1)*0.5-10);
+    
+    ctx.stroke();
+  }
+  with(ctx) {
+    // Draw red line
+    fillStyle = '#FFFFFF';
+    fillRect(0, 0, w, h);
+    fill();
+    beginPath();
+    lineWidth = 2;
+    strokeStyle = '#00';
+    // Start
+    moveTo(w/7 + interval, h/2);
+    // End
+    lineTo(w/7 + (endi+1) * interval, h/2);
+    stroke();
+
+    // Draw vertical lines
+    for(var i = starti;i <= endi; i++) {
+      beginPath();
+      strokeStyle = '#000000';
+      lineWidth = 2;
+      moveTo(w/7 + (i+1) * interval, h/2 - 10);
+      lineTo(w/7 + (i+1) * interval, h/2 + 10);
+      fillStyle = '#000000';
+      fillText(i, (w/7 + (i+1) * interval )- 5, h/2 + 25);
+
+      // Center
+      if(endi / 2 == i) {
+        strokeStyle = '#ff00ff';
+      }
+      fill();
+      stroke();
+    }
+    
+  }
+  
+  // Draw points
+    
+        if(n > 100000 || a > 100000 ||
+            b > 100000 || c > 100000) {
+                alert('ERROR in args');
+                return;
+        }
+
+        for(let i = 0; i < (n / a) + 1; i++) {
+            ctx.fillStyle = '#ffff00'
+            ctx.strokeStyle = '#ffff00'
+            drawPoint(w/7 + (a * i * interval) + interval); // Georgi
+        }
+    
+        for(let i = (n / b) | 0; i >= 0; i--) {
+            ctx.fillStyle = '#8B4513'
+            ctx.strokeStyle = '#8B4513'
+            drawPoint(w/7 + (n - (b * i) ) * interval + interval); // Gergana
+        }
+
+        // Draw red lines
+        ctx.beginPath();
+        ctx.fillStyle = '#FF0000'
+        ctx.strokeStyle = '#FF0000'
+
+        var count = 0;
+
+        for(let i = 0; i < (n / a) + 1; i++) {
+            for(let y = (n / b) | 0; y >= 0; y--) {
+                loc1 = a * i;
+                loc2 = n - (b * y);
+
+                if(Math.abs(loc1 - loc2) == c) {
+                    count++
+
+                    ctx.moveTo(w/7 + (Math.min(loc1, loc2) * interval) + interval, h/2);
+                    ctx.lineTo(w/7 + (Math.max(loc1, loc2) * interval) + interval, h/2);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        document.getElementById('count').innerHTML = 'Length: ' + (n - count) + ' meters    ';
+}
+
+</script>
+</body>
+</html>
