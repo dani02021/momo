@@ -10,6 +10,7 @@ from django.contrib.auth import authenticate, get_user, get_user_model
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
 
+from django.db.models import Q
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -26,6 +27,8 @@ from ecom.models import Category, EcomUser, Order, OrderItem, PayPalTransaction,
 from ecom.utils import capture_order, email_decrypt_uuid, email_encrypt_uuid, generate_email_link, get_cart_count, orderQtyAdd, orderQtyRem, validate_form, validate_status
 from ecom.decorators import admin_only
 from ecommerce.settings import MEDIA_ROOT
+
+from djqscsv import render_to_csv_response
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -400,13 +403,13 @@ def captureOrder(request):
         pass
 
 def administration(request):
+    context = {
+        'items': Order.objects.all().order_by('-ordered_at')[:10],
+        'selected': 'dashboard'
+    }
     if request.method == 'GET':
         if request.user.is_authenticated:
             if request.user.is_staff:
-                context = {
-                    'items': Order.objects.all().order_by('-ordered_at')[:10],
-                    'selected': 'dashboard'
-                }
                 return render(request, 'admin1/index.html', context)
             else:
                 messages.error(request, 'no_staff')
@@ -418,7 +421,7 @@ def administration(request):
         user = authenticate(request, username=username, password=password)
         if user is not None and user.is_staff:
             auth_login(request, user)
-            return render(request, 'admin1/index.html')
+            return render(request, 'admin1/index.html', context)
         else:
             messages.error(request, 'login_user_or_staff')
         return render(request, 'admin1/login/index.html')
@@ -474,7 +477,7 @@ def adminOrdersPage(request, page):
     items = Order.objects.filter(status__gte = 1)
     ORDERS_PER_PAGE = 20
     # Get values
-    stat = request.GET.get('stat', '1')
+    stat = request.GET.get('stat', '-1')
     user = request.GET.get('user', '')
     ord_after = request.GET.get('ord-after', '0')
     ord_before = request.GET.get('ord-before', '0')
@@ -489,10 +492,15 @@ def adminOrdersPage(request, page):
         else:
             ord_before = datetime.strptime(ord_before, '%Y-%m-%dT%H:%M')
         
-        if user == '':
-            items = Order.objects.filter(status__gte=stat, ordered_at__range=(ord_after, ord_before))
+        if stat == '-1':
+            stat = Order.OrderStatus.values
         else:
-             items = Order.objects.filter(status__gte=stat, user = EcomUser.objects.get(user = get_user_model().objects.get(username = user)), ordered_at__range=(ord_after, ord_before))
+            stat = [int(stat)]
+
+        if user == '':
+            items = Order.objects.filter(status__in=stat, ordered_at__range=(ord_after, ord_before))
+        else:
+             items = Order.objects.filter(status__in=stat, user = EcomUser.objects.get(user = get_user_model().objects.get(username = user)), ordered_at__range=(ord_after, ord_before))
     except (ValueError, ValidationError) as e:
         traceback.print_exc()
         context['items'] = ''
@@ -756,7 +764,6 @@ def adminAccounts(request):
 @admin_only
 def adminAccountsPage(request, page):
     context = { }
-    items = [ ]
     ACCOUNTS_PER_PAGE = 20
     # Get values
     user = request.GET.get('user', '')
@@ -771,10 +778,7 @@ def adminAccountsPage(request, page):
         if active == 'on':
             active = [True]
         
-        users = get_user_model().objects.filter(username__icontains = user, email__icontains = email, is_staff__in = staff, is_active__in = active)
-
-        for us in users:
-            items.append(EcomUser.objects.get(user = us, country__icontains = country))
+        items = EcomUser.objects.filter(user__username__icontains = user, user__email__icontains = email, user__is_staff__in = staff, user__is_active__in = active, country__icontains = country)
     except (ValueError, ValidationError) as e:
         traceback.print_exc()
         items = { }
@@ -787,7 +791,97 @@ def adminAccountsPage(request, page):
             
     context['paginator'] = paginator
     context['page'] = page
-    context['users'] = EcomUser.objects.all()
     context['items'] = page.object_list
     context['selected'] = 'accounts'
     return render(request, 'admin1/accounts.html', context)
+
+def adminReport(request):
+    return adminReportPage(request, 1)
+
+def adminReportPage(request, page):
+    context = { }
+    statuses = { }
+    REPORTS_PER_PAGE = 20
+
+    products = request.GET.getlist('product[]')
+    user = request.GET.get('user', '')
+    country = request.GET.get('country', '')
+    status = request.GET.get('stat', '-1')
+    ord_after = request.GET.get('ord-after', '0')
+    ord_before = request.GET.get('ord-before', '0')
+
+    try:
+        if(ord_after == '0'):
+            ord_after = timezone.make_aware(datetime.fromisoformat('2000-01-01'))
+        else:
+            ord_after = timezone.make_aware(datetime.strptime(ord_after, '%Y-%m-%dT%H:%M'))
+        if(ord_before == '0'):
+            ord_before = timezone.make_aware(datetime.now())
+        else:
+            ord_before = timezone.make_aware(datetime.strptime(ord_before, '%Y-%m-%dT%H:%M'))
+        
+        if status == '-1':
+            status = Order.OrderStatus.values
+        else:
+            status = [int(status)]
+        if products:
+            conditions = Q()
+            for product in products:
+                conditions |= Q(items__product__name__icontains = product)
+            items = Order.objects.filter(conditions, status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before))
+        else:
+            items = Order.objects.filter(status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before))
+    except Exception as e:
+        traceback.print_exc()
+        items = { }
+
+    for orderstatus in Order.OrderStatus.choices:
+        statuses[orderstatus[0]] = orderstatus[1]
+    
+    paginator = Paginator(items, REPORTS_PER_PAGE)
+
+    page = paginator.get_page(page)
+    
+    context['paginator'] = paginator
+    context['page'] = page
+    context['items'] = page.object_list
+    context['statuses'] = statuses
+    context['items'] = items
+    context['selected'] = 'report'
+
+    return render(request, 'admin1/report.html', context)
+
+def adminReportExcel(request):
+    products = request.GET.getlist('product[]')
+    user = request.GET.get('user', '')
+    country = request.GET.get('country', '')
+    status = request.GET.get('stat', '-1')
+    ord_after = request.GET.get('ord-after', '0')
+    ord_before = request.GET.get('ord-before', '0')
+
+    try:
+        if(ord_after == '0'):
+            ord_after = timezone.make_aware(datetime.fromisoformat('2000-01-01'))
+        else:
+            ord_after = timezone.make_aware(datetime.strptime(ord_after, '%Y-%m-%dT%H:%M'))
+        if(ord_before == '0'):
+            ord_before = timezone.make_aware(datetime.now())
+        else:
+            ord_before = timezone.make_aware(datetime.strptime(ord_before, '%Y-%m-%dT%H:%M'))
+        
+        if status == '-1':
+            status = Order.OrderStatus.values
+        else:
+            status = [int(status)]
+        if products:
+            conditions = Q()
+            for product in products:
+                conditions |= Q(items__product__name__icontains = product)
+            items = Order.objects.filter(conditions, status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before))
+        else:
+            items = Order.objects.filter(status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before))
+    except Exception as e:
+        traceback.print_exc()
+        return None
+
+    return render_to_csv_response(items, filename="report_" + timezone.make_aware(datetime.now()).strftime('%Y%m%d%H:%M'))

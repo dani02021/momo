@@ -1,0 +1,208 @@
+{% extends 'admin1/base.html' %}
+{% load static %}
+{% block content %}
+{% for message in messages %}
+{% if message|stringformat:'s' == 'order_exists' %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+  <strong>Order already exists!</strong>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+{% endfor %}
+<div class="container mt-5">
+  <div class="row tm-content-row">
+    <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
+      <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 850px;">
+        <h2 class="tm-block-title">Report</h2>
+        <div class="container">
+          <form action="/administration/report/" method="get" onsubmit="checkOrderFilter(this);">
+            <div class="row">
+              <div class="col">
+                <div style="margin-bottom: 10px;">
+                  <select name="product[]" id="report-products" style="width: 360px;" multiple>
+                  </select>
+                  <div data-bs-target="#add-product-item" data-bs-toggle="modal" style="display: inline-block;">
+                    <i class="fas fa-plus" style="color: white"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-4">
+                <select name="stat" class="form-select">
+                  <option value="-1" selected disabled>Select status:</option>
+                  {% for key, stat in statuses.items %}
+                  <option value="{{ key }}">{{ stat }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-sm-4">
+                <input name="user" class="form-select" style="background-image: none" placeholder="User">
+              </div>
+              <div class="col-sm-4">
+                <input name="country" class="form-select" style="background-image: none" placeholder="Country of User">
+              </div>
+              <div class="col-sm-4">
+                <input name="ord-after" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
+                  title="Ordered after" type="datetime-local">
+              </div>
+              <div class="col-sm-4">
+                <input name="ord-before" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
+                  title="Ordered before" type="datetime-local"><br>
+              </div>
+            </div>
+            <div class="row" style="margin-bottom: 12px;">
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
+                <a href="/administration/report/" class="btn btn-primary text-uppercase">Clear filters</a>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="tm-product-table-container">
+          <table id="table1" class="table table-hover tm-table-small tm-product-table">
+            <thead>
+              <tr>
+                <th scope="col">&nbsp;</th>
+                <th scope="col">ORDER NO.</th>
+                <th scope="col">STATUS</th>
+                <th scope="col">NAME</th>
+                <th scope="col">COUNTRY</th>
+                <th scope="col">ADDRESS</th>
+                <th scope="col">TOTAL PRICE</th>
+                <th scope="col">ORDERED</th>
+                <th scope="col">ACTION</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in items %}
+              <tr>
+                <th scope="row"><input type="checkbox" /></th>
+                <td><b>#{{ item.id }}</b></td>
+                <td>
+                  {% if item.status|stringformat:'s' == '1' %}
+                  <div class="tm-status-circle pending"></div>
+                  {% elif item.status|stringformat:'s' == '2' %}
+                  <div class="tm-status-circle moving"></div>
+                  {% elif item.status|stringformat:'s' == '3' %}
+                  <div class="tm-status-circle cancelled"></div>
+                  {% elif item.status|stringformat:'s' == '4' %}
+                  <div class="tm-status-circle cancelled"></div>
+                  {% elif item.status|stringformat:'s' == '5' %}
+                  <div class="tm-status-circle moving"></div>
+                  {% endif %}
+                  {{ item.get_status_display }}
+                </td>
+                <td><b>{{ item.user.user.first_name|add:' '|add:item.user.user.last_name }}</b></td>
+                <td><b>{{ item.user.country }}</b></td>
+                <td><b>{{ item.user.address }}</b></td>
+                <td style="text-align: right;"><b>{{ item.get_total }} $</b></td>
+                <td><b>{{ item.ordered_at }}</b></td>
+                <td><a href="/administration/orders/edit/{{ item.id }}/" class="tm-order-edit-link">
+                    <i class="far fa-edit tm-order-edit-icon"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <!-- table container -->
+        <div class="d-grid gap-2">
+          <a class="btn btn-primary text-uppercase mb-3" onclick="location.pathname='administration/report/excel/'">Download CSV file</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Pagination Start -->
+{% if paginator %}
+<div class="col-md-12">
+  <nav>
+    <ul class="pagination justify-content-center">
+      {% if page.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'-1'}});">Previous</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled">
+        <a class="page-link" href="" tabindex="-1">Previous</a>
+      </li>
+      {% endif %}
+      {% for pag in paginator.page_range %}
+      {% if page.number == pag %}
+      <li class="page-item active"><a class="page-link" href="">{{ pag }}</a></li>
+      {% else %}
+      <li class="page-item"><a class="page-link" href="javascript:moveToPage({{ pag }});">
+          {{ pag }}</a></li>
+      {% endif %}
+      {% endfor %}
+      {% if page.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'1'}});">Next</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled">
+        <a class="page-link" href="">Next</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
+<!-- Modal -->
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-product-item" tabindex="-1"
+  aria-labelledby="add-product-item" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="remove-cat-title">Add Product to search</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label>Product:</label>
+        <div>
+          <input type="text" name="add-product-name" id="add-product-name" placeholder="Product name">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+        <button type="button" data-bs-dismiss="modal"
+          onclick="addOrderItemModal(this);" class="btn btn-primary">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function addOrderItemModal(elem) {
+      option = document.createElement('option');
+      e = document.getElementById('add-product-name');
+      items = document.getElementById('report-products');
+
+      for (var i = 0; i < items.length; i++) {
+        if(items.options[i].text.localeCompare(e.value, undefined, {sensitivity: 'accent'}) === 0)
+          return;
+      }
+
+      option.text = e.value
+      option.value = e.value
+      option.selected = 'true'
+      document.getElementById('report-products').add(option);
+  }
+
+  function selectAll() {
+      options = document.getElementById('report-products').getElementsByTagName('option');
+      for (i = 0; i < options.length; i++) {
+        options[i].selected = 'true';
+      }
+    }
+  
+  function checkOrderFilter(form) {
+    selectAll();
+    for (const elem of form.elements) {
+      if (elem.value === '')
+        elem.disabled = true;
+    }
+  }
+</script>
+
+{% endblock %}
