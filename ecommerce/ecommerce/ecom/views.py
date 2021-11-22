@@ -572,6 +572,9 @@ def adminAddProduct(request):
             fout.write(chunk)
         fout.close()
 
+        product.image = 'id'+str(productid) + os.sep + image.name
+        product.save()
+
     messages.success(request, 'product_created')
     return redirect('adminProducts')
 
@@ -687,6 +690,19 @@ def adminEditProduct(request, productid):
         description = request.POST.get('description', '')
         hide = request.POST.get('hide', '')
 
+        # Check the values
+        try:
+            if float(price) > 9999.99 or float(price) < 0 \
+                or float(discount_price) > 9999.99 or float(discount_price) < 0:
+                messages.error(request, 'product_edit_error_price')
+                return redirect('adminProducts')
+        except Exception as e:
+            traceback.print_exc()
+            messages.error(request, 'product_edit_error_unknown')
+            return redirect('adminProducts')
+        
+        product = Product.objects.get(id = productid)
+
         if image != '':
             # Upload the image
             try:
@@ -702,21 +718,10 @@ def adminEditProduct(request, productid):
             for chunk in file_content.chunks():
                 fout.write(chunk)
             fout.close()
-        
-        # Check the values
-        try:
-            if float(price) > 9999.99 or float(price) < 0 \
-                or float(discount_price) > 9999.99 or float(discount_price) < 0:
-                messages.error(request, 'product_edit_error_price')
-                return redirect('adminProducts')
-        except Exception as e:
-            traceback.print_exc()
-            messages.error(request, 'product_edit_error_unknown')
-            return redirect('adminProducts')
-        # Finish the table
-        product = Product.objects.get(id = productid)
 
-        product.image = image
+            product.image = 'id'+str(productid) + os.sep + image.name
+        
+        # Finish the table
         
         product.name = name
         product.category = Category.objects.get(id = category)
