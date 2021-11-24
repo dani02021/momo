@@ -1,0 +1,49 @@
+<html>
+<head>
+<title>Otse4ki</title>
+</head>
+<body>
+<label for="n">n:</label><br>
+<input id="n" type="number" placeholder="n"><br>
+<button type="button" id="btn">Generate</button><br><br>
+<label id="count" type="number">Length: 0 meters</label><br>
+<label id="unique" type="number">Unique distances num:</label><br><br>
+<canvas id="canvas"></canvas>
+</body>
+
+<script>
+document.getElementById("btn").onclick = function() {
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+
+  var POINT_DIST = 5;
+  var START_LOCATION = 20;
+
+  var n = parseInt(document.getElementById('n').value)
+  var w = canvas.width = 6000;
+  var h = canvas.height = 6000;
+
+  with(ctx) {
+      for(i = 0; i < n; i++) {
+          for(z = 0; z < n; z++) {
+            fillRect(START_LOCATION + z * POINT_DIST, START_LOCATION + i * POINT_DIST, 2, 2)
+          }
+      }
+
+      beginPath()
+      moveTo(START_LOCATION, START_LOCATION)
+      lineTo(START_LOCATION + (n-0.6) * POINT_DIST, START_LOCATION, START_LOCATION)
+      lineTo(START_LOCATION + (n-0.6) * POINT_DIST, START_LOCATION + (n-0.6) * POINT_DIST)
+      lineTo(START_LOCATION, START_LOCATION + (n-0.6) * POINT_DIST)
+      lineTo(START_LOCATION, START_LOCATION)
+      stroke()
+
+      draw()
+  }
+
+  document.getElementById('count').innerHTML = 'Length: ' + (n - count) + ' meters    ';
+}
+
+</script>
+</body>
+</html>

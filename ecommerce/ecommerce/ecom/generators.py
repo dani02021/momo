@@ -14,12 +14,10 @@ def generateProducts(request):
     quantity = models.IntegerField(default=1)
     hide = models.BooleanField(default=False)
 
-def nameGenerator():
-    responce = requests.get('https://randomazonbackend.appspot.com/product/')
-    data = responce.json()
-    asin = data['ASIN']
-    image = requests.get('https://ws-na.amazon-adsystem.com/widgets/q?_encoding=UTF8&MarketPlace=US&ASIN='+asin+'&ServiceVersion=20070822&ID=AsinImage&WS=1&Format=SL500')
-
-    with open(path, 'wb') as f:
-        r.raw.decode_content = True
-        shutil.copyfileobj(r.raw, f)
+def nameGenerator(n):
+    for i in range(n-1):
+        responce = requests.get('https://randomazonbackend.appspot.com/product/')
+        data = responce.json()
+        asin = data['ASIN']
+        image = requests.get('https://ws-na.amazon-adsystem.com/widgets/q?_encoding=UTF8&MarketPlace=US&ASIN='+asin+'&ServiceVersion=20070822&ID=AsinImage&WS=1&Format=SL500').content
+        yield data, image
