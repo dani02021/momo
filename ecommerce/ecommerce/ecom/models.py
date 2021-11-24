@@ -7,25 +7,35 @@ from django.utils.translation import gettext as _
 from django.contrib.auth.models import User
 from iso3166 import countries
 
+from ecom.utils import product_delete_images, product_delete_variations
+
 # Create your models here.
 
 # Custom user
 class EcomUser(models.Model):
     def __str__(self) -> str:
         return self.user.username
+    def ecom_delete(self):
+        self.deleted = True
+        self.save()
     
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     address = models.CharField(max_length=200)
     country = models.CharField(max_length=100) # Would be better with IntegerField
     email_confirmed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    deleted = models.BooleanField()
 
 class Category(models.Model):
     def __str__(self) -> str:
         return self.name
+    def ecom_delete(self):
+        self.deleted = True
+        self.save()
     
     name = models.CharField(max_length=100)
     image_css = models.CharField(max_length=100)
+    deleted = models.BooleanField()
 
 class Product(models.Model):
     #
@@ -34,6 +44,11 @@ class Product(models.Model):
     #
     def __str__(self) -> str:
         return self.name
+    def ecom_delete(self):
+        self.deleted = True
+        product_delete_images(self.id)
+        product_delete_variations(self.id)
+        self.save()
     
     id = models.BigAutoField(primary_key=True)
     name = models.CharField(max_length=100, unique=True)
@@ -45,15 +60,20 @@ class Product(models.Model):
     quantity = models.IntegerField(default=1)
     hide = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    deleted = models.BooleanField()
 
 class OrderItem(models.Model):
     def __str__(self) -> str:
         return ' Order Item: ' + self.product.name
     def get_total(self):
         return self.product.discount_price * self.quantity
+    def ecom_delete(self):
+        self.deleted = True
+        self.save()
     
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.IntegerField(default = 1)
+    deleted = models.BooleanField()
 
 class Order(models.Model):
     def __str__(self) -> str:
@@ -68,6 +88,11 @@ class Order(models.Model):
         if self.ordered_at is None:
             return ''
         return self.ordered_at.strftime('%Y-%m-%dT%H:%M')
+    def ecom_delete(self):
+        self.deleted = True
+        for item in self.items.all():
+            item.ecom_delete(self)
+        self.save()
     
     class OrderStatus(models.IntegerChoices):
         NOT_ORDERED = 0, _('Not Ordered')
@@ -81,9 +106,10 @@ class Order(models.Model):
     
     id = models.BigAutoField(primary_key=True)
     items = models.ManyToManyField(OrderItem)
-    user = models.ForeignKey(EcomUser, on_delete=models.SET_NULL, null=True)
+    user = models.ForeignKey(EcomUser, on_delete=models.DO_NOTHING)
     ordered_at = models.DateTimeField(blank=True, null=True)
     status = models.IntegerField(choices=OrderStatus.choices)
+    deleted = models.BooleanField()
 
 class OrderItemCookie(models.Model):
     def __str__(self) -> str:
@@ -115,6 +141,7 @@ class ProductImage(models.Model):
     
     product = models.ForeignKey(Product, default=None, on_delete=models.CASCADE)
     image = models.ImageField(blank = True, null = True)
+    deleted = models.BooleanField()
 
 class Variation(models.Model):
     def __str__(self) -> str:
@@ -124,18 +151,13 @@ class Variation(models.Model):
     tag_value = models.CharField(max_length=50)
     product = models.ForeignKey(Product, default=None, on_delete=models.CASCADE, related_name="product")
     variation = models.ForeignKey(Product, default=None, on_delete=models.CASCADE, related_name="variationProduct")
-
-class ProductInfo(models.Model):
-    def __str__(self) -> str:
-        return self.id
-    
-    id = models.OneToOneField(Product, on_delete=models.CASCADE, primary_key=True)
-    orders = models.IntegerField()
+    deleted = models.BooleanField()
 
 class PayPalTransaction(models.Model):
     def __str__(self) -> str:
         return super().__str__()
     
+    timestamp = models.DateTimeField(auto_now_add=True)
     transaction_id = models.CharField(default='', null=False, max_length=50)
     paypal_request_id = models.UUIDField(null=False)
     status_code = models.CharField(default='', null=False, max_length=20)
@@ -144,3 +166,4 @@ class PayPalTransaction(models.Model):
     first_name = models.CharField(default='', null=False, max_length=255)
     last_name = models.CharField(default='', null=False, max_length=255)
     phone_number = models.CharField(default='', null=False, max_length=50)
+    deleted = models.BooleanField()

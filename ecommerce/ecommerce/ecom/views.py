@@ -26,6 +26,7 @@ import logging, re, json, time, iso3166, traceback
 from ecom.models import Category, EcomUser, Order, OrderItem, PayPalTransaction, Product, ProductImage, Variation
 from ecom.utils import capture_order, email_decrypt_uuid, email_encrypt_uuid, generate_email_link, get_cart_count, orderQtyAdd, orderQtyRem, validate_form, validate_status
 from ecom.decorators import admin_only
+from ecom.exceptions import NotEnoughQuantityException
 from ecommerce.settings import MEDIA_ROOT
 
 from djqscsv import render_to_csv_response
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 def index(request):
     context = {
         # Give last 10 records
-        'items': Product.objects.filter(hide=False).order_by('-created_at')[:10],
+        'items': Product.objects.filter(hide=False, deleted=False).order_by('-created_at')[:10],
         'categories': Category.objects.all()
     }
 
@@ -95,9 +96,9 @@ def productsPage(request, page):
             maxval = 'invalid'
         
         if(cat != ''):
-            items = Product.objects.filter(hide=False, category=Category.objects.get(pk=cat), discount_price__gte = minval, discount_price__lte = maxval, name__icontains=search)
+            items = Product.objects.filter(hide=False, deleted=False, category=Category.objects.get(pk=cat), discount_price__gte = minval, discount_price__lte = maxval, name__icontains=search)
         else:
-            items = Product.objects.filter(hide=False, discount_price__gte = minval, discount_price__lte = maxval, name__icontains=search)
+            items = Product.objects.filter(hide=False, deleted=False, discount_price__gte = minval, discount_price__lte = maxval, name__icontains=search)
         
         paginator = Paginator(items, PRODUCTS_PER_PAGE)
 
@@ -136,7 +137,7 @@ def productsPage(request, page):
 def productDetail(request, id):
     context = { }
 
-    items = Product.objects.filter(hide=False, id=id)
+    items = Product.objects.filter(hide=False, deleted=False, id=id)
 
     if(len(items) > 1):
         logger.warn('There are ' + len(items) + ' products with id: ' + id + '!')
@@ -146,10 +147,10 @@ def productDetail(request, id):
     
     # Get product images
     productImages = [items[0].image]
-    productImages.extend(ProductImage.objects.filter(product=items[0]))
+    productImages.extend(ProductImage.objects.filter(deleted=False, product=items[0]))
 
     # Get product variations
-    variationsList = Variation.objects.filter(product=items[0])
+    variationsList = Variation.objects.filter(deleted=False, product=items[0])
     variations = { }
 
     for var in variationsList:
@@ -222,7 +223,7 @@ def register(request):
                 'Link: ' + email_link,
                 'danielgudjenev@gmail.com',
                 [email],
-                fail_silently=False,
+                fail_silently=True,
             ) # Message is sent, but GMAIL says the address doesn't exist
 
             if sent == 0:
@@ -254,7 +255,7 @@ def register(request):
 def cart(request):
     if request.user.is_authenticated:
         user = EcomUser.objects.get(user = request.user)
-        context = {'items': Order.objects.filter(user = user, status = Order.OrderStatus.NOT_ORDERED)}
+        context = {'items': Order.objects.filter(deleted=False, user = user, status = Order.OrderStatus.NOT_ORDERED)}
 
         # Cart message
         num = get_cart_count(request)
@@ -322,11 +323,11 @@ def removeFromCart(request):
 def checkout(request):
     if request.user.is_authenticated:
         user = EcomUser.objects.get(user = request.user)
-        if len(Order.objects.filter(user = user, status = Order.OrderStatus.NOT_ORDERED)) == 0:
+        if len(Order.objects.filter(deleted=False, user = user, status = Order.OrderStatus.NOT_ORDERED)) == 0:
             return redirect('index')
         
         context = {
-            'items': Order.objects.filter(user = user, status = Order.OrderStatus.NOT_ORDERED),
+            'items': Order.objects.filter(deleted=False, user = user, status = Order.OrderStatus.NOT_ORDERED),
             'ecom_user': user
         }
 
@@ -450,9 +451,9 @@ def adminProductsPage(request, page):
     PRODUCTS_PER_PAGE = 20
 
     if category == '':
-        items = Product.objects.filter(hide=False, name__icontains=name, discount_price__gte=min_price, discount_price__lte=max_price)
+        items = Product.objects.filter(hide=False, deleted=False, name__icontains=name, discount_price__gte=min_price, discount_price__lte=max_price).order_by('-created_at')
     else:
-        items = Product.objects.filter(hide=False, category=Category.objects.get(id=category), name__icontains=name, discount_price__gte=min_price, discount_price__lte=max_price)
+        items = Product.objects.filter(hide=False, deleted=False, category=Category.objects.get(id=category), name__icontains=name, discount_price__gte=min_price, discount_price__lte=max_price).order_by('-created_at')
 
     paginator = Paginator(items, PRODUCTS_PER_PAGE)
 
@@ -474,7 +475,7 @@ def adminOrders(request):
 @admin_only
 def adminOrdersPage(request, page):
     context = { }
-    items = Order.objects.filter(status__gte = 1)
+    items = Order.objects.filter(deleted=False, status__gte = 1).order_by('-ordered_at')
     ORDERS_PER_PAGE = 20
     # Get values
     stat = request.GET.get('stat', '-1')
@@ -484,13 +485,13 @@ def adminOrdersPage(request, page):
 
     try:
         if(ord_after == '0'):
-            ord_after = datetime.fromisoformat('2000-01-01')
+            ord_after = timezone.make_aware(datetime.fromisoformat('2000-01-01'))
         else:
-            ord_after = datetime.strptime(ord_after, '%Y-%m-%dT%H:%M')
+            ord_after = timezone.make_aware(datetime.strptime(ord_after, '%Y-%m-%dT%H:%M'))
         if(ord_before == '0'):
-            ord_before = datetime.now()
+            ord_before = timezone.make_aware(datetime.now())
         else:
-            ord_before = datetime.strptime(ord_before, '%Y-%m-%dT%H:%M')
+            ord_before = timezone.make_aware(datetime.strptime(ord_before, '%Y-%m-%dT%H:%M'))
         
         if stat == '-1':
             stat = Order.OrderStatus.values
@@ -498,9 +499,9 @@ def adminOrdersPage(request, page):
             stat = [int(stat)]
 
         if user == '':
-            items = Order.objects.filter(status__in=stat, ordered_at__range=(ord_after, ord_before))
+            items = Order.objects.filter(deleted=False, status__in=stat, ordered_at__range=(ord_after, ord_before)).order_by('-ordered_at')
         else:
-             items = Order.objects.filter(status__in=stat, user = EcomUser.objects.get(user = get_user_model().objects.get(username = user)), ordered_at__range=(ord_after, ord_before))
+             items = Order.objects.filter(deleted=False, status__in=stat, user = EcomUser.objects.get(user = get_user_model().objects.get(username = user)), ordered_at__range=(ord_after, ord_before)).order_by('-ordered_at')
     except (ValueError, ValidationError) as e:
         traceback.print_exc()
         context['items'] = ''
@@ -583,7 +584,7 @@ def adminDelProduct(request):
     ids = request.POST.getlist('id')
 
     for id in ids:
-        Product.objects.filter(id = id).delete()
+        Product.objects.filter(deleted=False, id = id).ecom_delete()
     
     messages.success(request, 'product_deleted')
     return redirect('adminProducts')
@@ -607,7 +608,11 @@ def adminAddOrder(request):
     if int(status) > 0:
         order.ordered_at = timezone.localtime(timezone.now())
         order.save()
-        orderQtyRem(order)
+        try:
+            orderQtyRem(order)
+        except NotEnoughQuantityException:
+            messages.error(request, 'order_not_enough_qty')
+            return redirect('adminOrders')
     
     messages.success(request, 'order_created')
     return redirect('adminOrders')
@@ -617,11 +622,11 @@ def adminDelOrder(request):
     ids = request.POST.getlist('id')
 
     for id in ids:
-        order = Order.objects.filter(id = id)
+        order = Order.objects.filter(deleted=False, id = id)
 
-        orderQtyAdd(order)
-
-        order.delete()
+        if order.exists():
+            orderQtyAdd(order[0])
+            order[0].ecom_delete()
     
     messages.success(request, 'order_deleted')
     return redirect('adminOrders')
@@ -660,7 +665,7 @@ def adminEditOrder(request, orderid):
         
         order.user = EcomUser.objects.get(user = get_user_model().objects.get(username = user))
         order.status = int(status)
-        order.ordered_at = timezone.make_aware(datetime.strptime(ordered_at, "%Y-%m-%dT%H:%M"))
+        # order.ordered_at = timezone.make_aware(datetime.strptime(ordered_at, "%Y-%m-%dT%H:%M")) -> Don't update the time, it is created at time
 
         order.save()
 
@@ -672,7 +677,6 @@ def adminEditOrder(request, orderid):
 @admin_only
 def adminEditProduct(request, productid):
     if request.method == 'GET':
-
         context = {
             'product': Product.objects.get(id=productid),
             'categories': Category.objects.all(),
@@ -740,14 +744,13 @@ def adminEditProduct(request, productid):
         messages.success(request, 'product_edited')
         return redirect('adminProducts')
 
-
 @admin_only
 def adminRemoveCat(request):
     id = request.POST.get('id', '')
-    cat = Category.objects.get(id=id)
+    cat = Category.objects.filter(deleted=False, id=id)
 
-    if(cat):
-        cat.delete()
+    if(cat.exists()):
+        cat.ecom_delete()
     
     return redirect('adminProducts')
 
@@ -755,9 +758,9 @@ def adminRemoveCat(request):
 def adminAddCat(request):
     name = request.POST.get('name', '')
     image = request.POST.get('image', '')
-    cat = Category.objects.filter(name = name)
+    cat = Category.objects.filter(deleted=False, name = name)
 
-    if(not cat):
+    if(not cat.exists()):
         Category.objects.create(name = name, image_css = image)
     
     return redirect('adminProducts')
@@ -783,7 +786,7 @@ def adminAccountsPage(request, page):
         if active == 'on':
             active = [True]
         
-        items = EcomUser.objects.filter(user__username__icontains = user, user__email__icontains = email, user__is_staff__in = staff, user__is_active__in = active, country__icontains = country)
+        items = EcomUser.objects.filter(deleted=False, user__username__icontains = user, user__email__icontains = email, user__is_staff__in = staff, user__is_active__in = active, country__icontains = country).order_by('-user__date_joined')
     except (ValueError, ValidationError) as e:
         traceback.print_exc()
         items = { }
@@ -798,7 +801,18 @@ def adminAccountsPage(request, page):
     context['page'] = page
     context['items'] = page.object_list
     context['selected'] = 'accounts'
+    context['countries'] = iso3166.countries
     return render(request, 'admin1/accounts.html', context)
+
+@admin_only
+def adminDelAccount(request):
+    id = request.POST.get('id', '')
+    ecom_user = EcomUser.objects.filter(deleted=False, id=id)
+
+    if(ecom_user.exists()):
+        ecom_user.ecom_delete()
+    
+    return redirect('adminProducts')
 
 def adminReport(request):
     return adminReportPage(request, 1)
@@ -833,9 +847,9 @@ def adminReportPage(request, page):
             conditions = Q()
             for product in products:
                 conditions |= Q(items__product__name__icontains = product)
-            items = Order.objects.filter(conditions, status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before))
+            items = Order.objects.filter(conditions, deleted=False, status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before)).order_by('-ordered_at')
         else:
-            items = Order.objects.filter(status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before))
+            items = Order.objects.filter(deleted=False, status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before)).order_by('-ordered_at')
     except Exception as e:
         traceback.print_exc()
         items = { }
@@ -882,9 +896,9 @@ def adminReportExcel(request):
             conditions = Q()
             for product in products:
                 conditions |= Q(items__product__name__icontains = product)
-            items = Order.objects.filter(conditions, status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before))
+            items = Order.objects.filter(conditions, deleted=False, status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before))
         else:
-            items = Order.objects.filter(status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before))
+            items = Order.objects.filter(deleted=False, status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before))
     except Exception as e:
         traceback.print_exc()
         return None

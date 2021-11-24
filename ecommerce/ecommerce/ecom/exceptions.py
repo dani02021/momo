@@ -1,0 +1,2 @@
+class NotEnoughQuantityException(Exception):
+    pass

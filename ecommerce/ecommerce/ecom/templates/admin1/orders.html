@@ -26,6 +26,12 @@
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 {% endif %}
+{% if message|stringformat:'s' == 'order_not_enough_qty' %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+  <strong>Some of the product/s does not have enough quantity/ies!</strong>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
 {% endfor %}
 <div class="container mt-5">
   <div class="row tm-content-row">
@@ -68,13 +74,13 @@
             <thead>
               <tr>
                 <th scope="col">&nbsp;</th>
+                <th scope="col">TIMESTAMP</th>
                 <th scope="col">ORDER NO.</th>
                 <th scope="col">STATUS</th>
                 <th scope="col">NAME</th>
                 <th scope="col">COUNTRY</th>
                 <th scope="col">ADDRESS</th>
                 <th scope="col">TOTAL PRICE</th>
-                <th scope="col">ORDERED</th>
                 <th scope="col">ACTION</th>
               </tr>
             </thead>
@@ -82,7 +88,8 @@
               {% for item in items %}
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b>#{{ item.id }}</b></td>
+                <td><b>{{ item.ordered_at }}</b></td>
+                <td data-id="{{ item.id }}"><b>#{{ item.id }}</b></td>
                 <td>
                   {% if item.status|stringformat:'s' == '1' %}
                   <div class="tm-status-circle pending"></div>
@@ -101,7 +108,6 @@
                 <td><b>{{ item.user.country }}</b></td>
                 <td><b>{{ item.user.address }}</b></td>
                 <td style="text-align: right;"><b>{{ item.get_total }} $</b></td>
-                <td><b>{{ item.ordered_at }}</b></td>
                 <td><a href="/administration/orders/edit/{{ item.id }}/" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>
@@ -294,7 +300,13 @@
           continue;
 
         var row = inp.parentElement.parentElement;
-        var id = row.getElementsByTagName('td')[0].innerText.match(/\d+/)[0];
+        var elems = row.getElementsByTagName('td');
+
+        for (const elem of elems) {
+          if("id" in elem.dataset) {
+            var id = elem.innerText.match(/\d+/)[0];
+          }
+        }
 
         input = document.createElement('input');
         input.hidden = 'hidden';

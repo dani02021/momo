@@ -30,7 +30,7 @@
 <div class="container mt-5">
   <div class="row tm-content-row">
     <div class="col-sm-12 col-md-12 col-lg-8 col-xl-8 tm-block-col">
-      <div class="tm-bg-primary-dark tm-block tm-block-products">
+      <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 850px;">
         <h2 class="tm-block-title">Products</h2>
         <div class="container">
           <form action="/administration/products/" method="get" onsubmit="checkProductFilter(this);">
@@ -79,7 +79,7 @@
               {% for item in items %}
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b>#{{ item.id }}</b></td>
+                <td data-id="{{ item.id }}"><b>#{{ item.id }}</b></td>
                 <td class="tm-product-name">{{ item.name }}</td>
                 <td style="text-align: right;">{{ item.price }} $</td>
                 <td style="text-align: right;">{{ item.discount_price }} $</td>
@@ -348,9 +348,15 @@
     for (const inp of table.getElementsByTagName('input')) {
       if (!inp.checked)
         continue;
-
+      
       var row = inp.parentElement.parentElement;
-      var id = row.getElementsByTagName('td')[0].innerText.match(/\d+/)[0];
+      var elems = row.getElementsByTagName('td');
+
+      for (const elem of elems) {
+        if("id" in elem.dataset) {
+          var id = elem.innerText.match(/\d+/)[0];
+        }
+      }
 
       input = document.createElement('input');
       input.hidden = 'hidden';

@@ -41,12 +41,12 @@
                 <input name="country" class="form-select" style="background-image: none" placeholder="Country of User">
               </div>
               <div class="col-sm-4">
-                <input name="ord-after" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="Ordered after" type="datetime-local">
-              </div>
-              <div class="col-sm-4">
                 <input name="ord-before" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
                   title="Ordered before" type="datetime-local"><br>
+              </div>
+              <div class="col-sm-4">
+                <input name="ord-after" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
+                  title="Ordered after" type="datetime-local">
               </div>
             </div>
             <div class="row" style="margin-bottom: 12px;">
@@ -62,21 +62,21 @@
             <thead>
               <tr>
                 <th scope="col">&nbsp;</th>
+                <th scope="col">TIMESTAMP</th>
                 <th scope="col">ORDER NO.</th>
                 <th scope="col">STATUS</th>
                 <th scope="col">NAME</th>
                 <th scope="col">COUNTRY</th>
                 <th scope="col">ADDRESS</th>
                 <th scope="col">TOTAL PRICE</th>
-                <th scope="col">ORDERED</th>
-                <th scope="col">ACTION</th>
               </tr>
             </thead>
             <tbody>
               {% for item in items %}
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b>#{{ item.id }}</b></td>
+                <td><b>{{ item.ordered_at }}</b></td>
+                <td id="id"><b>#{{ item.id }}</b></td>
                 <td>
                   {% if item.status|stringformat:'s' == '1' %}
                   <div class="tm-status-circle pending"></div>
@@ -95,11 +95,6 @@
                 <td><b>{{ item.user.country }}</b></td>
                 <td><b>{{ item.user.address }}</b></td>
                 <td style="text-align: right;"><b>{{ item.get_total }} $</b></td>
-                <td><b>{{ item.ordered_at }}</b></td>
-                <td><a href="/administration/orders/edit/{{ item.id }}/" class="tm-order-edit-link">
-                    <i class="far fa-edit tm-order-edit-icon"></i>
-                  </a>
-                </td>
               </tr>
               {% endfor %}
             </tbody>

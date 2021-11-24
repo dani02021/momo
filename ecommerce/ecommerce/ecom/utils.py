@@ -7,7 +7,7 @@ from django.utils.http import urlsafe_base64_encode
 from django.contrib.auth import authenticate, login
 from django.utils import timezone
 
-from ecom.models import EcomUser, Order
+import ecom.models as models
 from ecom.tokens import account_activation_token
 
 import iso3166, os, binascii, uuid, time, base64
@@ -16,6 +16,8 @@ from Crypto.Cipher import AES
 from Crypto.Util import Counter
 from ecom.PayPalClient import client
 from paypalcheckoutsdk.orders import OrdersCaptureRequest
+
+from ecom.exceptions import NotEnoughQuantityException
 
 def validate_form(email, username, password, country):
     validate_email(email)
@@ -34,9 +36,9 @@ def get_cart_count(request):
     order = None
 
     if not request.user.is_anonymous:
-        ecom = EcomUser.objects.get(user=request.user)
-        order = Order.objects.filter(
-            user=ecom, status=Order.OrderStatus.NOT_ORDERED).first()
+        ecom = models.EcomUser.objects.get(user=request.user)
+        order = models.Order.objects.filter(
+            user=ecom, status=models.Order.OrderStatus.NOT_ORDERED).first()
     else:
         # Check from cookies
         pass
@@ -70,18 +72,30 @@ def email_decrypt_uuid(uuidEnc):
     return aes.decrypt(uuidEnc[16:])
 
 def orderQtyRem(cart):
-    for item in cart.items:
+    for item in cart.items.all():
+        if item.product.quantity < item.quantity:
+            raise NotEnoughQuantityException(item.product + " has only " + item.product.quantity + " qty, but order #" + cart.id + " is trying to order " + item.quantity + "!")
         item.product.quantity -= item.quantity
         item.save()
 
     cart.save()
 
 def orderQtyAdd(cart):
-    for item in cart.items:
+    for item in cart.items.all():
         item.product.quantity += item.quantity
         item.save()
 
     cart.save()
+
+def product_delete_images(id):
+    for image in models.ProductImage.objects.filter(product = id):
+        image.deleted = True
+        image.save()
+
+def product_delete_variations(id):
+    for var in models.Variation.objects.filter(product = id):
+        var.deleted = True
+        var.save()
 
 def capture_order(order_id, debug=False):
     """Method to capture order using order_id"""
@@ -112,28 +126,14 @@ def capture_order(order_id, debug=False):
         response.result.payer.phone.phone_number.national_number) """
     return uid, response
 
-def orderQtyRem(cart):
-    for item in cart.items:
-            item.product.quantity -= item.quantity
-            item.save()
-
-    cart.save()
-
-def orderQtyAdd(cart):
-    for item in cart.items:
-            item.product.quantity += item.quantity
-            item.save()
-
-    cart.save()
-
 def validate_status(request, uid, order_id, order):
     if order.result.status == 'COMPLETED':
         # Order is completed
-        ecom_user = EcomUser.objects.get(user=request.user)
+        ecom_user = models.EcomUser.objects.get(user=request.user)
 
-        cart = Order.objects.filter(
-            user=ecom_user, status=Order.OrderStatus.NOT_ORDERED)[0]
-        cart.status = Order.OrderStatus.PENDING
+        cart = models.Order.objects.filter(
+            user=ecom_user, status=models.Order.OrderStatus.NOT_ORDERED)[0]
+        cart.status = models.Order.OrderStatus.PENDING
         cart.ordered_at = timezone.now()
 
         orderQtyRem(cart)

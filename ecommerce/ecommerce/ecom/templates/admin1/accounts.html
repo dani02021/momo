@@ -66,13 +66,13 @@
             <thead>
               <tr>
                 <th scope="col">&nbsp;</th>
+                <th scope="col">TIMESTAMP</th>
                 <th scope="col">ACCOUNT NO.</th>
                 <th scope="col">USERNAME</th>
                 <th scope="col">FULL NAME</th>
                 <th scope="col">COUNTRY</th>
                 <th scope="col">ADDRESS</th>
                 <th scope="col">EMAIL</th>
-                <th scope="col">CREATED</th>
                 <th scope="col">ACTION</th>
               </tr>
             </thead>
@@ -80,13 +80,13 @@
               {% for item in items %}
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b>#{{ item.id }}</b></td>
+                <td><b>{{ item.created_at }}</b></td>
+                <td data-id="{{ item.id }}"><b>#{{ item.id }}</b></td>
                 <td><b>{{ item.user.username }}</b></td>
                 <td><b>{{ item.user.first_name|add:' '|add:item.user.last_name }}</b></td>
                 <td><b>{{ item.country }}</b></td>
                 <td><b>{{ item.address }}</b></td>
                 <td><b>{{ item.user.email }}</b></td>
-                <td><b>{{ item.created_at }}</b></td>
                 <td><a href="/administration/accounts/edit/{{ item.id }}/" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>
@@ -150,10 +150,10 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Add Order</h5>
+        <h5 class="modal-title">Add Account</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="add-account-form" action="/administration/accounts/add/" onsubmit="selectAll();" method="post">
+      <form id="add-account-form" action="/administration/accounts/add/" onsubmit="return checkPass();" method="post">
         <div class="modal-body">
           <div class="row">
             <div class="col-md-5 mx-auto">
@@ -185,34 +185,37 @@
           </div>
           <div class="row">
             <div class="col-md-5 mx-auto">
-              <label>Select image:</label>
+              <label>Password:</label>
               <div>
-                <select name="country" required>
-                  {% for country in countries %}
-                  {% endfor %}
-                </select>
+                <input type="password" name="password" id="password">
               </div>
             </div>
             <div class="col-md-5 mx-auto">
-              <label>Category:</label>
+              <label>Confirm Password:</label>
               <div>
-                <select name="category" id="category">
-                  {% for category in categories %}
-                  <option value="{{ category.id }}">{{ category.name }}</option>
-                  {% endfor %}
-                </select>
+                <input type="password" name="password2" id="password2">
               </div>
             </div>
           </div>
           <div class="row">
-            <div class="col-md-11 mx-auto">
-              <label>Description:</label>
-              <div>
-                <textarea name="description" id="description" cols="47" rows="10"
-                  style="min-height: 200px; height: 200px;" placeholder="Description"></textarea>
-              </div>
+            <div class="col-md-5 mx-auto">
+              <label>Address:</label>
+              <input name="address" id="address">
+            </div>
+            <div class="col-md-5 mx-auto">
+              <label>Country:</label>
+              <select id="country" name="country" style="width: 100%;">
+                <option disabled selected>-- Select a Country --</option>
+                {% for country in countries %}
+                <option value="{{ country.name }}">{{ country.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="row">
+              <div class="col-md-11 mx-auto"><label id="pass-err" style="color: red; font-weight: 300;"></label></div>
             </div>
           </div>
+        </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
           {% csrf_token %}
@@ -220,39 +223,9 @@
         </div>
       </form>
     </div>
-</div>
-<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-accounts-accountsitem" tabindex="-1"
-  aria-labelledby="add-account-accountitem" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="remove-cat-title">Add Account</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <label>Product:</label>
-        <div>
-          <select id="accountitem-select" name="items">
-            {% for product in products %}
-            <option value="{{ product.id }}">{{ product.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <label>Quantity:</label>
-        <div>
-          <input type="number" id="orderitem-quantity" name="orderitem-quantity" placeholder="Quantity">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-target="#add-order" data-bs-toggle="modal"
-          data-bs-dismiss="modal" data-bs-dismiss="modal">Back</button>
-        <button type="button" data-bs-target="#add-order" data-bs-toggle="modal" data-bs-dismiss="modal"
-          onclick="addOrderItemModal(this);" class="btn btn-primary">Add</button>
-      </div>
-    </div>
   </div>
 </div>
-<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="rem-account tabindex="-1"
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="rem-account tabindex=" -1"
   aria-labelledby="rem-account" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -296,11 +269,16 @@
     document.getElementById('add-order-items').add(option);
   }
 
-  function selectAll() {
-    options = document.getElementById('add-order-items').getElementsByTagName('option');
-    for (i = 0; i < options.length; i++) {
-      options[i].selected = 'true';
+  function checkPass() {
+    pass = document.getElementById('password').value
+    pass2 = document.getElementById('password2').value
+
+    if (pass != pass2) {
+      document.getElementById('pass-err').innerHTML = "Passwords don't match!"
+      return false;
     }
+
+    return true;
   }
 
   function deleteAccounts(elem) {
@@ -312,7 +290,13 @@
         continue;
 
       var row = inp.parentElement.parentElement;
-      var id = row.getElementsByTagName('td')[0].innerText.match(/\d+/)[0];
+      var elems = row.getElementsByTagName('td');
+
+      for (const elem of elems) {
+        if ("id" in elem.dataset) {
+          var id = elem.innerText.match(/\d+/)[0];
+        }
+      }
 
       input = document.createElement('input');
       input.hidden = 'hidden';

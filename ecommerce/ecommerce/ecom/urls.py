@@ -1,7 +1,8 @@
 from django.conf.urls import url
 from django.contrib.auth import logout
 from django.urls import path
-from . import views
+
+from ecom import views
 
 urlpatterns = [
     path('', views.index, name='index'),
