@@ -97,6 +97,38 @@ def product_delete_variations(id):
         var.deleted = True
         var.save()
 
+def give_pages(paginator, page):
+    pages = []
+
+    if paginator.num_pages <= 3:
+        if paginator.num_pages == 1:
+            return ['1']
+        elif paginator.num_pages == 2:
+            return ['1', '2']
+        elif paginator.num_pages == 3:
+            return ['1', '2', '3']
+
+    if page.number <= 3:
+            if page.number == 1:
+                pages = ['1', '2', '...', str(paginator.num_pages)]
+            elif page.number == 2:
+                pages = [str(page.number - 1), str(page.number), str(page.number + 1), '...', str(paginator.num_pages)]
+            else:
+                pages = ['1', str(page.number - 1), str(page.number), str(page.number + 1), '...', str(paginator.num_pages)]
+    elif paginator.num_pages - page.number <= 3:
+        if paginator.num_pages - page.number == 0:
+            pages = ['1', '...', str(page.number - 1), str(page.number)]
+        elif paginator.num_pages - page.number == 1:
+            pages = ['1', '...', str(page.number), str(page.number + 1)]
+        elif paginator.num_pages - page.number == 2:
+            pages = ['1', '...', str(page.number - 1), str(page.number), str(page.number + 1), str(paginator.num_pages)]
+        else:
+            pages = ['1', '...', str(page.number - 1), str(page.number), str(page.number + 1), '...', str(paginator.num_pages)]
+    else:
+        pages = ['1', '...', str(page.number - 1), str(page.number), str(page.number + 1), '...', str(paginator.num_pages)]
+    
+    return pages
+
 def capture_order(order_id, debug=False):
     """Method to capture order using order_id"""
     request = OrdersCaptureRequest(order_id)

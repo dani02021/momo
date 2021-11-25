@@ -24,9 +24,10 @@ from ecom.tokens import account_activation_token
 import logging, re, json, time, iso3166, traceback
 
 from ecom.models import Category, EcomUser, Order, OrderItem, PayPalTransaction, Product, ProductImage, Variation
-from ecom.utils import capture_order, email_decrypt_uuid, email_encrypt_uuid, generate_email_link, get_cart_count, orderQtyAdd, orderQtyRem, validate_form, validate_status
+from ecom.utils import capture_order, email_decrypt_uuid, email_encrypt_uuid, generate_email_link, get_cart_count, give_pages, orderQtyAdd, orderQtyRem, validate_form, validate_status
 from ecom.decorators import admin_only
 from ecom.exceptions import NotEnoughQuantityException
+from ecom.generators import generateProducts
 from ecommerce.settings import MEDIA_ROOT
 
 from djqscsv import render_to_csv_response
@@ -103,9 +104,12 @@ def productsPage(request, page):
         paginator = Paginator(items, PRODUCTS_PER_PAGE)
 
         page = paginator.get_page(page)
+
+        pages = give_pages(paginator, page)
             
         context['paginator'] = paginator
         context['page'] = page
+        context['pages'] = pages
         context['items'] = page.object_list
         context['categories'] = Category.objects.all()
         
@@ -458,10 +462,13 @@ def adminProductsPage(request, page):
     paginator = Paginator(items, PRODUCTS_PER_PAGE)
 
     page = paginator.get_page(page)
+
+    pages = give_pages(paginator, page)
     
     context = {
         'paginator': paginator,
         'page': page,
+        'pages': pages,
         'categories': Category.objects.all(),
         'items': page.object_list,
         'selected': 'products'
@@ -512,6 +519,8 @@ def adminOrdersPage(request, page):
 
     page = paginator.get_page(page)
 
+    pages = give_pages(paginator, page)
+
     statuses = { }
 
     for orderstatus in Order.OrderStatus.choices:
@@ -519,6 +528,7 @@ def adminOrdersPage(request, page):
             
     context['paginator'] = paginator
     context['page'] = page
+    context['pages'] = pages
     context['products'] = Product.objects.all()
     context['users'] = EcomUser.objects.all()
     context['statuses'] = statuses
@@ -796,9 +806,12 @@ def adminAccountsPage(request, page):
     paginator = Paginator(items, ACCOUNTS_PER_PAGE)
 
     page = paginator.get_page(page)
+
+    pages = give_pages(paginator, page)
             
     context['paginator'] = paginator
     context['page'] = page
+    context['pages'] = pages
     context['items'] = page.object_list
     context['selected'] = 'accounts'
     context['countries'] = iso3166.countries
@@ -860,9 +873,12 @@ def adminReportPage(request, page):
     paginator = Paginator(items, REPORTS_PER_PAGE)
 
     page = paginator.get_page(page)
+
+    pages = give_pages(paginator, page)
     
     context['paginator'] = paginator
     context['page'] = page
+    context['pages'] = pages
     context['items'] = page.object_list
     context['statuses'] = statuses
     context['items'] = items

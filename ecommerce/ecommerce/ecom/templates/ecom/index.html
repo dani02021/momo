@@ -176,7 +176,7 @@
             {% for item in items %}
             <div class="col-lg-3">
                 <div class="product-item">
-                    <div class="product-title">
+                    <div class="product-title" style="height: 90px;display: block;text-overflow: ellipsis;overflow: hidden; white-space: nowrap;">
                         <a href="#">{{ item.name }}</a>
                         <div class="ratting">
                             <i class="fa fa-star"></i>
@@ -187,9 +187,9 @@
                         </div>
                     </div>
                     <div class="product-image">
-                        <a href="product-detail.html">
+                        <a href="product-detail.html" style="height: 300.66px;overflow: hidden;">
                             {% if item.image %}
-                            <img src="{{ item.image.url }}" alt="Product Image">
+                            <img src="{{ item.image.url }}" style="object-fit: cover;" alt="Product Image">
                             {% else %}
                             <img src="" alt="No Image">
                             {% endif %}

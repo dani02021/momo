@@ -123,11 +123,11 @@
         <a class="page-link" href="" tabindex="-1">Previous</a>
       </li>
       {% endif %}
-      {% for pag in paginator.page_range %}
-      {% if page.number == pag %}
+      {% for pag in pages %}
+      {% if page.number|stringformat:'s' == pag|stringformat:'s' %}
       <li class="page-item active"><a class="page-link" href="">{{ pag }}</a></li>
       {% else %}
-      <li class="page-item"><a class="page-link" href="javascript:moveToPage({{ pag }});">
+      <li class="page-item {% if '...' == pag|stringformat:'s' %}disabled{% endif %}"><a class="page-link" href="javascript:moveToPage({{ pag }});">
           {{ pag }}</a></li>
       {% endif %}
       {% endfor %}

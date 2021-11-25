@@ -28,7 +28,7 @@
 <!-- Product List Start -->
 <div class="product-view">
     <div class="container-fluid">
-        <div class="row">
+        <div class="row" style="margin-bottom: 24px;">
             <!-- Side Bar Start -->
             <div class="col-lg-3 sidebar">
                 <div class="sidebar-widget category">
@@ -140,7 +140,9 @@
                     <div class="col-md-4">
                         <div class="product-item">
                             <div class="product-title">
-                                <a href="/product-detail/{{ item.id }}">{{ item.name }}</a>
+                                <a href="/product-detail/{{ item.id }}"
+                                    style="height: 30px;display: block;text-overflow: ellipsis;overflow: hidden; white-space: nowrap;"
+                                    data-bs-toggle="tooltip" title="{{ item.name }}">{{ item.name }}</a>
                                 <div class="ratting">
                                     <i class="fa fa-star"></i>
                                     <i class="fa fa-star"></i>
@@ -150,9 +152,9 @@
                                 </div>
                             </div>
                             <div class="product-image">
-                                <a href="product-detail.html">
+                                <a href="product-detail.html" style="height: 254.66px;overflow: hidden;">
                                     {% if item.image %}
-                                    <img src="{{ item.image.url }}" alt="Product Image">
+                                    <img src="{{ item.image.url }}" style="object-fit: cover;" alt="Product Image">
                                     {% else %}
                                     <img src="" alt="No Image">
                                     {% endif %}
@@ -192,11 +194,11 @@
                                     <a class="page-link" href="" tabindex="-1">Previous</a>
                                 </li>
                                 {% endif %}
-                                {% for pag in paginator.page_range %}
-                                {% if page.number == pag %}
+                                {% for pag in pages %}
+                                {% if page.number|stringformat:'s' == pag|stringformat:'s' %}
                                 <li class="page-item active"><a class="page-link" href="">{{ pag }}</a></li>
                                 {% else %}
-                                <li class="page-item"><a class="page-link" href="javascript:moveToPage({{ pag }});">
+                                <li class="page-item {% if '...' == pag|stringformat:'s' %}disabled{% endif %}"><a class="page-link" href="javascript:moveToPage({{ pag }});">
                                     {{ pag }}</a></li>
                                 {% endif %}
                                 {% endfor %}

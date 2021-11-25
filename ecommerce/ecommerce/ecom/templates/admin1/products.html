@@ -30,7 +30,7 @@
 <div class="container mt-5">
   <div class="row tm-content-row">
     <div class="col-sm-12 col-md-12 col-lg-8 col-xl-8 tm-block-col">
-      <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 850px;">
+      <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1000px;">
         <h2 class="tm-block-title">Products</h2>
         <div class="container">
           <form action="/administration/products/" method="get" onsubmit="checkProductFilter(this);">
@@ -147,11 +147,11 @@
         <a class="page-link" href="" tabindex="-1">Previous</a>
       </li>
       {% endif %}
-      {% for pag in paginator.page_range %}
-      {% if page.number == pag %}
+      {% for pag in pages %}
+      {% if page.number|stringformat:'s' == pag|stringformat:'s' %}
       <li class="page-item active"><a class="page-link" href="">{{ pag }}</a></li>
       {% else %}
-      <li class="page-item"><a class="page-link" href="javascript:moveToPage({{ pag }});">
+      <li class="page-item {% if '...' == pag|stringformat:'s' %}disabled{% endif %}"><a class="page-link" href="javascript:moveToPage({{ pag }});">
           {{ pag }}</a></li>
       {% endif %}
       {% endfor %}
