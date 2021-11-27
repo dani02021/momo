@@ -98,22 +98,18 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="remove-cat-title">Add Order</h5>
+        <h5 class="modal-title" id="add-orderitem-title">Add Order</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <label>Product:</label>
         <div>
-          <select id="orderitem-select" name="items">
-            {% for product in products %}
-            <option value="{{ product.id }}">{{ product.name }}</option>
-            {% endfor %}
-          </select>
-          </div>
-          <label>Quantity:</label>
-          <div>
+          <input name="product" id="product">
+        </div>
+        <label>Quantity:</label>
+        <div>
           <input type="number" id="orderitem-quantity" name="orderitem-quantity" placeholder="Quantity">
-          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-target="#add-order" data-bs-toggle="modal" data-bs-dismiss="modal" data-bs-dismiss="modal">Back</button>

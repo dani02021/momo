@@ -17,29 +17,6 @@
         <div class="container">
           <form action="/administration/report/" method="get" onsubmit="checkOrderFilter(this);">
             <div class="row">
-              <div class="col">
-                <div style="margin-bottom: 10px;">
-                  <select name="product[]" id="report-products" style="width: 360px;" multiple>
-                  </select>
-                  <div data-bs-target="#add-product-item" data-bs-toggle="modal" style="display: inline-block;">
-                    <i class="fas fa-plus" style="color: white"></i>
-                  </div>
-                </div>
-              </div>
-              <div class="col-sm-4">
-                <select name="stat" class="form-select">
-                  <option value="-1" selected disabled>Select status:</option>
-                  {% for key, stat in statuses.items %}
-                  <option value="{{ key }}">{{ stat }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-              <div class="col-sm-4">
-                <input name="user" class="form-select" style="background-image: none" placeholder="User">
-              </div>
-              <div class="col-sm-4">
-                <input name="country" class="form-select" style="background-image: none" placeholder="Country of User">
-              </div>
               <div class="col-sm-4">
                 <input name="ord-before" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
                   title="Ordered before" type="datetime-local"><br>
@@ -47,6 +24,15 @@
               <div class="col-sm-4">
                 <input name="ord-after" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
                   title="Ordered after" type="datetime-local">
+              </div>
+              <div class="col-sm-4">
+                <select name="time-group" class="form-select">
+                  <option value="-1" selected disabled>Group By:</option>
+                  <option value="0">Day</option>
+                  <option value="1">Week</option>
+                  <option value="2">Month</option>
+                  <option value="3">Year</option>
+                </select>
               </div>
             </div>
             <div class="row" style="margin-bottom: 12px;">
@@ -63,11 +49,8 @@
               <tr>
                 <th scope="col">&nbsp;</th>
                 <th scope="col">TIMESTAMP</th>
-                <th scope="col">ORDER NO.</th>
-                <th scope="col">STATUS</th>
-                <th scope="col">NAME</th>
-                <th scope="col">COUNTRY</th>
-                <th scope="col">ADDRESS</th>
+                <th scope="col">ORDERS</th>
+                <th scope="col">PRODUCTS</th>
                 <th scope="col">TOTAL PRICE</th>
               </tr>
             </thead>
@@ -75,8 +58,8 @@
               {% for item in items %}
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b>{{ item.ordered_at }}</b></td>
-                <td id="id"><b>#{{ item.id }}</b></td>
+                <td><b>{{ item.start_day }}</b></td>
+                <td id="id"><b>{{ item.orders }}</b></td>
                 <td>
                   {% if item.status|stringformat:'s' == '1' %}
                   <div class="tm-status-circle pending"></div>
@@ -89,11 +72,8 @@
                   {% elif item.status|stringformat:'s' == '5' %}
                   <div class="tm-status-circle moving"></div>
                   {% endif %}
-                  {{ item.get_status_display }}
+                  {{ item.items_count }}
                 </td>
-                <td><b>{{ item.user.user.first_name|add:' '|add:item.user.user.last_name }}</b></td>
-                <td><b>{{ item.user.country }}</b></td>
-                <td><b>{{ item.user.address }}</b></td>
                 <td style="text-align: right;"><b>{{ item.get_total }} $</b></td>
               </tr>
               {% endfor %}
@@ -122,11 +102,11 @@
         <a class="page-link" href="" tabindex="-1">Previous</a>
       </li>
       {% endif %}
-      {% for pag in paginator.page_range %}
-      {% if page.number == pag %}
+      {% for pag in pages %}
+      {% if page.number|stringformat:'s' == pag|stringformat:'s' %}
       <li class="page-item active"><a class="page-link" href="">{{ pag }}</a></li>
       {% else %}
-      <li class="page-item"><a class="page-link" href="javascript:moveToPage({{ pag }});">
+      <li class="page-item {% if '...' == pag|stringformat:'s' %}disabled{% endif %}"><a class="page-link" href="javascript:moveToPage({{ pag }});">
           {{ pag }}</a></li>
       {% endif %}
       {% endfor %}
@@ -183,16 +163,8 @@
       option.selected = 'true'
       document.getElementById('report-products').add(option);
   }
-
-  function selectAll() {
-      options = document.getElementById('report-products').getElementsByTagName('option');
-      for (i = 0; i < options.length; i++) {
-        options[i].selected = 'true';
-      }
-    }
   
   function checkOrderFilter(form) {
-    selectAll();
     for (const elem of form.elements) {
       if (elem.value === '')
         elem.disabled = true;

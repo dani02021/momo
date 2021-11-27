@@ -754,3 +754,7 @@ input[type=number] {
   -moz-appearance: none;
   appearance: none;
 }
+
+.ui-autocomplete {
+  z-index: 9999999999;
+}

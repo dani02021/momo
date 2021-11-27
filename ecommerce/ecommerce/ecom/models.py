@@ -24,7 +24,7 @@ class EcomUser(models.Model):
     country = models.CharField(max_length=100) # Would be better with IntegerField
     email_confirmed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    deleted = models.BooleanField()
+    deleted = models.BooleanField(default=False)
 
 class Category(models.Model):
     def __str__(self) -> str:
@@ -35,7 +35,7 @@ class Category(models.Model):
     
     name = models.CharField(max_length=100)
     image_css = models.CharField(max_length=100)
-    deleted = models.BooleanField()
+    deleted = models.BooleanField(default=False)
 
 class Product(models.Model):
     #
@@ -60,7 +60,7 @@ class Product(models.Model):
     quantity = models.IntegerField(default=1)
     hide = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    deleted = models.BooleanField()
+    deleted = models.BooleanField(default=False)
 
 class OrderItem(models.Model):
     def __str__(self) -> str:
@@ -73,7 +73,7 @@ class OrderItem(models.Model):
     
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.IntegerField(default = 1)
-    deleted = models.BooleanField()
+    deleted = models.BooleanField(default=False)
 
 class Order(models.Model):
     def __str__(self) -> str:
@@ -91,7 +91,7 @@ class Order(models.Model):
     def ecom_delete(self):
         self.deleted = True
         for item in self.items.all():
-            item.ecom_delete(self)
+            item.ecom_delete()
         self.save()
     
     class OrderStatus(models.IntegerChoices):
@@ -109,7 +109,7 @@ class Order(models.Model):
     user = models.ForeignKey(EcomUser, on_delete=models.DO_NOTHING)
     ordered_at = models.DateTimeField(blank=True, null=True)
     status = models.IntegerField(choices=OrderStatus.choices)
-    deleted = models.BooleanField()
+    deleted = models.BooleanField(default=False)
 
 class OrderItemCookie(models.Model):
     def __str__(self) -> str:
@@ -141,7 +141,7 @@ class ProductImage(models.Model):
     
     product = models.ForeignKey(Product, default=None, on_delete=models.CASCADE)
     image = models.ImageField(blank = True, null = True)
-    deleted = models.BooleanField()
+    deleted = models.BooleanField(default=False)
 
 class Variation(models.Model):
     def __str__(self) -> str:
@@ -151,7 +151,7 @@ class Variation(models.Model):
     tag_value = models.CharField(max_length=50)
     product = models.ForeignKey(Product, default=None, on_delete=models.CASCADE, related_name="product")
     variation = models.ForeignKey(Product, default=None, on_delete=models.CASCADE, related_name="variationProduct")
-    deleted = models.BooleanField()
+    deleted = models.BooleanField(default=False)
 
 class PayPalTransaction(models.Model):
     def __str__(self) -> str:
@@ -166,4 +166,4 @@ class PayPalTransaction(models.Model):
     first_name = models.CharField(default='', null=False, max_length=255)
     last_name = models.CharField(default='', null=False, max_length=255)
     phone_number = models.CharField(default='', null=False, max_length=50)
-    deleted = models.BooleanField()
+    deleted = models.BooleanField(default=False)

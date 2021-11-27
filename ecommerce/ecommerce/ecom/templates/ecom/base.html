@@ -140,7 +140,7 @@
             Item removed from cart!
         </div>
     </div>
-{% endif %}
+    {% endif %}
     {% endif %}
     {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}
     {% if message|stringformat:'s' == 'email_validation' %}
@@ -156,6 +156,16 @@
         <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
         <div>
             An error occured while trying to validate your email!
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% if message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}
+    {% if message|stringformat:'s' == 'user_exists' %}
+    <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center" role="alert">
+        <i class="fas fa-check" style="margin-right: 10px;"></i>
+        <div>
+            User already exists!
         </div>
     </div>
     {% endif %}

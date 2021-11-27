@@ -1,9 +1,17 @@
-import requests, random, os, logging, traceback
+import requests, random, os, logging, traceback, datetime, time
+
 from lxml import html
-from ecom.models import Category, Product
+
+from ecom.models import Category, EcomUser, Order, OrderItem, Product
+
+from django.utils import timezone
+from django.contrib.auth.models import User
+from ecom.utils import random_date
+
 from ecommerce.settings import MEDIA_ROOT
+
 from multiprocessing.dummy import Pool as ThreadPool
-import time
+
 from faker import Faker
 
 logging.getLogger('faker').setLevel(logging.ERROR)
@@ -79,4 +87,43 @@ def generateProducts(n = 10):
     threadPool.close()
     threadPool.join()
 
-# generateProducts(50)
+def generateOrderItemsOf(order):
+    products = random.sample(list(Product.objects.all()), random.randint(1, 5))
+
+    for product in products:
+        order.items.add(OrderItem.objects.get_or_create(
+            product = product,
+            quantity = random.randint(1, 5)
+            )[0])
+    
+    order.save()
+
+def generateOrders(n = 10):
+    for i in range(n):
+        order, create = Order.objects.get_or_create(
+            user = random.choice(list(EcomUser.objects.all())),
+            status = random.choice([1,2,3,4]),
+            ordered_at = random_date("2010-1-1 12:00", "2021-11-11 12:00", random.random())
+        )
+        generateOrderItemsOf(order)
+
+def generateUsers(n = 10):
+    for i in range(n):
+        try:
+            profile = fake.simple_profile()
+
+            user = User.objects.create_user(profile['username'], profile['mail'], '123456')
+            user.first_name = profile['name'].split(' ')[0],
+            user.last_name = profile['name'].split(' ')[1],
+            user.save()
+
+            EcomUser.objects.get_or_create(
+                user = user,
+                address = profile['address'],
+                country = 'Bulgaria',
+                email_confirmed = True
+            )
+        except:
+            pass
+
+#generateOrders()

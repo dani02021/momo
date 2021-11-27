@@ -3,6 +3,8 @@ import os
 from django.contrib import auth
 from django.core.files.base import ContentFile
 from django.core.checks.messages import Error
+from django.db.models.aggregates import Sum
+from django.db.models.fields import DateTimeField
 from django.http import request
 from django.http.response import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -10,8 +12,10 @@ from django.contrib.auth import authenticate, get_user, get_user_model
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
 
-from django.db.models import Q
+from django.db.models import Q, F, Count
+from django.db.models.functions import Trunc
 from django.contrib import messages
+from django.core import serializers
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.core.mail import send_mail
@@ -55,7 +59,7 @@ def login(request):
         password = request.POST.get('password')
         user = authenticate(request, username=username, password=password)
         if user is not None:
-            ecom_user = EcomUser.objects.get(user = user)
+            ecom_user = EcomUser.objects.get(deleted = False, user = user)
 
             if not ecom_user.email_confirmed:
                 uidb64 = urlsafe_base64_encode(email_encrypt_uuid(urlsafe_base64_encode(force_bytes(ecom_user.user.id))))
@@ -200,7 +204,10 @@ def register(request):
 
             # Check for validy
             validate_form(email, username, password, country)
-            
+
+            if get_user_model().objects.filter(username = username):
+                messages.warning(request, 'user_exists')
+                return redirect('index')
             # Create user
             user = get_user_model().objects.create_user(username, email, password)
 
@@ -238,7 +245,6 @@ def register(request):
             
             messages.success(request, 'check_email')
 
-
             return redirect('index')
             
     except Exception as e:
@@ -258,7 +264,7 @@ def register(request):
 
 def cart(request):
     if request.user.is_authenticated:
-        user = EcomUser.objects.get(user = request.user)
+        user = EcomUser.objects.get(deleted = False, user = request.user)
         context = {'items': Order.objects.filter(deleted=False, user = user, status = Order.OrderStatus.NOT_ORDERED)}
 
         # Cart message
@@ -309,7 +315,7 @@ def removeFromCart(request):
             quantity = request.POST.get('quantity', '-1')
 
             if quantity == '-1':
-                OrderItem.objects.get(id = id).delete()
+                OrderItem.objects.get(deleted = False, id = id).delete()
             else:
                 item = OrderItem.objects.get(id = id)
                 if item.quantity > 1:
@@ -476,13 +482,22 @@ def adminProductsPage(request, page):
     return render(request, 'admin1/products.html', context)
 
 @admin_only
+def adminProductsGet(request):
+    # Get values
+    product = request.GET['term']
+
+    items = Product.objects.filter(deleted = False, hide = False, name__istartswith=product).values('id', value=F('name'))
+
+    return JsonResponse(list(items), safe=False)
+
+@admin_only
 def adminOrders(request):
     return adminOrdersPage(request, 1)
 
 @admin_only
 def adminOrdersPage(request, page):
     context = { }
-    items = Order.objects.filter(deleted=False, status__gte = 1).order_by('-ordered_at')
+    items = Order.objects.filter(deleted=False, status__gte=1).order_by('-ordered_at')
     ORDERS_PER_PAGE = 20
     # Get values
     stat = request.GET.get('stat', '-1')
@@ -508,32 +523,31 @@ def adminOrdersPage(request, page):
         if user == '':
             items = Order.objects.filter(deleted=False, status__in=stat, ordered_at__range=(ord_after, ord_before)).order_by('-ordered_at')
         else:
-             items = Order.objects.filter(deleted=False, status__in=stat, user = EcomUser.objects.get(user = get_user_model().objects.get(username = user)), ordered_at__range=(ord_after, ord_before)).order_by('-ordered_at')
+            if get_user_model().objects.filter(deleted = False, username = user).exists():
+                items = Order.objects.filter(deleted=False, status__in=stat, user = EcomUser.objects.get(user = get_user_model().objects.get(username = user)), ordered_at__range=(ord_after, ord_before)).order_by('-ordered_at')
+            else:
+                items = { }
     except (ValueError, ValidationError) as e:
         traceback.print_exc()
-        context['items'] = ''
+        items = { }
 
     # Display order page
-
-    paginator = Paginator(items, ORDERS_PER_PAGE)
-
-    page = paginator.get_page(page)
-
-    pages = give_pages(paginator, page)
-
+    if items:
+        paginator = Paginator(items, ORDERS_PER_PAGE)
+        page = paginator.get_page(page)
+        pages = give_pages(paginator, page)
+        context['paginator'] = paginator
+        context['page'] = page
+        context['pages'] = pages
+        context['items'] = page.object_list
+    
     statuses = { }
 
     for orderstatus in Order.OrderStatus.choices:
         statuses[orderstatus[0]] = orderstatus[1]
             
-    context['paginator'] = paginator
-    context['page'] = page
-    context['pages'] = pages
-    context['products'] = Product.objects.all()
-    context['users'] = EcomUser.objects.all()
     context['statuses'] = statuses
-    context['items'] = page.object_list
-    context['selected'] = 'orders' # November 13, 2021 - 19:40:24 - %B %d, %Y - %H:%M:%S
+    context['selected'] = 'orders'
     return render(request, 'admin1/orders.html', context)
 
 @admin_only
@@ -594,7 +608,7 @@ def adminDelProduct(request):
     ids = request.POST.getlist('id')
 
     for id in ids:
-        Product.objects.filter(deleted=False, id = id).ecom_delete()
+        Product.objects.filter(deleted=False, hide = False, id = id).ecom_delete()
     
     messages.success(request, 'product_deleted')
     return redirect('adminProducts')
@@ -650,8 +664,7 @@ def adminEditOrder(request, orderid):
             statuses[orderstatus[0]] = orderstatus[1]
 
         context = {
-            'order': Order.objects.get(id = orderid),
-            'products': Product.objects.all(),
+            'order': Order.objects.get(id = orderid, deleted = False),
             'selected': 'orders',
             'statuses': statuses
         }
@@ -818,6 +831,15 @@ def adminAccountsPage(request, page):
     return render(request, 'admin1/accounts.html', context)
 
 @admin_only
+def adminAccountsGet(request):
+    # Get values
+    user = request.GET.get['term']
+
+    items = EcomUser.objects.filter(deleted = False, user__username__istartswith=user).values(value=F('user__username'))
+
+    return JsonResponse(list(items), safe=False)
+
+@admin_only
 def adminDelAccount(request):
     id = request.POST.get('id', '')
     ecom_user = EcomUser.objects.filter(deleted=False, id=id)
@@ -835,9 +857,6 @@ def adminReportPage(request, page):
     statuses = { }
     REPORTS_PER_PAGE = 20
 
-    products = request.GET.getlist('product[]')
-    user = request.GET.get('user', '')
-    country = request.GET.get('country', '')
     status = request.GET.get('stat', '-1')
     ord_after = request.GET.get('ord-after', '0')
     ord_before = request.GET.get('ord-before', '0')
@@ -856,13 +875,12 @@ def adminReportPage(request, page):
             status = Order.OrderStatus.values
         else:
             status = [int(status)]
-        if products:
-            conditions = Q()
-            for product in products:
-                conditions |= Q(items__product__name__icontains = product)
-            items = Order.objects.filter(conditions, deleted=False, status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before)).order_by('-ordered_at')
-        else:
-            items = Order.objects.filter(deleted=False, status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before)).order_by('-ordered_at')
+        # items = Order.objects.annotate(start_day=Trunc('ordered_at', 'month', output_field=DateTimeField())).filter(deleted=False, status__in = status, ordered_at__range=(ord_after, ord_before)).values('start_day').annotate(orders=Count('id'))
+        items = Order.objects \
+        .annotate(items_count=Count('items')) \
+        .filter(deleted=False, status__in = status, ordered_at__range=(ord_after, ord_before)) \
+        .annotate(start_day=Trunc('ordered_at', 'month', output_field=DateTimeField())) \
+        .values('start_day').annotate(orders=Count('id'))
     except Exception as e:
         traceback.print_exc()
         items = { }
@@ -881,7 +899,6 @@ def adminReportPage(request, page):
     context['pages'] = pages
     context['items'] = page.object_list
     context['statuses'] = statuses
-    context['items'] = items
     context['selected'] = 'report'
 
     return render(request, 'admin1/report.html', context)

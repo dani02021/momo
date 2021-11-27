@@ -33,10 +33,15 @@
 </div>
 {% endif %}
 {% endfor %}
+<style>
+  .ui-autocomplete-loading {
+    background: white url("{% static 'img/ui-anim_basic_16x16.gif' %}") right center no-repeat;
+  }
+</style>
 <div class="container mt-5">
   <div class="row tm-content-row">
     <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
-      <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 850px;">
+      <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1000px;">
         <h2 class="tm-block-title">Orders</h2>
         <div class="container">
           <form action="/administration/orders/" method="get" onsubmit="checkOrderFilter(this);">
@@ -182,12 +187,8 @@
             </select>
           </div>
           <label>User:</label>
-          <div>
-            <select id="add-order-users" name="user">
-              {% for user in users %}
-              <option value="{{ user.user.username }}">{{ user.user.username }}</option>
-              {% endfor %}
-            </select>
+          <div class="ui-widget">
+            <input name="user" id="user">
           </div>
           <label>Status:</label>
           <div>
@@ -220,11 +221,7 @@
         <div class="modal-body">
           <label>Product:</label>
           <div>
-            <select id="orderitem-select" name="items">
-              {% for product in products %}
-              <option value="{{ product.id }}">{{ product.name }}</option>
-              {% endfor %}
-            </select>
+            <input name="product" id="product">
           </div>
           <label>Quantity:</label>
           <div>
@@ -326,6 +323,45 @@
           elem.disabled = true;
       }
     }
+
+    // Users autocomplete
+    $( function() {
+    var cache = {};
+    $( "#user" ).autocomplete({
+      source: "/administration/accounts/get/",
+      minLength: 3,
+      source: function( request, response ) {
+        var term = request.term;
+        if ( term in cache ) {
+          response( cache[ term ] );
+          return;
+        }
+ 
+        $.getJSON( "/administration/accounts/get/", request, function( data, status, xhr ) {
+          cache[ term ] = data;
+          response( data );
+        });
+      }
+    });
+
+    var cache1 = {};
+    $( "#product" ).autocomplete({
+      source: "/administration/products/get/",
+      minLength: 2,
+      source: function( request, response ) {
+        var term = request.term;
+        if ( term in cache1 ) {
+          response( cache1[ term ] );
+          return;
+        }
+ 
+        $.getJSON( "/administration/products/get/", request, function( data, status, xhr ) {
+          cache1[ term ] = data;
+          response( data );
+        });
+      }
+    });
+  } );
   </script>
 
   {% endblock %}
