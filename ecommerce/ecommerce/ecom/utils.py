@@ -76,6 +76,7 @@ def orderQtyRem(cart):
         if item.product.quantity < item.quantity:
             raise NotEnoughQuantityException(item.product + " has only " + item.product.quantity + " qty, but order #" + cart.id + " is trying to order " + item.quantity + "!")
         item.product.quantity -= item.quantity
+        item.product.save()
         item.save()
 
     cart.save()

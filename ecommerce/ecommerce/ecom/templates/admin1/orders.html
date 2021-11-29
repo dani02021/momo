@@ -49,21 +49,22 @@
               <div class="col">
                 <select name="stat" class="form-select">
                   <option value="-1" selected disabled>Select status:</option>
+                  {{ pass_stat }}
                   {% for key, stat in statuses.items %}
-                  <option value="{{ key }}">{{ stat }}</option>
+                  <option value="{{ key }}" {% if stat|stringformat:'s' == pass_stat|stringformat:'s' %} selected {% endif %}>{{ stat }}</option>
                   {% endfor %}
                 </select>
               </div>
               <div class="col-sm-3">
-                <input name="user" class="form-select" style="background-image: none" placeholder="User">
-              </div>
-              <div class="col-sm-3">
-                <input name="ord-after" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="Ordered after" type="datetime-local">
+                <input name="user" class="form-select" style="background-image: none" placeholder="User" value="{{ pass_user }}">
               </div>
               <div class="col-sm-3">
                 <input name="ord-before" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="Ordered before" type="datetime-local"><br>
+                  title="Ordered before" type="datetime-local" value="{{ pass_ord_before }}">
+              </div>
+              <div class="col-sm-3">
+                <input name="ord-after" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
+                  title="Ordered after" type="datetime-local" value="{{ pass_ord_after }}"><br>
               </div>
             </div>
             <div class="row" style="margin-bottom: 12px;">
@@ -327,7 +328,7 @@
     // Users autocomplete
     $( function() {
     var cache = {};
-    $( "#user" ).autocomplete({
+    $( "input[name='user']" ).autocomplete({
       source: "/administration/accounts/get/",
       minLength: 3,
       source: function( request, response ) {

@@ -36,20 +36,20 @@
           <form action="/administration/accounts/" method="get" onsubmit="checkAccountFilter(this);">
             <div class="row">
               <div class="col-sm-3">
-                <input class="form-universal" name="user" placeholder="Username">
+                <input class="form-universal" name="user" placeholder="Username" value="{{ pass_user }}">
               </div>
               <div class="col-sm-3">
-                <input name="email" class="form-universal" placeholder="E-mail">
+                <input name="email" class="form-universal" placeholder="E-mail" value="{{ pass_email }}">
               </div>
               <div class="col-sm-3">
-                <input name="country" class="form-universal" placeholder="Country">
+                <input name="country" class="form-universal" placeholder="Country" value="{{ pass_country }}">
               </div>
               <div class="col-sm-1">
-                <input name="staff" class="form-universal" type="checkbox">
+                <input name="staff" class="form-universal" type="checkbox" {% if pass_staff == 'on' %} checked {% endif %}>
                 <label style="color: white;">Staff</label>
               </div>
               <div class="col-sm-1">
-                <input name="active" class="form-universal" type="checkbox">
+                <input name="active" class="form-universal" type="checkbox" {% if pass_active == 'on' %} checked {% endif %}>
                 <label style="color: white;">Active</label>
               </div>
             </div>
@@ -225,7 +225,7 @@
     </div>
   </div>
 </div>
-<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="rem-account tabindex=" -1"
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="rem-account" tabindex="-1"
   aria-labelledby="rem-account" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">

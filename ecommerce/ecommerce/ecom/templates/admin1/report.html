@@ -19,19 +19,19 @@
             <div class="row">
               <div class="col-sm-4">
                 <input name="ord-before" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="Ordered before" type="datetime-local"><br>
+                  title="Ordered before" type="datetime-local" value="{{ pass_order_before }}">
               </div>
               <div class="col-sm-4">
                 <input name="ord-after" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="Ordered after" type="datetime-local">
+                  title="Ordered after" type="datetime-local" value="{{ pass_order_after }}"><br>
               </div>
               <div class="col-sm-4">
-                <select name="time-group" class="form-select">
+                <select name="timegroup" class="form-select">
                   <option value="-1" selected disabled>Group By:</option>
-                  <option value="0">Day</option>
-                  <option value="1">Week</option>
-                  <option value="2">Month</option>
-                  <option value="3">Year</option>
+                  <option value="0" {% if pass_timegroup == 'day' %} selected {% endif %}>Day</option>
+                  <option value="1" {% if pass_timegroup == 'week' %} selected {% endif %}>Week</option>
+                  <option value="2" {% if pass_timegroup == 'month' %} selected {% endif %}>Month</option>
+                  <option value="3" {% if pass_timegroup == 'year' %} selected {% endif %}>Year</option>
                 </select>
               </div>
             </div>
@@ -47,7 +47,6 @@
           <table id="table1" class="table table-hover tm-table-small tm-product-table">
             <thead>
               <tr>
-                <th scope="col">&nbsp;</th>
                 <th scope="col">TIMESTAMP</th>
                 <th scope="col">ORDERS</th>
                 <th scope="col">PRODUCTS</th>
@@ -57,7 +56,6 @@
             <tbody>
               {% for item in items %}
               <tr>
-                <th scope="row"><input type="checkbox" /></th>
                 <td><b>{{ item.start_day }}</b></td>
                 <td id="id"><b>{{ item.orders }}</b></td>
                 <td>

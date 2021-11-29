@@ -36,6 +36,8 @@ urlpatterns = [
     path('administration/products/remove-cat/', views.adminRemoveCat, name='adminRemoveCat'),
     path('administration/products/add-cat/', views.adminAddCat, name='adminAddCat'),
     path('administration/accounts/', views.adminAccounts, name='adminAccounts'),
+    path('administration/accounts/add/', views.adminAddAccount, name='adminAddAccounts'),
+    path('administration/accounts/del/', views.adminDelAccount, name='adminDelAccounts'),
     path('administration/accounts/<int:page>/', views.adminAccountsPage, name='adminAccountsPage'),
     path('administration/accounts/get/', views.adminAccountsGet, name='adminAccountsGet'),
     url(r'^activate_account/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,50})/$',

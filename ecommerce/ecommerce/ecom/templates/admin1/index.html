@@ -124,10 +124,10 @@
                 <table class="table">
                     <thead>
                         <tr>
+                            <th scope="col">TIMESTAMP</th>
                             <th scope="col">ORDER NO.</th>
                             <th scope="col">USER</th>
                             <th scope="col">PRODUCTS</th>
-                            <th scope="col">ORDERED</th>
                             <th scope="col">STATUS</th>
                             <th scope="col">&nbsp;</th>
                         </tr>
@@ -136,10 +136,10 @@
                         {% for item in items %}
                         {% if item.status|stringformat:'s' != '0' %}
                         <tr>
+                            <td>{{ item.ordered_at }}</td>
                             <th scope="row"><b>#{{ item.id }}</b></th>
                             <td class="tm-product-name">{{ item.user.user.username }}</td>
                             <td>{{ item.get_items_count }}</td>
-                            <td>{{ item.ordered_at }}</td>
                             <td>
                                 {% if item.status|stringformat:'s' == '1' %}
                                 <div class="tm-status-circle pending"></div>
@@ -154,7 +154,7 @@
                                 {% endif %}
                                 {{ item.get_status_display }}
                             </td>
-                            <td><a href="/administration/edit-order/{{ item.id }}" class="tm-order-edit-link">
+                            <td><a href="/administration/orders/edit/{{ item.id }}" class="tm-order-edit-link">
                                     <i class="far fa-edit tm-order-edit-icon"></i>
                                 </a>
                             </td>

@@ -338,20 +338,22 @@
 <script>
     const filters = document.getElementsByClassName('filters')[0];
 
-    for (var c = 0; c < filters.children.length; c++) {
-        var filter = filters.children[c]
-        var ele = filter.querySelectorAll(".btn-group > input.btn-check");
+    if(filters) {
+        for (var c = 0; c < filters.children.length; c++) {
+            var filter = filters.children[c]
+            var ele = filter.querySelectorAll(".btn-group > input.btn-check");
 
-        for (let i = 0; i < ele.length; i++) {
-            ele[i].addEventListener("click", function () {
-                ele[i].checked = true
-
-                for (var v = 0; v < ele.length; v++) {
-                    if (ele[v] !== ele[i]) {
-                        ele[v].checked = false
+            for (let i = 0; i < ele.length; i++) {
+                ele[i].addEventListener("click", function () {
+                    ele[i].checked = true
+                    
+                    for (var v = 0; v < ele.length; v++) {
+                        if (ele[v] !== ele[i]) {
+                            ele[v].checked = false
+                        }
                     }
-                }
-            });
+                });
+            }
         }
     }
 </script>

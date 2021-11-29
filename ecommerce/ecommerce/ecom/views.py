@@ -1,12 +1,13 @@
 from datetime import datetime
 import os
 from django.contrib import auth
+from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
 from django.core.checks.messages import Error
 from django.db.models.aggregates import Sum
 from django.db.models.fields import DateTimeField
 from django.http import request
-from django.http.response import HttpResponse, JsonResponse
+from django.http.response import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth import authenticate, get_user, get_user_model
 from django.contrib.auth import login as auth_login
@@ -22,6 +23,8 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+
+from tempfile import NamedTemporaryFile
 
 from ecom.tokens import account_activation_token
 
@@ -410,7 +413,7 @@ def captureOrder(request):
             return validate_status(request, uid, order_id, order)
         return JsonResponse({'msg': 'redirect', 'status': 'redirect'})
     except Exception as e:
-        # Save to DB
+        traceback.print_exc()
         pass
 
 def administration(request):
@@ -442,13 +445,25 @@ def adminProducts(request):
     return adminProductsPage(request, 1)
 @admin_only
 def adminProductsPage(request, page):
+    context = { }
+    PRODUCTS_PER_PAGE = 20
+
     # Get values
     category = request.GET.get('category', '')
     name = request.GET.get('name', '')
-    min_price = request.GET.get('min-price', '0')
-    max_price = request.GET.get('max-price', '9999.99')
+    min_price = request.GET.get('min-price', '')
+    max_price = request.GET.get('max-price', '')
 
-     # Check the values
+    context['pass_name'] = name
+    context['pass_minprice'] = min_price
+    context['pass_maxprice'] = max_price
+
+    # Check the values
+    if min_price == '':
+        min_price = '0'
+    if max_price == '':
+        max_price = '9999.99'
+    
     try:
         if float(min_price) > 9999.99 or float(min_price) < 0 \
             or float(max_price) > 9999.99 or float(max_price) < 0:
@@ -458,8 +473,6 @@ def adminProductsPage(request, page):
         traceback.print_exc()
         return redirect('adminProducts')
     
-    PRODUCTS_PER_PAGE = 20
-
     if category == '':
         items = Product.objects.filter(hide=False, deleted=False, name__icontains=name, discount_price__gte=min_price, discount_price__lte=max_price).order_by('-created_at')
     else:
@@ -471,14 +484,16 @@ def adminProductsPage(request, page):
 
     pages = give_pages(paginator, page)
     
-    context = {
-        'paginator': paginator,
-        'page': page,
-        'pages': pages,
-        'categories': Category.objects.all(),
-        'items': page.object_list,
-        'selected': 'products'
-    }
+    context['paginator'] = paginator
+    context['page'] = page
+    context['pages'] =pages
+    context['categories'] = Category.objects.all()
+    context['items'] = page.object_list
+    context['selected'] = 'products'
+
+    if(category != ''):
+        context['pass_cat'] = Category.objects.get(id=category).name
+    
     return render(request, 'admin1/products.html', context)
 
 @admin_only
@@ -500,36 +515,44 @@ def adminOrdersPage(request, page):
     items = Order.objects.filter(deleted=False, status__gte=1).order_by('-ordered_at')
     ORDERS_PER_PAGE = 20
     # Get values
-    stat = request.GET.get('stat', '-1')
+    stat = request.GET.get('stat', '')
     user = request.GET.get('user', '')
-    ord_after = request.GET.get('ord-after', '0')
-    ord_before = request.GET.get('ord-before', '0')
+    ord_after = request.GET.get('ord-after', '')
+    ord_before = request.GET.get('ord-before', '')
 
     try:
-        if(ord_after == '0'):
+        if(ord_after == ''):
             ord_after = timezone.make_aware(datetime.fromisoformat('2000-01-01'))
+            context['pass_ord_after'] = ''
         else:
             ord_after = timezone.make_aware(datetime.strptime(ord_after, '%Y-%m-%dT%H:%M'))
-        if(ord_before == '0'):
+            context['pass_ord_after'] = ord_after.strftime('%Y-%m-%dT%H:%M')
+        if(ord_before == ''):
             ord_before = timezone.make_aware(datetime.now())
+            context['pass_ord_before'] = ''
         else:
             ord_before = timezone.make_aware(datetime.strptime(ord_before, '%Y-%m-%dT%H:%M'))
+            context['pass_ord_before'] = ord_before.strftime('%Y-%m-%dT%H:%M')
         
-        if stat == '-1':
+        if stat == '':
             stat = Order.OrderStatus.values
+            context['pass_stat'] = ''
         else:
             stat = [int(stat)]
+            context['pass_stat'] = Order.OrderStatus.choices[stat[0]][1]
 
         if user == '':
             items = Order.objects.filter(deleted=False, status__in=stat, ordered_at__range=(ord_after, ord_before)).order_by('-ordered_at')
         else:
-            if get_user_model().objects.filter(deleted = False, username = user).exists():
+            if get_user_model().objects.filter(username = user).exists():
                 items = Order.objects.filter(deleted=False, status__in=stat, user = EcomUser.objects.get(user = get_user_model().objects.get(username = user)), ordered_at__range=(ord_after, ord_before)).order_by('-ordered_at')
             else:
                 items = { }
     except (ValueError, ValidationError) as e:
         traceback.print_exc()
         items = { }
+    
+    context['pass_user'] = user
 
     # Display order page
     if items:
@@ -806,8 +829,10 @@ def adminAccountsPage(request, page):
     try:
         if staff == 'on':
             staff = [True]
+            context['pass_staff'] = 'on'
         if active == 'on':
             active = [True]
+            context['pass_active'] = 'on'
         
         items = EcomUser.objects.filter(deleted=False, user__username__icontains = user, user__email__icontains = email, user__is_staff__in = staff, user__is_active__in = active, country__icontains = country).order_by('-user__date_joined')
     except (ValueError, ValidationError) as e:
@@ -821,7 +846,11 @@ def adminAccountsPage(request, page):
     page = paginator.get_page(page)
 
     pages = give_pages(paginator, page)
-            
+    
+    context['pass_user'] = user
+    context['pass_email'] = email
+    context['pass_country'] = country
+
     context['paginator'] = paginator
     context['page'] = page
     context['pages'] = pages
@@ -833,7 +862,7 @@ def adminAccountsPage(request, page):
 @admin_only
 def adminAccountsGet(request):
     # Get values
-    user = request.GET.get['term']
+    user = request.GET['term']
 
     items = EcomUser.objects.filter(deleted = False, user__username__istartswith=user).values(value=F('user__username'))
 
@@ -841,13 +870,38 @@ def adminAccountsGet(request):
 
 @admin_only
 def adminDelAccount(request):
-    id = request.POST.get('id', '')
-    ecom_user = EcomUser.objects.filter(deleted=False, id=id)
+    ids = request.POST.getlist('id', '')
 
-    if(ecom_user.exists()):
+    for id in ids:
+        ecom_user = EcomUser.objects.get(deleted=False, id=id)
         ecom_user.ecom_delete()
     
-    return redirect('adminProducts')
+    messages.success(request, 'account_deleted')
+    return redirect('adminAccounts')
+
+@admin_only
+def adminAddAccount(request):
+    username = request.POST.get('username', '')
+    email = request.POST.get('email', '')
+    first_name = request.POST.get('firstname', '')
+    last_name = request.POST.get('lastname', '')
+    password = request.POST.get('password', '')
+    address = request.POST.get('address', '')
+    country = request.POST.get('country', '')
+
+    if User.objects.filter(Q(username = username) | Q(email = email)).exists():
+        messages.error(request, 'account_exists')
+        return redirect('adminAccounts')
+    
+    user = User.objects.create_user(username, email, password)
+    user.first_name = first_name
+    user.last_name = last_name
+    user.save()
+
+    EcomUser.objects.create(user = user, address = address, country = country, email_confirmed = True)
+    
+    messages.success(request, 'account_created')
+    return redirect('adminAccounts')
 
 def adminReport(request):
     return adminReportPage(request, 1)
@@ -857,30 +911,41 @@ def adminReportPage(request, page):
     statuses = { }
     REPORTS_PER_PAGE = 20
 
-    status = request.GET.get('stat', '-1')
     ord_after = request.GET.get('ord-after', '0')
     ord_before = request.GET.get('ord-before', '0')
+    groupby = request.GET.get('timegroup', '')
 
     try:
         if(ord_after == '0'):
             ord_after = timezone.make_aware(datetime.fromisoformat('2000-01-01'))
+            context['pass_order_after'] = ''
         else:
             ord_after = timezone.make_aware(datetime.strptime(ord_after, '%Y-%m-%dT%H:%M'))
+            context['pass_order_after'] = ord_after.strftime('%Y-%m-%dT%H:%M')
         if(ord_before == '0'):
             ord_before = timezone.make_aware(datetime.now())
+            context['pass_order_before'] = ''
         else:
             ord_before = timezone.make_aware(datetime.strptime(ord_before, '%Y-%m-%dT%H:%M'))
+            context['pass_order_before'] = ord_before.strftime('%Y-%m-%dT%H:%M')
         
-        if status == '-1':
-            status = Order.OrderStatus.values
-        else:
-            status = [int(status)]
-        # items = Order.objects.annotate(start_day=Trunc('ordered_at', 'month', output_field=DateTimeField())).filter(deleted=False, status__in = status, ordered_at__range=(ord_after, ord_before)).values('start_day').annotate(orders=Count('id'))
+        if groupby == '':
+            groupby = 'month'
+        elif groupby == '0':
+            groupby = 'day'
+        elif groupby == '1':
+            groupby = 'week'
+        elif groupby == '2':
+            groupby = 'month'
+        elif groupby == '3':
+            groupby = 'year'
+        
         items = Order.objects \
-        .annotate(items_count=Count('items')) \
-        .filter(deleted=False, status__in = status, ordered_at__range=(ord_after, ord_before)) \
-        .annotate(start_day=Trunc('ordered_at', 'month', output_field=DateTimeField())) \
-        .values('start_day').annotate(orders=Count('id'))
+            .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
+            .annotate(start_day=Trunc('ordered_at', groupby)) \
+            .values('start_day') \
+            .order_by('-start_day') \
+            .annotate(orders=Count('id'))
     except Exception as e:
         traceback.print_exc()
         items = { }
@@ -894,6 +959,7 @@ def adminReportPage(request, page):
 
     pages = give_pages(paginator, page)
     
+    context['pass_timegroup'] = groupby
     context['paginator'] = paginator
     context['page'] = page
     context['pages'] = pages
@@ -904,12 +970,9 @@ def adminReportPage(request, page):
     return render(request, 'admin1/report.html', context)
 
 def adminReportExcel(request):
-    products = request.GET.getlist('product[]')
-    user = request.GET.get('user', '')
-    country = request.GET.get('country', '')
-    status = request.GET.get('stat', '-1')
     ord_after = request.GET.get('ord-after', '0')
     ord_before = request.GET.get('ord-before', '0')
+    groupby = request.GET.get('timegroup', '')
 
     try:
         if(ord_after == '0'):
@@ -921,19 +984,41 @@ def adminReportExcel(request):
         else:
             ord_before = timezone.make_aware(datetime.strptime(ord_before, '%Y-%m-%dT%H:%M'))
         
-        if status == '-1':
-            status = Order.OrderStatus.values
-        else:
-            status = [int(status)]
-        if products:
-            conditions = Q()
-            for product in products:
-                conditions |= Q(items__product__name__icontains = product)
-            items = Order.objects.filter(conditions, deleted=False, status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before))
-        else:
-            items = Order.objects.filter(deleted=False, status__in = status, user__user__username__icontains = user, user__country__icontains = country, ordered_at__range=(ord_after, ord_before))
+        if groupby == '':
+            groupby = 'month'
+        elif groupby == '0':
+            groupby = 'day'
+        elif groupby == '1':
+            groupby = 'week'
+        elif groupby == '2':
+            groupby = 'month'
+        elif groupby == '3':
+            groupby = 'year'
+        
+        items = Order.objects \
+            .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
+            .annotate(start_day=Trunc('ordered_at', groupby)) \
+            .values('start_day') \
+            .order_by('-start_day') \
+            .annotate(orders=Count('id')) \
+            .values_list("start_day", "orders")
     except Exception as e:
         traceback.print_exc()
         return None
+    
+    f = NamedTemporaryFile(delete=True, mode='w+')
 
-    return render_to_csv_response(items, filename="report_" + timezone.make_aware(datetime.now()).strftime('%Y%m%d%H:%M'))
+    f.write("timestamp,orders\n")
+    f.flush()
+    
+    for item in items:
+        f.write(
+            "" + item[0].strftime('%Y-%m-%dT%H:%M') + "," + str(item[1]) + "\n"
+        )
+        f.flush()
+
+    response = HttpResponse(open(f.name, mode='r').read(), content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename='+datetime.now().strftime("%Y-%m-%d_%H:%M.csv")
+
+    return response
+    #return render_to_csv_response(items, filename="report_" + timezone.make_aware(datetime.now()).strftime('%Y%m%d%H:%M'))
