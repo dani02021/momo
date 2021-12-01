@@ -6,12 +6,29 @@
 <label for="n">n:</label><br>
 <input id="n" type="number" placeholder="n"><br>
 <button type="button" id="btn">Generate</button><br><br>
-<label id="count" type="number">Length: 0 meters</label><br>
+<label id="count" type="number">Length:</label><br>
 <label id="unique" type="number">Unique distances num:</label><br><br>
 <canvas id="canvas"></canvas>
 </body>
 
 <script>
+var maxpointa, maxpointb = 0
+
+class Point {
+	constructor(x, y) {
+		this.x = x;
+		this.y = y;
+	}
+
+  get disabled() {
+    return this._disabled;
+  }
+
+  set disabled(disable) {
+    this._disabled = disable;
+  }
+}
+
 document.getElementById("btn").onclick = function() {
   var canvas = document.getElementById('canvas');
   var ctx = canvas.getContext('2d');
@@ -22,6 +39,11 @@ document.getElementById("btn").onclick = function() {
   var n = parseInt(document.getElementById('n').value)
   var w = canvas.width = 6000;
   var h = canvas.height = 6000;
+
+  if(n < 0 || n > 20_000) {
+    alert('error in args: 0<n<20 000');
+    return;
+  }
 
   with(ctx) {
       for(i = 0; i < n; i++) {
@@ -38,11 +60,105 @@ document.getElementById("btn").onclick = function() {
       lineTo(START_LOCATION, START_LOCATION)
       stroke()
 
-      draw()
-  }
+      algo(ctx, n)
 
-  document.getElementById('count').innerHTML = 'Length: ' + (n - count) + ' meters    ';
+      beginPath()
+      ctx.strokeStyle = "#ff0000"
+      moveTo(START_LOCATION + maxpointa * POINT_DIST, START_LOCATION + maxpointb * POINT_DIST)
+      lineTo(START_LOCATION + maxpointc * POINT_DIST, START_LOCATION + maxpointd * POINT_DIST)
+      stroke()
+  }
 }
+
+function algo(ctx, a) {
+		indexPoint = 0;
+		
+    points = new Array((a+1)*(a+1))
+		
+		for(x = 0; x <= a; x++) {
+			for(y = 0; y <= a; y++) {
+				if(y > x)
+					continue;
+				points[++indexPoint] = new Point(x, y);
+			}
+		}
+
+    max = 0;
+		var uniques = new Set();
+
+    for(i = 0; i < indexPoint; i++) {
+			a1 = points[i];
+			
+			for(z = 0; z < indexPoint; z++) {
+				b = points[z];
+				
+				if(a1 == null || b == null || a1.disabled || b.disabled)
+					continue;
+				
+				if(a1.x == b.x || a1.y == b.y)
+					continue;
+				
+				xpos = Math.abs(a1.x - b.x);
+				ypos = Math.abs(a1.y - b.y);
+				dist = isPerfectSquare( parseInt(xpos * xpos + ypos * ypos));
+				
+				if(dist == -1)
+					continue;
+				
+				distI = parseInt(dist);
+
+				if(max < distI) {
+          globalThis.maxpointa = a1.x;
+          globalThis.maxpointb = a1.y;
+          globalThis.maxpointc = b.x;
+          globalThis.maxpointd = b.y;
+          max = distI;
+        }
+				
+				uniques.add(distI);
+			}
+			if(a1 != null)
+				a1.disabled = true;
+		}
+
+    document.getElementById('count').innerHTML = 'Length: ' + max + ' meters'
+    document.getElementById('unique').innerHTML = 'Unique distances num: ' + uniques.size
+}
+
+function isPerfectSquare(n)
+	{
+		x = n;
+		// Divide out powers of 4 using binary search
+	    if((x & 4294967295) == 0)
+	        x >>= 32;
+	    if((x & 65535) == 0)
+	        x >>= 16;
+	    if((x & 255) == 0)
+	        x >>= 8;
+	    if((x & 15) == 0)
+	        x >>= 4;
+	    if((x & 3) == 0)
+	        x >>= 2;
+
+	    if((x & 7) != 1)
+	        return -1;
+	    
+	    if (n < 0)
+	        return -1;
+
+	    switch(parseInt(n & 0xF))
+	    {
+	    case 0: case 1: case 4: case 9:
+	        tst = Math.sqrt(n);
+	        tstI = parseInt(tst);
+	        if(tstI*tstI == n)
+	        	return tst;
+	        return -1;
+
+	    default:
+	        return -1;
+	    }
+	}
 
 </script>
 </body>

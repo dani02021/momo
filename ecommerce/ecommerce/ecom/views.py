@@ -944,8 +944,18 @@ def adminReportPage(request, page):
             .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
             .annotate(start_day=Trunc('ordered_at', groupby)) \
             .values('start_day') \
+            .annotate(orders=Count('id')) \
             .order_by('-start_day') \
-            .annotate(orders=Count('id'))
+            .values('start_day', 'orders')
+        
+        """items1 = Order.objects \
+            .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
+            .annotate(start_day=Trunc('ordered_at', groupby)) \
+            .values('start_day') \
+            .annotate(products=Count('items')) \
+            .order_by('-start_day') \
+            .values('start_day', 'products')"""
+        
     except Exception as e:
         traceback.print_exc()
         items = { }
@@ -995,13 +1005,20 @@ def adminReportExcel(request):
         elif groupby == '3':
             groupby = 'year'
         
-        items = Order.objects \
+        """items = Order.objects \
             .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
             .annotate(start_day=Trunc('ordered_at', groupby)) \
             .values('start_day') \
             .order_by('-start_day') \
             .annotate(orders=Count('id')) \
-            .values_list("start_day", "orders")
+            .values_list("start_day", "orders")"""
+        items = Order.objects \
+            .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
+            .annotate(start_day=Trunc('ordered_at', groupby)) \
+            .values('start_day') \
+            .order_by('-start_day') \
+            .annotate(products=Count('items')) \
+            .values_list("start_day", "products")
     except Exception as e:
         traceback.print_exc()
         return None
