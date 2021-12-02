@@ -133,6 +133,18 @@ document.getElementById("btn").onclick = function() {
 		y = parseInt(vals[1])
 		r = parseInt(vals[2])
 
+		if(x < -10_000 || x > 10_000 || y < -10_000 || y > 10_000) {
+    		alert('error in args: -10 000<x,y<10 000');
+			clearRect(0, 0, w, h)
+    		return;
+  		}
+
+		if(r < 1 || r > 10_000) {
+    		alert('error in args: 0<r<10 000');
+			clearRect(0, 0, w, h)
+    		return;
+  		}
+
 		circles.push(new Circle(x, y, r))
 
 		if(index == 0)
