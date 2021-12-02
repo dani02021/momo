@@ -1,33 +1,105 @@
 <html>
 <head>
-<title>Otse4ki</title>
+<title>Round</title>
 </head>
 <body>
 <label for="n">n:</label><br>
 <input id="n" type="number" placeholder="n" min="2" max="1000" onchange="makeInputs(this);"><br>
 <div id="circles"></div>
 <button type="button" id="btn">Generate</button><br><br>
-<label id="count" type="number">Length:</label><br>
-<label id="unique" type="number">Unique distances num:</label><br><br>
+<label id="count">Count:</label><br>
 <canvas id="canvas"></canvas>
 </body>
 
 <script>
-var maxpointa, maxpointb = 0
+var lines = 0
 
-class Point {
-	constructor(x, y) {
+function Graph() {
+  var neighbors = this.neighbors = {}; // Key = vertex, value = array of neighbors.
+
+  this.addEdge = function (u, v) {
+    if (neighbors[u] === undefined) {  // Add the edge u -> v.
+      neighbors[u] = [];
+    }
+    neighbors[u].push(v);
+  };
+
+  return this;
+}
+function bfs(graph, source) {
+  var queue = [ { vertex: source, count: 0 } ],
+      visited = { source: true },
+      tail = 0;
+  while (tail < queue.length) {
+    var u = queue[tail].vertex,
+        count = queue[tail++].count;  // Pop a vertex off the queue.
+    console.log('distance from ' + source + ' to ' + u + ': ' + count);
+	lines = count
+    graph.neighbors[u].forEach(function (v) {
+      if (!visited[v]) {
+        visited[v] = true;
+        queue.push({ vertex: v, count: count + 1 });
+      }
+    });
+  }
+}
+function shortestPath(graph, source, target) {
+  if (source == target) {   // Delete these four lines if
+    console.log(source);          // you want to look for a cycle
+    return;                 // when the source is equal to
+  }                         // the target.
+  var queue = [ source ],
+      visited = { source: true },
+      predecessor = {},
+      tail = 0;
+  while (tail < queue.length) {
+    var u = queue[tail++],  // Pop a vertex off the queue.
+        neighbors = graph.neighbors[u];
+    for (var i = 0; i < neighbors.length; ++i) {
+      var v = neighbors[i];
+      if (visited[v]) {
+        continue;
+      }
+      visited[v] = true;
+      if (v === target) {
+        var path = [ v ];
+        while (u !== source) {
+          path.push(u);
+          u = predecessor[u];
+        }
+        path.push(u);
+        path.reverse();
+        return;
+      }
+      predecessor[v] = u;
+      queue.push(v);
+    }
+  }
+  count = -1;
+}
+
+class Circle {
+	constructor(x, y, r) {
 		this.x = x;
 		this.y = y;
+		this.r = r;
 	}
 
-  get disabled() {
-    return this._disabled;
-  }
+	intersect(b) {
+		if (this == b)
+			return false;
 
-  set disabled(disable) {
-    this._disabled = disable;
-  }
+		this.d = calcDist(this, b);
+
+		if ((this.d == 0 && this.r == b.r) || (this.d >= this.r + b.r) || (this.d <= Math.abs(this.r - b.r)))
+			return false;
+		
+		return true;
+	}
+
+	toString() {
+		return '(' + this.x + ',' + this.y + ')';
+	}
 }
 
 document.getElementById("btn").onclick = function() {
@@ -35,88 +107,70 @@ document.getElementById("btn").onclick = function() {
   var ctx = canvas.getContext('2d');
 
   var n = parseInt(document.getElementById('n').value)
-  var w = canvas.width = 600;
-  var h = canvas.height = 600;
+  var w = canvas.width = 2000;
+  var h = canvas.height = 2000;
 
-  var CENTER = (w+h) / 4
-  var MULTI = 10
+  var CENTER = (w+h) / 10
+  var MULTI = 25
+  
+  var graph = new Graph();
 
   if(n < 2 || n > 1_000) {
     alert('error in args: 1<n<1 001');
     return;
   }
 
+  circles = []
+
   with(ctx) {
+	  index = 0
 	  for (elem of document.getElementById('circles').childNodes) {
-		  if(elem.tagName.toLowerCase() !== 'input')
-		  	continue;
+		if(elem.tagName.toLowerCase() !== 'input')
+			continue;
 
-		  vals = elem.value.split(' ')
-		  x = vals[0]
-		  y = vals[1]
+		vals = elem.value.split(' ')
+		x = parseInt(vals[0])
+		y = parseInt(vals[1])
+		r = parseInt(vals[2])
 
-		  alert(x)
+		circles.push(new Circle(x, y, r))
 
-		  fillRect(CENTER, CENTER, 3, 3)
-		  fillRect(CENTER + 10, CENTER, 3, 3)
-		  //fillRect(parseInt(x) * MULTI + CENTER, parseInt(y) * MULTI + CENTER, 3, 3)
+		if(index == 0)
+			strokeStyle = 'green';
+		else if(index == n - 1)
+		  	strokeStyle = 'red'
+		else
+		  	strokeStyle = 'black'
+		
+		beginPath()
+		arc(CENTER + parseInt(x) * MULTI, CENTER - parseInt(y) * MULTI, r * MULTI, 0, 2 * Math.PI)
+		stroke()
+		
+		index++
 	  }
+
+	  for (i = 0; i < circles.length; i++) {
+			a = circles[i];
+			for (z = 0; z < circles.length; z++) {
+				b = circles[z];
+
+				if (a.intersect(b)) {
+					graph.addEdge(a.toString(), b.toString());
+					
+					strokeStyle = "black"
+					beginPath()
+					moveTo(CENTER + parseInt(a.x) * MULTI, CENTER - parseInt(a.y) * MULTI)
+					lineTo(CENTER + parseInt(b.x) * MULTI, CENTER - parseInt(b.y) * MULTI)
+					stroke()
+				}
+			}
+	  }
+
+	  bfs(graph, '('+circles[0].x+','+circles[0].y+')');
+	  shortestPath(graph, '('+circles[0].x+','+circles[0].y+')', '('+circles[circles.length-1].x+','+circles[circles.length-1].y+')');
+
+	  document.getElementById('count').innerHTML = 'Count: ' + lines
   }
-}
-
-function algo(ctx, a) {
-		indexPoint = 0;
-		
-    points = new Array((a+1)*(a+1))
-		
-		for(x = 0; x <= a; x++) {
-			for(y = 0; y <= a; y++) {
-				if(y > x)
-					continue;
-				points[++indexPoint] = new Point(x, y);
-			}
-		}
-
-    max = 0;
-		var uniques = new Set();
-
-    for(i = 0; i < indexPoint; i++) {
-			a1 = points[i];
-			
-			for(z = 0; z < indexPoint; z++) {
-				b = points[z];
-				
-				if(a1 == null || b == null || a1.disabled || b.disabled)
-					continue;
-				
-				if(a1.x == b.x || a1.y == b.y)
-					continue;
-				
-				xpos = Math.abs(a1.x - b.x);
-				ypos = Math.abs(a1.y - b.y);
-				dist = isPerfectSquare( parseInt(xpos * xpos + ypos * ypos));
-				
-				if(dist == -1)
-					continue;
-				
-				distI = parseInt(dist);
-
-				if(max < distI) {
-          globalThis.maxpointa = a1.x;
-          globalThis.maxpointb = a1.y;
-          globalThis.maxpointc = b.x;
-          globalThis.maxpointd = b.y;
-          max = distI;
-        }
-				
-				uniques.add(distI);
-			}
-			if(a1 != null)
-				a1.disabled = true;
-		}
-
-    document.getElementById('count').innerHTML = 'Length: ' + max + ' meters'
-    document.getElementById('unique').innerHTML = 'Unique distances num: ' + uniques.size
 }
 
 function makeInputs(elem) {
@@ -131,6 +185,10 @@ function makeInputs(elem) {
 		div.appendChild(br)
 	}
 }
+
+function calcDist(a, b) {
+		return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+	}
 </script>
 </body>
 </html>
