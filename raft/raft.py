@@ -9,7 +9,7 @@ def calcCourses(a, capacity):
     b = a.copy()
 
     while True:
-        for i in range(len(b) - 1, 0, -1):
+        for i in range(len(b) - 1, -1, -1):
             num = b[i]
             if capacity < num:
                 # Capacity is too low
