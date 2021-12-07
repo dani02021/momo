@@ -1016,9 +1016,9 @@ def adminReportExcel(request):
             .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
             .annotate(start_day=Trunc('ordered_at', groupby)) \
             .values('start_day') \
+            .annotate(orders=Count('id')) \
             .order_by('-start_day') \
-            .annotate(products=Count('items')) \
-            .values_list("start_day", "products")
+            .values('start_day', 'orders')
     except Exception as e:
         traceback.print_exc()
         return None

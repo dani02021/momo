@@ -84,6 +84,7 @@ def orderQtyRem(cart):
 def orderQtyAdd(cart):
     for item in cart.items.all():
         item.product.quantity += item.quantity
+        item.product.save()
         item.save()
 
     cart.save()
@@ -195,7 +196,7 @@ def validate_status(request, uid, order_id, order):
                 order.result.status != 'APPROVED':
                     return validate_status(request, uid, order_id, order)
             
-            # TODO Now what?
+            # TODO Wait for time and retry
 
 # Random date
 def str_time_prop(start, end, time_format, prop):
