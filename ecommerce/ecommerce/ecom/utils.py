@@ -175,7 +175,7 @@ def validate_status(request, uid, order_id, order):
         return JsonResponse({'msg': 'Your order is completed!', 'status': 'ok'})
     elif order.result.status == 'VOIDED':
         # Order cannot be proceeded
-        return JsonResponse({'msg': 'An error occured while trying to proceed your request! Please contact us!', 'status': 'error'})
+        return JsonResponse({'msg': 'Payment has been rejected, check you bank!', 'status': 'error'})
     elif order.result.status == 'PAYER_ACTION_REQUIRED':
         # Additional action from the user is required
         for link in order.result.links:
@@ -196,7 +196,7 @@ def validate_status(request, uid, order_id, order):
                 order.result.status != 'APPROVED':
                     return validate_status(request, uid, order_id, order)
             
-            # TODO Wait for time and retry
+            # TODO retry
 
 # Random date
 def str_time_prop(start, end, time_format, prop):

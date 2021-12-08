@@ -1018,7 +1018,7 @@ def adminReportExcel(request):
             .values('start_day') \
             .annotate(orders=Count('id')) \
             .order_by('-start_day') \
-            .values('start_day', 'orders')
+            .values_list('start_day', 'orders')
     except Exception as e:
         traceback.print_exc()
         return None
