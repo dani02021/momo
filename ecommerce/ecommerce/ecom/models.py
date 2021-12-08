@@ -101,6 +101,8 @@ class Order(models.Model):
         REFUSED = 3, _('Refused')
         DECLINED = 4, _('Declined')
         COMPLETED = 5, _('Completed')
+        NOT_PAYED = 6, _('Not Payed')
+        PAYER_ACTION_REQUIRED = 7, _('Payer Action Required')
 
         # __empty__ = _('(Unknown)')
     
@@ -108,7 +110,7 @@ class Order(models.Model):
     items = models.ManyToManyField(OrderItem)
     user = models.ForeignKey(EcomUser, on_delete=models.DO_NOTHING)
     ordered_at = models.DateTimeField(blank=True, null=True)
-    status = models.IntegerField(choices=OrderStatus.choices)
+    status = models.IntegerField(choices=OrderStatus.choices, default=OrderStatus.NOT_PAYED)
     deleted = models.BooleanField(default=False)
 
 class OrderItemCookie(models.Model):

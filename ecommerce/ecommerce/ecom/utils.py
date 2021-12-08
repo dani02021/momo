@@ -1,6 +1,7 @@
 from re import U
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.db.models.query_utils import Q
 from django.http.response import HttpResponse, JsonResponse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
@@ -175,9 +176,21 @@ def validate_status(request, uid, order_id, order):
         return JsonResponse({'msg': 'Your order is completed!', 'status': 'ok'})
     elif order.result.status == 'VOIDED':
         # Order cannot be proceeded
-        return JsonResponse({'msg': 'Payment has been rejected, check you bank!', 'status': 'error'})
+        ecom_user = models.EcomUser.objects.get(user=request.user)
+
+        cart = models.Order.objects.filter(
+            user=ecom_user).filter(Q(status=models.Order.OrderStatus.NOT_ORDERED) | Q(status=models.Order.OrderStatus.PAYER_ACTION_REQUIRED))[0]
+        cart.status = models.Order.OrderStatus.DECLINED
+
+        return JsonResponse({'msg': 'The payment has been rejected!', 'status': 'error'})
     elif order.result.status == 'PAYER_ACTION_REQUIRED':
         # Additional action from the user is required
+        ecom_user = models.EcomUser.objects.get(user=request.user)
+
+        cart = models.Order.objects.filter(
+            user=ecom_user, status=models.Order.OrderStatus.NOT_ORDERED)[0]
+        cart.status = models.Order.OrderStatus.PAYER_ACTION_REQUIRED
+
         for link in order.result.links:
             if link.rel == 'payer-action':
                 return JsonResponse({'msg': 'Additional action is required! (3DS Auth?) Please click \
@@ -191,6 +204,9 @@ def validate_status(request, uid, order_id, order):
             # Try again after short period
             time.sleep(2)
             uid, order = capture_order(order_id)
+
+            # Don't change the status of the order
+
             if order.result.status != 'CREATED' and \
                 order.result.status != 'SAVED' and \
                 order.result.status != 'APPROVED':
