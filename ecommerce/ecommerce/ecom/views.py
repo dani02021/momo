@@ -398,16 +398,19 @@ def captureOrder(request):
     try:
         if request.method == "POST":
             order_id = json.loads(request.body)['orderID']
+            ordert = Order.objects.get(deleted = False, user = EcomUser.objects.get(deleted = False, user=request.user), status = Order.OrderStatus.NOT_ORDERED)
             uid, order = capture_order(order_id)
 
             PayPalTransaction.objects.get_or_create (
+                order = ordert.id,
                 transaction_id = order_id,
                 paypal_request_id = uid,
                 status_code = order.status_code,
                 status = order.result.status,
                 email_address = order.result.payer.email_address,
                 first_name = order.result.payer.name.given_name,
-                last_name = order.result.payer.name.surname
+                last_name = order.result.payer.name.surname,
+                price = ordert.get_total()
             )
 
             return validate_status(request, uid, order_id, order)

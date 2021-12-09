@@ -197,12 +197,12 @@ def validate_status(request, uid, order_id, order):
                     <a href='+link.href+' target="_blank" rel="noopener noreferrer">here</a>!', 'status': 'alert'})
                 
         # This should not happen
-        return JsonResponse({'msg': 'Internal server error happened! Please contact support! Transaction id: '+order_id, 'status':'error'})
+        return JsonResponse({'msg': 'Internal server error happened! Please contact support! Transaction ID: '+order_id, 'status':'error'})
     elif order.result.status == 'CREATED' or \
         order.result.status == 'SAVED' or \
         order.result.status == 'APPROVED':
             # Try again after short period
-            time.sleep(2)
+            time.sleep(3)
             uid, order = capture_order(order_id)
 
             # Don't change the status of the order
@@ -212,7 +212,7 @@ def validate_status(request, uid, order_id, order):
                 order.result.status != 'APPROVED':
                     return validate_status(request, uid, order_id, order)
             
-            # TODO retry
+            return JsonResponse({'msg': 'There was an error while processing your order! Please contact support! Transaction ID: ' + order_id, 'status': 'error'})
 
 # Random date
 def str_time_prop(start, end, time_format, prop):
