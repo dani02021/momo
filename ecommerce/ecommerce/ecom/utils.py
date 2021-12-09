@@ -1,6 +1,9 @@
 from re import U
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.core.validators import validate_email
+from django.db.models.aggregates import Count, Sum
+from django.db.models.functions.datetime import Trunc
 from django.db.models.query_utils import Q
 from django.http.response import HttpResponse, JsonResponse
 from django.utils.encoding import force_bytes
@@ -19,6 +22,52 @@ from ecom.PayPalClient import client
 from paypalcheckoutsdk.orders import OrdersCaptureRequest
 
 from ecom.exceptions import NotEnoughQuantityException
+
+# Roles permissions
+roles_perm = {
+    'Admin':[
+        'orders.create',
+        'orders.read',
+        'orders.update',
+        'orders.delete',
+        'products.create',
+        'products.read',
+        'products.update',
+        'products.delete',
+        'accounts.create',
+        'accounts.read',
+        'accounts.update',
+        'accounts.delete',
+        'report.read'
+    ],
+    'Moderator':[
+        'orders.create',
+        'orders.read',
+        'orders.update',
+        'products.create',
+        'products.read',
+        'products.update',
+        'accounts.create',
+        'accounts.read',
+        'accounts.update',
+        'report.read'
+    ],
+    'Vendor':[
+        'orders.create',
+        'orders.read',
+        'products.create',
+        'products.read',
+        'accounts.read'
+    ],
+    'Support':[
+        'orders.read',
+        'orders.update',
+        'products.read',
+        'products.update',
+        'accounts.read',
+        'accounts.update',
+    ]
+}
 
 def validate_form(email, username, password, country):
     validate_email(email)
@@ -91,12 +140,12 @@ def orderQtyAdd(cart):
     cart.save()
 
 def product_delete_images(id):
-    for image in models.ProductImage.objects.filter(product = id):
+    for image in models.ProductImage.objects.filter(product = id).iterator():
         image.deleted = True
         image.save()
 
 def product_delete_variations(id):
-    for var in models.Variation.objects.filter(product = id):
+    for var in models.Variation.objects.filter(product = id).iterator():
         var.deleted = True
         var.save()
 
@@ -170,6 +219,8 @@ def validate_status(request, uid, order_id, order):
             user=ecom_user, status=models.Order.OrderStatus.NOT_ORDERED)[0]
         cart.status = models.Order.OrderStatus.PENDING
         cart.ordered_at = timezone.now()
+        cart.price = cart.get_total()
+        cart.save()
 
         orderQtyRem(cart)
 
@@ -181,6 +232,7 @@ def validate_status(request, uid, order_id, order):
         cart = models.Order.objects.filter(
             user=ecom_user).filter(Q(status=models.Order.OrderStatus.NOT_ORDERED) | Q(status=models.Order.OrderStatus.PAYER_ACTION_REQUIRED))[0]
         cart.status = models.Order.OrderStatus.DECLINED
+        cart.save()
 
         return JsonResponse({'msg': 'The payment has been rejected!', 'status': 'error'})
     elif order.result.status == 'PAYER_ACTION_REQUIRED':
@@ -190,6 +242,7 @@ def validate_status(request, uid, order_id, order):
         cart = models.Order.objects.filter(
             user=ecom_user, status=models.Order.OrderStatus.NOT_ORDERED)[0]
         cart.status = models.Order.OrderStatus.PAYER_ACTION_REQUIRED
+        cart.save()
 
         for link in order.result.links:
             if link.rel == 'payer-action':
@@ -233,4 +286,60 @@ def str_time_prop(start, end, time_format, prop):
 
 
 def random_date(start, end, prop):
-    return str_time_prop(start, end, '%Y-%m-%d %I:%M', prop) 
+    return str_time_prop(start, end, '%Y-%m-%d %I:%M', prop)
+
+def report_items(REPORTS_PER_PAGE, groupby, ord_before, ord_after, page):
+    items1 = models.Order.objects \
+            .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
+            .annotate(start_day=Trunc('ordered_at', groupby)) \
+            .values('start_day') \
+            .annotate(orders=Count('id')) \
+            .order_by('-start_day') \
+            .values('start_day', 'orders')
+    items2 = models.Order.objects \
+            .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
+            .annotate(start_day=Trunc('ordered_at', groupby)) \
+            .values('start_day') \
+            .annotate(products=Count('items')) \
+            .order_by('-start_day') \
+            .values('start_day', 'products')
+    items3 = models.Order.objects \
+            .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
+            .annotate(start_day=Trunc('ordered_at', groupby)) \
+            .values('start_day') \
+            .annotate(total_price=Sum('price')) \
+            .order_by('-start_day') \
+            .values('start_day', 'total_price')
+    
+    # Give all
+    if REPORTS_PER_PAGE == -1:
+        REPORTS_PER_PAGE = items1.count()
+
+    paginator = Paginator(items1, REPORTS_PER_PAGE)
+    paginator2 = Paginator(items2, REPORTS_PER_PAGE)
+    paginator3 = Paginator(items3, REPORTS_PER_PAGE)
+
+    page2 = paginator2.get_page(page)
+    page3 = paginator3.get_page(page)
+    page = paginator.get_page(page)
+
+    pages = give_pages(paginator, page)
+
+    items = [ ]
+
+    for item in page.object_list:
+        items.append({ 'start_day': item['start_day'], 'orders': item['orders'] })
+    
+    index = 0
+
+    for item in page2.object_list:
+        items[index]['products'] = item['products']
+        index = index + 1
+    
+    index = 0
+
+    for item in page3.object_list:
+        items[index]['total_price'] = item['total_price']
+        index = index + 1
+    
+    return paginator, pages, items

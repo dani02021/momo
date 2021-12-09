@@ -31,7 +31,7 @@ from ecom.tokens import account_activation_token
 import logging, re, json, time, iso3166, traceback
 
 from ecom.models import Category, EcomUser, Order, OrderItem, PayPalTransaction, Product, ProductImage, Variation
-from ecom.utils import capture_order, email_decrypt_uuid, email_encrypt_uuid, generate_email_link, get_cart_count, give_pages, orderQtyAdd, orderQtyRem, validate_form, validate_status
+from ecom.utils import capture_order, email_decrypt_uuid, email_encrypt_uuid, generate_email_link, get_cart_count, give_pages, orderQtyAdd, orderQtyRem, report_items, validate_form, validate_status
 from ecom.decorators import admin_only
 from ecom.exceptions import NotEnoughQuantityException
 from ecom.generators import generateProducts
@@ -402,15 +402,14 @@ def captureOrder(request):
             uid, order = capture_order(order_id)
 
             PayPalTransaction.objects.get_or_create (
-                order = ordert.id,
+                order = ordert,
                 transaction_id = order_id,
                 paypal_request_id = uid,
                 status_code = order.status_code,
                 status = order.result.status,
                 email_address = order.result.payer.email_address,
                 first_name = order.result.payer.name.given_name,
-                last_name = order.result.payer.name.surname,
-                price = ordert.get_total()
+                last_name = order.result.payer.name.surname
             )
 
             return validate_status(request, uid, order_id, order)
@@ -942,23 +941,6 @@ def adminReportPage(request, page):
             groupby = 'month'
         elif groupby == '3':
             groupby = 'year'
-        
-        items = Order.objects \
-            .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
-            .annotate(start_day=Trunc('ordered_at', groupby)) \
-            .values('start_day') \
-            .annotate(orders=Count('id')) \
-            .order_by('-start_day') \
-            .values('start_day', 'orders')
-        
-        """items1 = Order.objects \
-            .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
-            .annotate(start_day=Trunc('ordered_at', groupby)) \
-            .values('start_day') \
-            .annotate(products=Count('items')) \
-            .order_by('-start_day') \
-            .values('start_day', 'products')"""
-        
     except Exception as e:
         traceback.print_exc()
         items = { }
@@ -966,17 +948,13 @@ def adminReportPage(request, page):
     for orderstatus in Order.OrderStatus.choices:
         statuses[orderstatus[0]] = orderstatus[1]
     
-    paginator = Paginator(items, REPORTS_PER_PAGE)
-
-    page = paginator.get_page(page)
-
-    pages = give_pages(paginator, page)
+    paginator, pages, items = report_items(REPORTS_PER_PAGE, groupby, ord_before, ord_after, page)
     
     context['pass_timegroup'] = groupby
     context['paginator'] = paginator
     context['page'] = page
     context['pages'] = pages
-    context['items'] = page.object_list
+    context['items'] = items
     context['statuses'] = statuses
     context['selected'] = 'report'
 
@@ -1007,33 +985,22 @@ def adminReportExcel(request):
             groupby = 'month'
         elif groupby == '3':
             groupby = 'year'
-        
-        """items = Order.objects \
-            .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
-            .annotate(start_day=Trunc('ordered_at', groupby)) \
-            .values('start_day') \
-            .order_by('-start_day') \
-            .annotate(orders=Count('id')) \
-            .values_list("start_day", "orders")"""
-        items = Order.objects \
-            .filter(deleted=False, status__gte = 1, ordered_at__range=(ord_after, ord_before)) \
-            .annotate(start_day=Trunc('ordered_at', groupby)) \
-            .values('start_day') \
-            .annotate(orders=Count('id')) \
-            .order_by('-start_day') \
-            .values_list('start_day', 'orders')
     except Exception as e:
         traceback.print_exc()
         return None
     
+    paginator, pages, items = report_items(-1, groupby, ord_before, ord_after, 1)
+
     f = NamedTemporaryFile(delete=True, mode='w+')
 
-    f.write("timestamp,orders\n")
+    f.write("timestamp,orders,products,total_price\n")
     f.flush()
     
     for item in items:
         f.write(
-            "" + item[0].strftime('%Y-%m-%dT%H:%M') + "," + str(item[1]) + "\n"
+            "" + item['start_day'].strftime('%Y-%m-%dT%H:%M') + "," +
+            str(item['orders']) + "," + str(item['products']) + "," +
+            str(item['total_price']) + "\n"
         )
         f.flush()
 

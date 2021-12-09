@@ -113,7 +113,7 @@
                 <td><b>{{ item.user.user.first_name|add:' '|add:item.user.user.last_name }}</b></td>
                 <td><b>{{ item.user.country }}</b></td>
                 <td><b>{{ item.user.address }}</b></td>
-                <td style="text-align: right;"><b>{{ item.get_total }} $</b></td>
+                <td style="text-align: right;"><b>{{ item.price }} $</b></td>
                 <td><a href="/administration/orders/edit/{{ item.id }}/" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>

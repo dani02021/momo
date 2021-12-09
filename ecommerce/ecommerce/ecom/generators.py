@@ -105,7 +105,23 @@ def generateOrders(n = 10):
             status = random.choice([1,2,3,4]),
             ordered_at = random_date("2010-1-1 12:00", "2021-11-11 12:00", random.random())
         )
+
         generateOrderItemsOf(order)
+
+        order.price = order.get_total()
+        order.save()
+
+def fixOrdersPrice(n = 10):
+    orders = Order.objects.filter(status__gte=1)
+    for order in orders.iterator():
+        if n <= 0:
+            return
+        if order.price != 0.00:
+            continue
+        
+        n = n - 1
+        order.price = order.get_total()
+        order.save()
 
 def generateUsers(n = 10):
     for i in range(n):
