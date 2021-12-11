@@ -1,4 +1,4 @@
-from re import U
+import traceback
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.core.validators import validate_email
@@ -25,7 +25,7 @@ from ecom.exceptions import NotEnoughQuantityException
 
 # Roles permissions
 roles_perm = {
-    'Admin':[
+    'Admin': [
         'orders.create',
         'orders.read',
         'orders.update',
@@ -34,32 +34,35 @@ roles_perm = {
         'products.read',
         'products.update',
         'products.delete',
+        'categories.create',
+        'categories.delete',
         'accounts.create',
         'accounts.read',
         'accounts.update',
         'accounts.delete',
         'report.read'
     ],
-    'Moderator':[
+    'Moderator': [
         'orders.create',
         'orders.read',
         'orders.update',
         'products.create',
         'products.read',
         'products.update',
+        'categories.create',
         'accounts.create',
         'accounts.read',
         'accounts.update',
         'report.read'
     ],
-    'Vendor':[
+    'Vendor': [
         'orders.create',
         'orders.read',
         'products.create',
         'products.read',
         'accounts.read'
     ],
-    'Support':[
+    'Support': [
         'orders.read',
         'orders.update',
         'products.read',
@@ -68,6 +71,15 @@ roles_perm = {
         'accounts.update',
     ]
 }
+
+def has_role_permission(role, perm):
+    try:
+        perms = roles_perm[role]
+        if perm in perms:
+            return True
+        return False
+    except:
+        return False
 
 def validate_form(email, username, password, country):
     validate_email(email)
@@ -80,7 +92,6 @@ def validate_form(email, username, password, country):
 
     if invalidC:
         raise ValidationError("Invalid Country")
-
 
 def get_cart_count(request):
     order = None

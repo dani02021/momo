@@ -31,33 +31,38 @@
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav mx-auto h-100">
                         <li class="nav-item">
-                            <a class="nav-link {% if selected|stringformat:'s' == 'dashboard' %}active{% endif %}" href="/administration/">
+                            <a class="nav-link {% if selected|stringformat:'s' == 'dashboard' %}active{% endif %}"
+                                href="/administration/">
                                 <i class="fas fa-tachometer-alt"></i>
                                 Dashboard
                                 <span class="sr-only">(current)</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link  {% if selected|stringformat:'s' == 'report' %}active{% endif %}" href="/administration/report/">
+                            <a class="nav-link  {% if selected|stringformat:'s' == 'report' %}active{% endif %}"
+                                href="/administration/report/">
                                 <i class="far fa-file-alt"></i>
                                 Report
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if selected|stringformat:'s' == 'products' %}active{% endif %}" href="/administration/products/">
+                            <a class="nav-link {% if selected|stringformat:'s' == 'products' %}active{% endif %}"
+                                href="/administration/products/">
                                 <i class="fas fa-shopping-cart"></i>
                                 Products
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if selected|stringformat:'s' == 'orders' %}active{% endif %}" href="/administration/orders/">
+                            <a class="nav-link {% if selected|stringformat:'s' == 'orders' %}active{% endif %}"
+                                href="/administration/orders/">
                                 <i class="fas fa-credit-card"></i>
                                 Orders
                             </a>
                         </li>
 
                         <li class="nav-item">
-                            <a class="nav-link {% if selected|stringformat:'s' == 'accounts' %}active{% endif %}" href="/administration/accounts/">
+                            <a class="nav-link {% if selected|stringformat:'s' == 'accounts' %}active{% endif %}"
+                                href="/administration/accounts/">
                                 <i class="far fa-user"></i>
                                 Accounts
                             </a>
@@ -90,14 +95,28 @@
         <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
         <script src="https://code.jquery.com/ui/1.12.0/jquery-ui.js"></script>
 
+        {% for message in messages %}
+        {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}
+        {% if message|stringformat:'s' == 'no_permission' %}
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
+            <div>
+                You don't have permission for this action!
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+
         {% block content %}{% endblock %}
 
         <footer class="tm-footer row tm-mt-small">
             <div class="col-12 font-weight-light">
                 <p class="text-center text-white mb-0 px-4 small">
                     Copyright &copy; <b>2018</b> All rights reserved.
-        
-                    Design: <a rel="nofollow noopener" href="https://templatemo.com" class="tm-footer-link">Template Mo</a>
+
+                    Design: <a rel="nofollow noopener" href="https://templatemo.com" class="tm-footer-link">Template
+                        Mo</a>
                 </p>
             </div>
         </footer>
@@ -107,4 +126,5 @@
         <script src="{% static 'js/moment.min.js' %}"></script>
         <script src="{% static 'js/main.js' %}"></script>
 </body>
+
 </html>

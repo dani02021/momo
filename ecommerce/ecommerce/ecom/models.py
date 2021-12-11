@@ -18,6 +18,7 @@ class EcomUser(models.Model):
         ('M', 'Moderator'),
         ('V', 'Vendor'),
         ('S', 'Support'),
+        ('_', 'User')
     )
     def __str__(self) -> str:
         return self.user.username
@@ -30,7 +31,7 @@ class EcomUser(models.Model):
     country = models.CharField(max_length=100) # Would be better with IntegerField
     email_confirmed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    role = models.CharField(max_length=1, choices=ROLE_CHOICES, default='A')
+    role = models.CharField(max_length=1, choices=ROLE_CHOICES, default='_')
     deleted = models.BooleanField(default=False)
 
 class Category(models.Model):

@@ -32,7 +32,7 @@ import logging, re, json, time, iso3166, traceback
 
 from ecom.models import Category, EcomUser, Order, OrderItem, PayPalTransaction, Product, ProductImage, Variation
 from ecom.utils import capture_order, email_decrypt_uuid, email_encrypt_uuid, generate_email_link, get_cart_count, give_pages, orderQtyAdd, orderQtyRem, report_items, validate_form, validate_status
-from ecom.decorators import admin_only
+from ecom.decorators import admin_only, has_permission
 from ecom.exceptions import NotEnoughQuantityException
 from ecom.generators import generateProducts
 from ecommerce.settings import MEDIA_ROOT
@@ -443,9 +443,12 @@ def administration(request):
         return render(request, 'admin1/login/index.html')
 
 @admin_only
+@has_permission('products.read')
 def adminProducts(request):
     return adminProductsPage(request, 1)
+
 @admin_only
+@has_permission('products.read')
 def adminProductsPage(request, page):
     context = { }
     PRODUCTS_PER_PAGE = 20
@@ -508,10 +511,12 @@ def adminProductsGet(request):
     return JsonResponse(list(items), safe=False)
 
 @admin_only
+@has_permission('orders.read')
 def adminOrders(request):
     return adminOrdersPage(request, 1)
 
 @admin_only
+@has_permission('orders.read')
 def adminOrdersPage(request, page):
     context = { }
     items = Order.objects.filter(deleted=False, status__gte=1).order_by('-ordered_at')
@@ -576,6 +581,7 @@ def adminOrdersPage(request, page):
     return render(request, 'admin1/orders.html', context)
 
 @admin_only
+@has_permission('products.create')
 def adminAddProduct(request):
     image = request.FILES.get('image', '')
     name = request.POST.get('name', '')
@@ -629,6 +635,7 @@ def adminAddProduct(request):
     return redirect('adminProducts')
 
 @admin_only
+@has_permission('products.delete')
 def adminDelProduct(request):
     ids = request.POST.getlist('id')
 
@@ -639,6 +646,7 @@ def adminDelProduct(request):
     return redirect('adminProducts')
 
 @admin_only
+@has_permission('orders.create')
 def adminAddOrder(request):
     items = request.POST.getlist('items[]')
     user = request.POST.get('user', '')
@@ -667,6 +675,7 @@ def adminAddOrder(request):
     return redirect('adminOrders')
 
 @admin_only
+@has_permission('orders.delete')
 def adminDelOrder(request):
     ids = request.POST.getlist('id')
 
@@ -681,6 +690,7 @@ def adminDelOrder(request):
     return redirect('adminOrders')
 
 @admin_only
+@has_permission('orders.update')
 def adminEditOrder(request, orderid):
     if request.method == 'GET':
         statuses = { }
@@ -723,6 +733,7 @@ def adminEditOrder(request, orderid):
         return redirect('adminOrders')
 
 @admin_only
+@has_permission('products.update')
 def adminEditProduct(request, productid):
     if request.method == 'GET':
         context = {
@@ -793,6 +804,7 @@ def adminEditProduct(request, productid):
         return redirect('adminProducts')
 
 @admin_only
+@has_permission('categories.delete')
 def adminRemoveCat(request):
     id = request.POST.get('id', '')
     cat = Category.objects.filter(deleted=False, id=id)
@@ -803,6 +815,7 @@ def adminRemoveCat(request):
     return redirect('adminProducts')
 
 @admin_only
+@has_permission('categories.create')
 def adminAddCat(request):
     name = request.POST.get('name', '')
     image = request.POST.get('image', '')
@@ -818,6 +831,7 @@ def adminAccounts(request):
     return adminAccountsPage(request, 1)
 
 @admin_only
+@has_permission('accounts.read')
 def adminAccountsPage(request, page):
     context = { }
     ACCOUNTS_PER_PAGE = 20
@@ -871,6 +885,7 @@ def adminAccountsGet(request):
     return JsonResponse(list(items), safe=False)
 
 @admin_only
+@has_permission('accounts.delete')
 def adminDelAccount(request):
     ids = request.POST.getlist('id', '')
 
@@ -882,6 +897,7 @@ def adminDelAccount(request):
     return redirect('adminAccounts')
 
 @admin_only
+@has_permission('accounts.create')
 def adminAddAccount(request):
     username = request.POST.get('username', '')
     email = request.POST.get('email', '')
@@ -905,9 +921,13 @@ def adminAddAccount(request):
     messages.success(request, 'account_created')
     return redirect('adminAccounts')
 
+@admin_only
+@has_permission('report.read')
 def adminReport(request):
     return adminReportPage(request, 1)
 
+@admin_only
+@has_permission('report.read')
 def adminReportPage(request, page):
     context = { }
     statuses = { }
@@ -960,6 +980,8 @@ def adminReportPage(request, page):
 
     return render(request, 'admin1/report.html', context)
 
+@admin_only
+@has_permission('report.read')
 def adminReportExcel(request):
     ord_after = request.GET.get('ord-after', '0')
     ord_before = request.GET.get('ord-before', '0')
