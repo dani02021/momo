@@ -1,8 +1,3 @@
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Scanner;
-
 import math, sys
 from collections import deque
 
@@ -13,10 +8,13 @@ def calcDist(a, b):
     return math.sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2))
 
 class Circle:
-    def __init__(self, x, y, r):
+    def __init__(self, x, y, r) -> None:
         self.x = x
         self.y = y
         self.r = r
+    
+    def __str__(self):
+        return "(" + str(self.x) + ", " + str(self.y) + ", " + str(self.r) + ")"
     
     def intersect(self, b) -> bool:
         if self == b:
@@ -33,6 +31,9 @@ class Point:
     def __init__(self, x, y) -> None:
         self.x = x
         self.y = y
+    
+    def __str__(self):
+        return "(" + str(self.x) + ", " + str(self.y) + ")"
 
 class Graph:
     def __init__(self, v) -> None:
@@ -44,14 +45,14 @@ class Graph:
         for i in range(v):
             self.adj.append(deque())
     
-    def addEdge(self, v, w):
-        self.adj[points.index(v)].add(w)
+    def addEdge(self, v, w) -> None:
+        self.adj[points.index(v)].append(w)
     
     def BFS(self, s) -> bool:
         visited = [False] * self.V
 
         for i in range(self.V):
-            self.dist[i] = sys.maxsize()
+            self.dist[i] = sys.maxsize
             self.pred[i] = -1
         
         queue = deque()
@@ -59,69 +60,55 @@ class Graph:
         visited[points.index(s)] = True
         self.dist[points.index(s)] = 0
         queue.append(s)
-
+        
         while len(queue) != 0:
             s = queue.pop()
 
-            for n in s:
-                if not visited[points.index(s)]:
-                    visited[points.index(s)] = True
-                    self.dist[points.index(s)] = self.dist[points.index(s)] + 1
-                    self.pred[points.index(s)] = points.index(s)
+            for n in self.adj[points.index(s)]:
+                if not visited[points.index(n)]:
+                    visited[points.index(n)] = True
+                    self.dist[points.index(n)] = self.dist[points.index(s)] + 1
+                    self.pred[points.index(n)] = points.index(s)
                     queue.append(n)
 
-                    if n == points.get(len(points) - 1):
+                    if n == points[len(points) - 1]:
                         return True
             
         return False
 
-    def printShortestDistance(self, s):
+    def printShortestDistance(self, s) -> None:
         if not self.BFS(s):
             print('-1')
             return
         
         path = deque()
-        crawl = points.get(len(points) - 1)
+        crawl = points[len(points) - 1]
         path.append(crawl)
 
         while self.pred[points.index(crawl)] != -1:
-            path.append(points.get(self.pred[points.index(crawl)]))
-            crawl = points.get(self.pred[points.index(crawl)])
+            path.append(points[self.pred[points.index(crawl)]])
+            crawl = points[self.pred[points.index(crawl)]]
         
-        print(self.dist[points.index(points.get(len(points) - 1))])
+        print(self.dist[points.index(points[len(points) - 1])])
 
-public class Main {
+if __name__ == "__main__":
+    n = int(input())
 
-	public static void main(String[] args) {
-		Scanner scan = new Scanner(System.in);
+    for i in range(n):
+        coords = input()
+        coor = coords.split(" ")
+        circles.append(Circle(int(coor[0]), int(coor[1]), int(coor[2])))
+        points.append(Point(int(coor[0]), int(coor[1])))
 
-		int n = Integer.parseInt(scan.nextLine());
-        // Get x y r of n circles
-		for (int i = 0; i < n; i++) {
-			String cords = scan.nextLine();
-			String[] cor = cords.split(" ");
-			circles.add(new Circle(Integer.parseInt(cor[0]), Integer.parseInt(cor[1]), Integer.parseInt(cor[2])));
-			points.add(new Point(Integer.parseInt(cor[0]), Integer.parseInt(cor[1])));
-		}
+    g = Graph(len(points))
 
-		scan.close();
+    for i in range(len(circles)):
+        a = circles[i]
+        for z in range(len(circles)):
+            b = circles[z]
 
-		Graph g = new Graph(points.size());
-
-        // Connect the points
-		for (int i = 0; i < circles.size(); i++) {
-			Circle a = circles.get(i);
-			for (int z = 0; z < circles.size(); z++) {
-				Circle b = circles.get(z);
-
-				if (a.intersect(b)) {
-					g.addEdge(points.get(circles.index(a)), points.get(circles.index(b)));
-				}
-			}
-		}
-
-        // Return the edges = shortest path
-		g.BFS(points.get(0));
-		g.printShortestDistance(points.get(0));
-	}
-}
+            if a.intersect(b):
+                g.addEdge(points[circles.index(a)], points[circles.index(b)])
+        
+    g.BFS(points[0])
+    g.printShortestDistance(points[0])
