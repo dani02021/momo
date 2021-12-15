@@ -2,7 +2,7 @@ import requests, random, os, logging, traceback, datetime, time
 
 from lxml import html
 
-from ecom.models import Category, EcomUser, Order, OrderItem, Product
+from ecom.models import Category, EcomUser, Order, OrderItem, Permission, Product, Role
 
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -142,4 +142,19 @@ def generateUsers(n = 10):
         except:
             pass
 
+def generatePermissions(perms:list):
+    for perm in perms:
+        Permission.objects.get_or_create(name=perm)
+
+def generateRoles(role_perms:dict):
+    for role, permissions in role_perms:
+        role, created = Role.objects.get_or_create(name=role)
+
+        for perm in permissions:
+            if not Role.objects.filter(name=role, permissions__name__icontains = perm).exists():
+                role.permissions.add(perm)
+        
+        role.save()
+
 #generateOrders()
+#generatePermissions()

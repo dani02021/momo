@@ -37,8 +37,6 @@ from ecom.exceptions import NotEnoughQuantityException
 from ecom.generators import generateProducts
 from ecommerce.settings import MEDIA_ROOT
 
-from djqscsv import render_to_csv_response
-
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 

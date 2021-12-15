@@ -13,13 +13,6 @@ from ecom.utils import product_delete_images, product_delete_variations
 
 # Custom user
 class EcomUser(models.Model):
-    ROLE_CHOICES = (
-        ('A', 'Admin'),
-        ('M', 'Moderator'),
-        ('V', 'Vendor'),
-        ('S', 'Support'),
-        ('_', 'User')
-    )
     def __str__(self) -> str:
         return self.user.username
     def ecom_delete(self):
@@ -31,8 +24,26 @@ class EcomUser(models.Model):
     country = models.CharField(max_length=100) # Would be better with IntegerField
     email_confirmed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    role = models.CharField(max_length=1, choices=ROLE_CHOICES, default='_')
     deleted = models.BooleanField(default=False)
+
+class Permission(models.Model):
+    name = models.CharField(max_length=40)
+
+class Role(models.Model):
+    ROLE_CHOICES = (
+        ('A', 'Admin'),
+        ('M', 'Moderator'),
+        ('V', 'Vendor'),
+        ('S', 'Support'),
+        ('_', 'User')
+    )
+
+    name = models.CharField(max_length=1, choices=ROLE_CHOICES, default='_')
+    permissions = models.ManyToManyField(Permission)
+
+class EcomUserRole(models.Model):
+    user = models.ForeignKey(EcomUser, on_delete=models.DO_NOTHING)
+    role = models.ForeignKey(Role, on_delete=models.DO_NOTHING)
 
 class Category(models.Model):
     def __str__(self) -> str:
@@ -62,7 +73,7 @@ class Product(models.Model):
     name = models.CharField(max_length=100, unique=True)
     price = models.DecimalField(max_digits=7, decimal_places=2) # Max price: 99999.99
     discount_price = models.DecimalField(max_digits=7, decimal_places=2) # Max price: 99999.99
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=models.DO_NOTHING)
     description = models.TextField()
     image = models.ImageField(blank = True, null = True)
     quantity = models.IntegerField(default=1)
