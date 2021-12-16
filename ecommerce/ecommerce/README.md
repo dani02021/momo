@@ -11,7 +11,7 @@ Version: 0.0.1-BETA
 1. Python 3
 2. Django (>= 3.0.0)
 3. PostgreSQL (>= 12)
-4. Libraries: six, pycrypto, iso3166, Pillow, psycopg2
+4. Libraries: six, pycrypto, iso3166, paypalcheckoutsdk, psycopg2
 
 # How to install
 1. Install Python 3
