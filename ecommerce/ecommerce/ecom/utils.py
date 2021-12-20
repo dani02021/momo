@@ -1,3 +1,4 @@
+import logging
 import traceback
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -12,6 +13,7 @@ from django.contrib.auth import authenticate, login
 from django.utils import timezone
 
 import ecom.models as models
+from ecom.utils import *
 from ecom.tokens import account_activation_token
 
 import iso3166, os, binascii, uuid, time, base64
@@ -72,10 +74,14 @@ roles_perm = {
     ]
 }
 
+# Get an instance of a logger
+logger = logging.getLogger(__name__)
+
 def has_role_permission(role, perm):
     try:
-        perms = roles_perm[role]
-        if perm in perms:
+        perms = models.Role.objects.get(id = role).permissions.values_list('name')
+        logger.debug(perms)
+        if (perm,) in perms:
             return True
         return False
     except:
@@ -132,6 +138,9 @@ def email_decrypt_uuid(uuidEnc):
     aes = AES.new(os.environ.get('AES_KEY', None), AES.MODE_CTR, counter=ctr)
     return aes.decrypt(uuidEnc[16:])
 
+"""
+Substranct from the product quantity the amount in the order
+"""
 def orderQtyRem(cart):
     for item in cart.items.all():
         if item.product.quantity < item.quantity:
@@ -142,6 +151,9 @@ def orderQtyRem(cart):
 
     cart.save()
 
+"""
+Add to the product quantity the amount in the order
+"""
 def orderQtyAdd(cart):
     for item in cart.items.all():
         item.product.quantity += item.quantity

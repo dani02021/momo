@@ -222,7 +222,7 @@
         <div class="modal-body">
           <label>Product:</label>
           <div>
-            <input name="product" id="product">
+            <input name="orderitem-select" id="orderitem-select" placeholder="Product Name">
           </div>
           <label>Quantity:</label>
           <div>
@@ -262,32 +262,37 @@
   </div>
 
   <script>
-    function addOrderItemModal(elem) {
-      option = document.createElement('option');
-      e = document.getElementById('orderitem-select');
-      q = document.getElementById('orderitem-quantity');
-      items = document.getElementById('add-order-items');
+  var id = {};
 
-      for (var i = 0; i < items.length; i++) {
-        if (items.options[i].text.startsWith(e.options[e.selectedIndex].text)) {
-          items.options[i].text = e.options[e.selectedIndex].text + ', ' + (parseInt(items.options[i].text.split(', ')[1]) + parseInt(q.value));
-          items.options[i].value = e.options[e.selectedIndex].value + ', ' + items.options[i].text.split(', ')[1];
-          return;
-        }
-      }
+  function addOrderItemModal(elem) {
+    option = document.createElement('option');
+    e = document.getElementById('orderitem-select');
+    q = document.getElementById('orderitem-quantity');
+    items = document.getElementById('add-order-items');
 
-      option.text = e.options[e.selectedIndex].text + ', ' + q.value;
-      option.value = e.options[e.selectedIndex].value + ', ' + q.value;
-      option.selected = 'true'
-      document.getElementById('add-order-items').add(option);
-    }
+    if(!q.value || !e.value)
+      return;
 
-    function selectAll() {
-      options = document.getElementById('add-order-items').getElementsByTagName('option');
-      for (i = 0; i < options.length; i++) {
-        options[i].selected = 'true';
+    for (var i = 0; i < items.length; i++) {
+      if (items.options[i].text.startsWith(e.value)) {
+        items.options[i].text = e.value + ', ' + (parseInt(items.options[i].text.split(', ')[1]) + parseInt(q.value));
+        items.options[i].value = e.value + ', ' + items.options[i].text.split(', ')[1];
+        return;
       }
     }
+
+    option.text = e.value + ', ' + q.value;
+    option.value = id[e.value] + ', ' + q.value;
+    option.selected = 'true'
+    items.add(option);
+  }
+
+  function selectAll() {
+    options = document.getElementById('add-order-items').getElementsByTagName('option');
+    for (i = 0; i < options.length; i++) {
+      options[i].selected = 'true';
+    }
+  }
 
     function deleteOrders(elem) {
       var table = document.getElementById('table1');
@@ -346,7 +351,7 @@
     });
 
     var cache1 = {};
-    $( "#product" ).autocomplete({
+    $( "#orderitem-select" ).autocomplete({
       source: "/administration/products/get/",
       minLength: 2,
       source: function( request, response ) {
@@ -360,7 +365,10 @@
           cache1[ term ] = data;
           response( data );
         });
-      }
+      },
+      select: function(request, responce) {
+        id[responce.item.value] = responce.item.id;
+    }
     });
   } );
   </script>

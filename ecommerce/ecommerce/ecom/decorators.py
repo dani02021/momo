@@ -2,8 +2,8 @@ from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.test import TestCase
 
-from ecom.models import EcomUser
-from ecom.utils import has_role_permission
+from ecom.models import *
+from ecom.utils import *
 
 def admin_only(view_func):
     def wrap(request, *args, **kwargs):
@@ -18,10 +18,13 @@ def has_permission(perm):
     def _method_wrapper(view_method):
         def _arguments_wrapper(request, *args, **kwargs) :
             user = EcomUser.objects.get(user = request.user)
-            if has_role_permission(user.get_role_display(), perm):
-                return view_method(request, *args, **kwargs)
-            else:
-                messages.error(request, 'no_permission')
-                return redirect('administration')
+            roles = EcomUserRole.objects.filter(user = user).values_list('role')
+
+            for role in roles:
+                if has_role_permission(role[0], perm):
+                    return view_method(request, *args, **kwargs)
+            
+            messages.error(request, 'no_permission')
+            return redirect('administration')
         return _arguments_wrapper
     return _method_wrapper

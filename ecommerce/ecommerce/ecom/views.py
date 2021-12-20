@@ -28,17 +28,14 @@ from tempfile import NamedTemporaryFile
 
 from ecom.tokens import account_activation_token
 
-import logging, re, json, time, iso3166, traceback
+import re, json, iso3166, traceback
 
-from ecom.models import Category, EcomUser, Order, OrderItem, PayPalTransaction, Product, ProductImage, Variation
-from ecom.utils import capture_order, email_decrypt_uuid, email_encrypt_uuid, generate_email_link, get_cart_count, give_pages, orderQtyAdd, orderQtyRem, report_items, validate_form, validate_status
+from ecom.models import *
+from ecom.utils import *
 from ecom.decorators import admin_only, has_permission
 from ecom.exceptions import NotEnoughQuantityException
 from ecom.generators import generateProducts
 from ecommerce.settings import MEDIA_ROOT
-
-# Get an instance of a logger
-logger = logging.getLogger(__name__)
 
 # Create your views here.
 def index(request):
@@ -275,18 +272,16 @@ def cart(request):
         return render(request, 'ecom/cart.html', context)
 
 def addToCart(request):
-    # TODO: Fix bug -> If product A has 1 quantity, and two people have the product in their cart,
-    # if on day the 1 first guy bought it, the other guy will get an error when trying to buy it!
-    # TODO: Fix bug -> If product A has 1 quantity, and someone add it in their cart
-    # and then go to the product, it will allow them to get one more quantity
     try:
         if request.user.is_authenticated:
             id = request.GET['id']
             quantity = request.GET.get('quantity', '1')
             variation = request.GET.get('var', '-1')
             isCart = request.GET.get('cart', False)
+
             ecom_user = get_object_or_404(EcomUser, user=request.user)
             product = get_object_or_404(Product, id=id)
+
             if(variation != '-1'):
                 product = get_object_or_404(Variation, id=variation, product=product).variation
             order, created = Order.objects.get_or_create(user = ecom_user, status = Order.OrderStatus.NOT_ORDERED)
@@ -334,11 +329,16 @@ def removeFromCart(request):
 def checkout(request):
     if request.user.is_authenticated:
         user = EcomUser.objects.get(user = request.user)
-        if len(Order.objects.filter(deleted=False, user = user, status = Order.OrderStatus.NOT_ORDERED)) == 0:
+        order = Order.objects.filter(deleted=False, user = user, status = Order.OrderStatus.NOT_ORDERED)
+        if not order:
             return redirect('index')
         
+        for item in order[0].items.all():
+                if item.product.quantity < item.quantity:
+                    messages.error(request, 'not_enough_quantity;'+ str(item.product.name))
+        
         context = {
-            'items': Order.objects.filter(deleted=False, user = user, status = Order.OrderStatus.NOT_ORDERED),
+            'items': order,
             'ecom_user': user
         }
 
@@ -397,6 +397,11 @@ def captureOrder(request):
         if request.method == "POST":
             order_id = json.loads(request.body)['orderID']
             ordert = Order.objects.get(deleted = False, user = EcomUser.objects.get(deleted = False, user=request.user), status = Order.OrderStatus.NOT_ORDERED)
+            # Check if products have enough quantity
+            for item in ordert.items.all():
+                if item.product.quantity < item.quantity:
+                    return JsonResponse({'msg': 'There is no enough quantity of ' + str(item.product.name), 'status': 'error'})
+            
             uid, order = capture_order(order_id)
 
             PayPalTransaction.objects.get_or_create (
@@ -669,6 +674,8 @@ def adminAddOrder(request):
             messages.error(request, 'order_not_enough_qty')
             return redirect('adminOrders')
     
+    order.price = order.get_total()
+    
     messages.success(request, 'order_created')
     return redirect('adminOrders')
 
@@ -687,6 +694,7 @@ def adminDelOrder(request):
     messages.success(request, 'order_deleted')
     return redirect('adminOrders')
 
+## IMPORTANT: Price of the order is not changed, if items are changed !!!
 @admin_only
 @has_permission('orders.update')
 def adminEditOrder(request, orderid):
@@ -717,11 +725,11 @@ def adminEditOrder(request, orderid):
         for item in items:
             product = item.split(sep=', ')[0]
             quantity = item.split(sep=', ')[1]
-            orderItem = order.items.create(product = Product.objects.get(id = product), quantity = quantity)
+            orderItem, created = order.items.create(product = Product.objects.get(id = product), quantity = quantity)
         
         order.user = EcomUser.objects.get(user = get_user_model().objects.get(username = user))
         order.status = int(status)
-        # order.ordered_at = timezone.make_aware(datetime.strptime(ordered_at, "%Y-%m-%dT%H:%M")) -> Don't update the time, it is created at time
+        # order.ordered_at = timezone.make_aware(datetime.strptime(ordered_at, "%Y-%m-%dT%H:%M")) -> Don't update the time
 
         order.save()
 

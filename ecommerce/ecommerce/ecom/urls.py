@@ -1,6 +1,5 @@
-from django.conf.urls import url
 from django.contrib.auth import logout
-from django.urls import path
+from django.urls import path, re_path
 
 from ecom import views
 
@@ -40,7 +39,7 @@ urlpatterns = [
     path('administration/accounts/del/', views.adminDelAccount, name='adminDelAccounts'),
     path('administration/accounts/<int:page>/', views.adminAccountsPage, name='adminAccountsPage'),
     path('administration/accounts/get/', views.adminAccountsGet, name='adminAccountsGet'),
-    url(r'^activate_account/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,50})/$',
+    re_path(r'^activate_account/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,50})/$',
             views.activateAccount, name='activateAccount'),
-    url(r'^email-resend/(?P<uidb64>[0-9A-Za-z_\-]+)', views.emailResend, name='emailResend'),
+    re_path(r'^email-resend/(?P<uidb64>[0-9A-Za-z_\-]+)', views.emailResend, name='emailResend'),
 ]

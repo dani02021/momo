@@ -159,6 +159,14 @@
         </div>
     </div>
     {% endif %}
+    {% if message|stringformat:'s'|slice:":19" == 'not_enough_quantity' %}
+    <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center" role="alert">
+        <i class="fas fa-check" style="margin-right: 10px;"></i>
+        <div>
+            There is not enough quantity of { message|stringformat:'s'|slice:"20:" }
+        </div>
+    </div>
+    {% endif %}
     {% endif %}
     {% if message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}
     {% if message|stringformat:'s' == 'user_exists' %}

@@ -27,7 +27,7 @@ SECRET_KEY = os.environ.get('APP_SECRET_KEY', 'unsafe-secret-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', "True") == "True"
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split()
+ALLOWED_HOSTS = ['192.168.1.6']
 
 PASSWORD_RESET_TIMEOUT = 259200
 
@@ -48,6 +48,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -79,15 +80,16 @@ WSGI_APPLICATION = 'ecommerce.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
-
+# Using 
 DATABASES = {
     'default': {
         'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
         'NAME': os.environ.get('DB_NAME', 'ecommerce'),
-        'USER': os.environ.get('DB_USER', ''),
+        'USER': os.environ.get('DB_USER', 'telebid'),
         'PASSWORD': base64.b64decode(os.environ.get('DB_PASSWORD', '')).decode('utf-8'),
         'HOST': 'localhost',
-        'PORT': '5432'
+        'PORT': '6432',
+        'CONN_MAX_AGE': 60,
     }
 }
 
@@ -144,6 +146,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(os.path.dirname(Path(__file__).resolve().parent), 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
@@ -165,3 +169,5 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_USER', '')
 EMAIL_HOST_PASSWORD = base64.b64decode(os.environ.get('EMAIL_PASS', '')).decode('utf-8')
 
 DEFAULT_FROM_EMAIL = 'dani02@dir.bg'
+
+DISABLE_SERVER_SIDE_CURSORS = True

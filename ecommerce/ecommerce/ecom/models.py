@@ -38,7 +38,7 @@ class Role(models.Model):
         ('_', 'User')
     )
 
-    name = models.CharField(max_length=1, choices=ROLE_CHOICES, default='_')
+    name = models.CharField(max_length=1, choices=ROLE_CHOICES)
     permissions = models.ManyToManyField(Permission)
 
 class EcomUserRole(models.Model):
@@ -57,10 +57,6 @@ class Category(models.Model):
     deleted = models.BooleanField(default=False)
 
 class Product(models.Model):
-    #
-    # IMPORTANT:
-    # Maybe I should add table for every product category ?
-    #
     def __str__(self) -> str:
         return self.name
     def ecom_delete(self):

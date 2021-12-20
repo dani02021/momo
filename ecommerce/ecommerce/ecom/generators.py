@@ -1,12 +1,13 @@
+from django.contrib.auth import get_user_model
 import requests, random, os, logging, traceback, datetime, time
 
 from lxml import html
 
-from ecom.models import Category, EcomUser, Order, OrderItem, Permission, Product, Role
+from ecom.models import *
 
 from django.utils import timezone
 from django.contrib.auth.models import User
-from ecom.utils import random_date
+from ecom.utils import *
 
 from ecommerce.settings import MEDIA_ROOT
 
@@ -133,12 +134,14 @@ def generateUsers(n = 10):
             user.last_name = profile['name'].split(' ')[1],
             user.save()
 
-            EcomUser.objects.get_or_create(
+            ecom_user, created = EcomUser.objects.get_or_create(
                 user = user,
                 address = profile['address'],
                 country = 'Bulgaria',
                 email_confirmed = True
             )
+
+            EcomUserRole.objects.get_or_create(user = ecom_user, role = Role.objects.get(name = "_"))
         except:
             pass
 
@@ -147,14 +150,23 @@ def generatePermissions(perms:list):
         Permission.objects.get_or_create(name=perm)
 
 def generateRoles(role_perms:dict):
-    for role, permissions in role_perms:
+    for role, permissions in role_perms.items():
         role, created = Role.objects.get_or_create(name=role)
 
         for perm in permissions:
             if not Role.objects.filter(name=role, permissions__name__icontains = perm).exists():
-                role.permissions.add(perm)
+                role.permissions.add(Permission.objects.get(name = perm))
         
         role.save()
 
+def generateUserRoles(user_roles:dict):
+    for user, roles in user_roles.items():
+        user = get_user_model().objects.get(username=user)
+        ecom_user = EcomUser.objects.get(user=user)
+
+        for role in roles:
+            EcomUserRole.objects.get_or_create(user = ecom_user, role = Role.objects.get(name=role))
+
+
 #generateOrders()
-#generatePermissions()
+#generateUserRoles({'dakata': ['A']})
