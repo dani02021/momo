@@ -7,7 +7,7 @@ from django.utils.translation import gettext as _
 from django.contrib.auth.models import User
 from iso3166 import countries
 
-from ecom.utils import product_delete_images, product_delete_variations
+from ecom.utils import has_role, product_delete_images, product_delete_variations
 
 # Create your models here.
 

@@ -928,6 +928,50 @@ def adminAddAccount(request):
     return redirect('adminAccounts')
 
 @admin_only
+@has_permission('accounts.update')
+def adminEditAccount(request, accountid):
+    if request.method == 'GET':
+        context = {
+            'user': EcomUser.objects.get(id=accountid),
+            'roles': Role.objects.all(),
+            'uroles': EcomUserRole.objects.filter(user = EcomUser.objects.get(id = accountid)),
+            'selected': 'accounts',
+        }
+
+        return render(request, 'admin1/edit-account.html', context)
+    elif request.method == 'POST':
+        roles = request.POST.getlist('role')
+        name = request.POST.get('name', '')
+        email = request.POST.get('email', '')
+        address = request.POST.get('address', '')
+        country = request.POST.get('country', '')
+        email_confirmed = request.POST.get('email_confirmed', '')
+        
+        account = EcomUser.objects.get(id = accountid)
+
+        account.user.username = name
+        account.user.email = email
+        account.address = address
+        account.country = country
+
+        if email_confirmed == 'on':
+            account.email_confirmed = True
+        else:
+            account.email_confirmed = False
+        
+        account.save()
+        account.user.save()
+
+        # Update the roles
+        EcomUserRole.objects.filter(user = EcomUser.objects.get(id=accountid)).delete()
+
+        for role in roles:
+            EcomUserRole.objects.get_or_create(user = EcomUser.objects.get(id=accountid), role = Role.objects.get(id = role))
+
+        messages.success(request, 'account_edited')
+        return redirect('adminAccounts')
+
+@admin_only
 @has_permission('report.read')
 def adminReport(request):
     return adminReportPage(request, 1)
@@ -1037,3 +1081,92 @@ def adminReportExcel(request):
 
     return response
     #return render_to_csv_response(items, filename="report_" + timezone.make_aware(datetime.now()).strftime('%Y%m%d%H:%M'))
+
+@admin_only
+def adminRoles(request):
+    return adminRolesPage(request, 1)
+
+@admin_only
+@has_permission('roles.read')
+def adminRolesPage(request, page):
+    context = { }
+    items = Role.objects.all()
+    ROLES_PER_PAGE = 20
+    
+    # Display order page
+
+    paginator = Paginator(items, ROLES_PER_PAGE)
+
+    page = paginator.get_page(page)
+
+    pages = give_pages(paginator, page)
+
+    context['paginator'] = paginator
+    context['page'] = page
+    context['pages'] = pages
+    context['items'] = page.object_list
+    context['selected'] = 'roles'
+    return render(request, 'admin1/roles.html', context)
+
+@admin_only
+@has_permission('roles.delete')
+def adminRemoveRole(request):
+    ids = request.POST.getlist('id', '')
+
+    for id in ids:
+        role = Role.objects.get(deleted=False, id=id)
+        role.ecom_delete()
+    
+    messages.success(request, 'role_deleted')
+    return redirect('adminRoles')
+
+@admin_only
+@has_permission('roles.update')
+def adminEditRole(request, roleid):
+    if request.method == 'GET':
+        context = {
+            'role': Role.objects.get(id=roleid),
+            'selected': 'roles',
+        }
+
+        return render(request, 'admin1/edit-role.html', context)
+    elif request.method == 'POST':
+        roles = request.POST.getlist('role')
+        name = request.POST.get('name', '')
+        email = request.POST.get('email', '')
+        address = request.POST.get('address', '')
+        country = request.POST.get('country', '')
+        email_confirmed = request.POST.get('email_confirmed', '')
+        
+        account = EcomUser.objects.get(id = accountid)
+
+        account.user.username = name
+        account.user.email = email
+        account.address = address
+        account.country = country
+
+        if email_confirmed == 'on':
+            account.email_confirmed = True
+        else:
+            account.email_confirmed = False
+        
+        account.save()
+        account.user.save()
+
+        # Update the roles
+        EcomUserRole.objects.filter(user = EcomUser.objects.get(id=accountid)).delete()
+
+        for role in roles:
+            EcomUserRole.objects.get_or_create(user = EcomUser.objects.get(id=accountid), role = Role.objects.get(id = role))
+
+        messages.success(request, 'account_edited')
+        return redirect('adminAccounts')
+
+@admin_only
+def adminPermissionsGet(request):
+    # Get values
+    perm = request.GET['term']
+
+    items = Product.objects.filter(deleted = False, hide = False, name__istartswith=perm).values('id', value=F('name'))
+
+    return JsonResponse(list(items), safe=False)

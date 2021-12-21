@@ -1,5 +1,6 @@
 import logging
 import traceback
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.core.validators import validate_email
@@ -25,62 +26,22 @@ from paypalcheckoutsdk.orders import OrdersCaptureRequest
 
 from ecom.exceptions import NotEnoughQuantityException
 
-# Roles permissions
-roles_perm = {
-    'Admin': [
-        'orders.create',
-        'orders.read',
-        'orders.update',
-        'orders.delete',
-        'products.create',
-        'products.read',
-        'products.update',
-        'products.delete',
-        'categories.create',
-        'categories.delete',
-        'accounts.create',
-        'accounts.read',
-        'accounts.update',
-        'accounts.delete',
-        'report.read'
-    ],
-    'Moderator': [
-        'orders.create',
-        'orders.read',
-        'orders.update',
-        'products.create',
-        'products.read',
-        'products.update',
-        'categories.create',
-        'accounts.create',
-        'accounts.read',
-        'accounts.update',
-        'report.read'
-    ],
-    'Vendor': [
-        'orders.create',
-        'orders.read',
-        'products.create',
-        'products.read',
-        'accounts.read'
-    ],
-    'Support': [
-        'orders.read',
-        'orders.update',
-        'products.read',
-        'products.update',
-        'accounts.read',
-        'accounts.update',
-    ]
-}
-
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
+
+
+def has_role(ecom_user_id, role):
+    try:
+        ecomroles = models.EcomUserRole.objects.filter(user = models.EcomUser.objects.get(id = ecom_user_id), role = role)
+        if ecomroles:
+            return True
+        return False
+    except:
+        return False
 
 def has_role_permission(role, perm):
     try:
         perms = models.Role.objects.get(id = role).permissions.values_list('name')
-        logger.debug(perms)
         if (perm,) in perms:
             return True
         return False
