@@ -18,12 +18,12 @@
           <form action="/administration/report/" method="get" onsubmit="checkOrderFilter(this);">
             <div class="row">
               <div class="col-sm-4">
-                <input name="ord-before" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="Ordered before" type="datetime-local" value="{{ pass_order_before }}">
-              </div>
-              <div class="col-sm-4">
                 <input name="ord-after" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
                   title="Ordered after" type="datetime-local" value="{{ pass_order_after }}"><br>
+              </div>
+              <div class="col-sm-4">
+                <input name="ord-before" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
+                  title="Ordered before" type="datetime-local" value="{{ pass_order_before }}">
               </div>
               <div class="col-sm-4">
                 <select name="timegroup" class="form-select">

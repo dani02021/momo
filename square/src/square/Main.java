@@ -89,6 +89,8 @@ public class Main {
 			false, false, false, true, false, // 61 - 65
 			};
 	
+	// This works because of Newton-Hensel lemma
+	// But idk why it works
 	public final static double isPerfectSquare(long n)
 	{
 		long x = n;
@@ -106,22 +108,8 @@ public class Main {
 
 	    if((x & 7) != 1)
 	        return -1D;
-	    
-	    if (n < 0)
-	        return -1D;
-
-	    switch((int)(n & 0xF))
-	    {
-	    case 0: case 1: case 4: case 9:
-	        double tst = Math.sqrt(n);
-	        int tstI = (int) tst;
-	        if(tstI*tstI == n)
-	        	return tst;
-	        return -1D;
-
-	    default:
-	        return -1D;
-	    }
+		
+		return Math.sqrt(n);
 	}
 
 }
