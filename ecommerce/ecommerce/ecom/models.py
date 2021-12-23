@@ -27,23 +27,30 @@ class EcomUser(models.Model):
     deleted = models.BooleanField(default=False)
 
 class Permission(models.Model):
+    def ecom_delete(self):
+        self.deleted = True
+        self.save()
+    
     name = models.CharField(max_length=40)
+    deleted = models.BooleanField(default=False)
 
 class Role(models.Model):
-    ROLE_CHOICES = (
-        ('A', 'Admin'),
-        ('M', 'Moderator'),
-        ('V', 'Vendor'),
-        ('S', 'Support'),
-        ('_', 'User')
-    )
+    def ecom_delete(self):
+        self.deleted = True
+        self.save()
 
-    name = models.CharField(max_length=1, choices=ROLE_CHOICES)
+    name = models.CharField(max_length=15)
     permissions = models.ManyToManyField(Permission)
+    deleted = models.BooleanField(default=False)
 
 class EcomUserRole(models.Model):
+    def ecom_delete(self):
+        self.deleted = True
+        self.save()
+    
     user = models.ForeignKey(EcomUser, on_delete=models.DO_NOTHING)
     role = models.ForeignKey(Role, on_delete=models.DO_NOTHING)
+    deleted = models.BooleanField(default=False)
 
 class Category(models.Model):
     def __str__(self) -> str:

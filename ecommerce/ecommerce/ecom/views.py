@@ -23,6 +23,7 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.views.decorators.cache import cache_page
 
 from tempfile import NamedTemporaryFile
 
@@ -36,6 +37,8 @@ from ecom.decorators import admin_only, has_permission
 from ecom.exceptions import NotEnoughQuantityException
 from ecom.generators import generateProducts
 from ecommerce.settings import MEDIA_ROOT
+
+ITEMS = Product.objects.filter(hide=False, deleted=False)
 
 # Create your views here.
 def index(request):
@@ -428,10 +431,7 @@ def administration(request):
     }
     if request.method == 'GET':
         if request.user.is_authenticated:
-            if request.user.is_staff:
-                return render(request, 'admin1/index.html', context)
-            else:
-                messages.error(request, 'no_staff')
+            return render(request, 'admin1/index.html', context)
         
         return render(request, 'admin1/login/index.html')
     elif request.method == 'POST':
@@ -913,9 +913,17 @@ def adminAddAccount(request):
     address = request.POST.get('address', '')
     country = request.POST.get('country', '')
 
-    if User.objects.filter(Q(username = username) | Q(email = email)).exists():
-        messages.error(request, 'account_exists')
-        return redirect('adminAccounts')
+    users = User.objects.filter((Q(username = username) | Q(email = email)))
+
+    # TODO: Test
+    if users:
+        ecom_users = EcomUser.objects.filter(deleted = False, user = users.first())
+
+        if not ecom_users:
+            messages.error(request, 'account_exists')
+            return redirect('adminAccounts')
+        
+        ecom_users.delete()
     
     user = User.objects.create_user(username, email, password)
     user.first_name = first_name
@@ -1090,7 +1098,7 @@ def adminRoles(request):
 @has_permission('roles.read')
 def adminRolesPage(request, page):
     context = { }
-    items = Role.objects.all()
+    items = Role.objects.filter(deleted = False)
     ROLES_PER_PAGE = 20
     
     # Display order page
@@ -1109,6 +1117,30 @@ def adminRolesPage(request, page):
     return render(request, 'admin1/roles.html', context)
 
 @admin_only
+@has_permission('roles.create')
+def adminAddRole(request):
+    role = request.POST.get('role', '')
+    permissions = request.POST.getlist('permissions[]', '')
+
+    if Role.objects.filter(deleted = False, name = role).exists():
+        messages.error(request, 'role_exists')
+        return redirect('adminRoles')
+    
+    role, create = Role.objects.get_or_create(name = role)
+
+    # If the role existed before, the permissions should be removed
+    role.permissions.clear()
+
+    for perm in permissions:
+        role.permissions.add(Permission.objects.get(deleted = False, id = perm))
+    
+    role.deleted = False
+    role.save()
+    
+    messages.success(request, 'role_created')
+    return redirect('adminRoles')
+
+@admin_only
 @has_permission('roles.delete')
 def adminRemoveRole(request):
     ids = request.POST.getlist('id', '')
@@ -1125,48 +1157,28 @@ def adminRemoveRole(request):
 def adminEditRole(request, roleid):
     if request.method == 'GET':
         context = {
-            'role': Role.objects.get(id=roleid),
+            'role': Role.objects.get(deleted = False, id=roleid),
             'selected': 'roles',
         }
 
         return render(request, 'admin1/edit-role.html', context)
     elif request.method == 'POST':
-        roles = request.POST.getlist('role')
-        name = request.POST.get('name', '')
-        email = request.POST.get('email', '')
-        address = request.POST.get('address', '')
-        country = request.POST.get('country', '')
-        email_confirmed = request.POST.get('email_confirmed', '')
+        permissions = request.POST.getlist('permissions')
         
-        account = EcomUser.objects.get(id = accountid)
+        role = Role.objects.get(id = roleid)
 
-        account.user.username = name
-        account.user.email = email
-        account.address = address
-        account.country = country
+        role.permissions.clear()
+        for perm in permissions:
+            role.permissions.add(Permission.objects.get(id = perm))
 
-        if email_confirmed == 'on':
-            account.email_confirmed = True
-        else:
-            account.email_confirmed = False
-        
-        account.save()
-        account.user.save()
-
-        # Update the roles
-        EcomUserRole.objects.filter(user = EcomUser.objects.get(id=accountid)).delete()
-
-        for role in roles:
-            EcomUserRole.objects.get_or_create(user = EcomUser.objects.get(id=accountid), role = Role.objects.get(id = role))
-
-        messages.success(request, 'account_edited')
-        return redirect('adminAccounts')
+        messages.success(request, 'role_edited')
+        return redirect('adminRoles')
 
 @admin_only
 def adminPermissionsGet(request):
     # Get values
     perm = request.GET['term']
 
-    items = Product.objects.filter(deleted = False, hide = False, name__istartswith=perm).values('id', value=F('name'))
+    items = Permission.objects.filter(deleted = False, name__istartswith=perm).values('id', value=F('name'))
 
     return JsonResponse(list(items), safe=False)

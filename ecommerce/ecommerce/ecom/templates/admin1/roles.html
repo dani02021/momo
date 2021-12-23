@@ -50,7 +50,7 @@
               {% for item in items %}
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b>{{ item.get_name_display }}</b></td>
+                <td data-id="{{ item.id }}"><b>{{ item.name }}</b></td>
                 <td><a href="/administration/roles/edit/{{ item.id }}/" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>
@@ -110,34 +110,26 @@
 {% endif %}
 <!-- Modal -->
 <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-role" tabindex="-1"
-  aria-labelledby="add-order" aria-hidden="true">
+  aria-labelledby="add-role" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Add Role</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="add-order-form" action="/administration/orders/add/" onsubmit="selectAll();" method="post">
+      <form id="add-order-form" action="/administration/roles/add/" onsubmit="selectAll();" method="post">
         <div class="modal-body">
-          <label>Items:</label>
+          <label>Permissions:</label>
           <div>
-            <select id="add-order-items" name="items[]" multiple>
+            <select id="add-role-permissions" name="permissions[]" multiple>
             </select>
           </div>
-          <label>User:</label>
+          <label>Name:</label>
           <div class="ui-widget">
-            <input name="user" id="user">
-          </div>
-          <label>Status:</label>
-          <div>
-            <select id="add-order-statuses" name="status">
-              {% for id, name in statuses.items %}
-              <option value="{{ id }}">{{ name }}</option>
-              {% endfor %}
-            </select>
+            <input name="role" id="role">
           </div><br>
-          <button type="button" class="btn btn-primary" data-bs-target="#add-order-orderitem" data-bs-toggle="modal"
-            data-bs-dismiss="modal">Add Item</button>
+          <button type="button" class="btn btn-primary" data-bs-target="#add-role-roleitem" data-bs-toggle="modal"
+            data-bs-dismiss="modal">Add Permission</button>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -148,29 +140,25 @@
     </div>
   </div>
 </div>
-  <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-order-orderitem" tabindex="-1"
-    aria-labelledby="add-order-orderitem" aria-hidden="true">
+  <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-role-roleitem" tabindex="-1"
+    aria-labelledby="add-role-roleitem" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="remove-cat-title">Add Order</h5>
+          <h5 class="modal-title" id="remove-role-title">Add Role</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <label>Product:</label>
+          <label>Permission:</label>
           <div>
-            <input name="orderitem-select" id="orderitem-select" placeholder="Product Name">
-          </div>
-          <label>Quantity:</label>
-          <div>
-            <input type="number" id="orderitem-quantity" name="orderitem-quantity" placeholder="Quantity">
+            <input name="roleitem-select" id="roleitem-select" placeholder="Permission">
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-target="#add-order" data-bs-toggle="modal"
+          <button type="button" class="btn btn-secondary" data-bs-target="#add-role" data-bs-toggle="modal"
             data-bs-dismiss="modal" data-bs-dismiss="modal">Back</button>
-          <button type="button" data-bs-target="#add-order" data-bs-toggle="modal" data-bs-dismiss="modal"
-            onclick="addOrderItemModal(this);" class="btn btn-primary">Add</button>
+          <button type="button" data-bs-target="#add-role" data-bs-toggle="modal" data-bs-dismiss="modal"
+            onclick="addRoleItemModal(this);" class="btn btn-primary">Add</button>
         </div>
       </div>
     </div>
@@ -180,7 +168,7 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="remove-cat-title">Delete Orders</h5>
+          <h5 class="modal-title" id="remove-role-title">Delete Roles</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
@@ -201,31 +189,30 @@
   <script>
   var id = {};
 
-  function addOrderItemModal(elem) {
+  function addRoleItemModal(elem) {
     option = document.createElement('option');
-    e = document.getElementById('orderitem-select');
-    q = document.getElementById('orderitem-quantity');
-    items = document.getElementById('add-order-items');
+    e = document.getElementById('roleitem-select');
+    items = document.getElementById('add-role-permissions');
 
-    if(!q.value || !e.value)
+    if(!e.value)
       return;
 
     for (var i = 0; i < items.length; i++) {
       if (items.options[i].text.startsWith(e.value)) {
-        items.options[i].text = e.value + ', ' + (parseInt(items.options[i].text.split(', ')[1]) + parseInt(q.value));
-        items.options[i].value = e.value + ', ' + items.options[i].text.split(', ')[1];
+        items.options[i].text = e.value;
+        items.options[i].value = id[e.value];
         return;
       }
     }
 
-    option.text = e.value + ', ' + q.value;
-    option.value = id[e.value] + ', ' + q.value;
+    option.text = e.value;
+    option.value = id[e.value];
     option.selected = 'true'
     items.add(option);
   }
 
   function selectAll() {
-    options = document.getElementById('add-order-items').getElementsByTagName('option');
+    options = document.getElementById('add-role-permissions').getElementsByTagName('option');
     for (i = 0; i < options.length; i++) {
       options[i].selected = 'true';
     }
@@ -244,7 +231,7 @@
 
         for (const elem of elems) {
           if("id" in elem.dataset) {
-            var id = elem.innerText.match(/\d+/)[0];
+            var id = elem.dataset.id;
           }
         }
 
@@ -260,7 +247,7 @@
       return ok;
     }
 
-    function checkOrderFilter(form) {
+    function checkRoleFilter(form) {
       for (const elem of form.elements) {
         if (elem.value === '')
           elem.disabled = true;
@@ -270,26 +257,10 @@
     // Users autocomplete
     $( function() {
     var cache = {};
-    $( "input[name='user']" ).autocomplete({
-      source: "/administration/accounts/get/",
-      minLength: 3,
-      source: function( request, response ) {
-        var term = request.term;
-        if ( term in cache ) {
-          response( cache[ term ] );
-          return;
-        }
- 
-        $.getJSON( "/administration/accounts/get/", request, function( data, status, xhr ) {
-          cache[ term ] = data;
-          response( data );
-        });
-      }
-    });
 
     var cache1 = {};
-    $( "#orderitem-select" ).autocomplete({
-      source: "/administration/products/get/",
+    $( "#roleitem-select" ).autocomplete({
+      source: "/administration/permissions/get/",
       minLength: 2,
       source: function( request, response ) {
         var term = request.term;
@@ -298,7 +269,7 @@
           return;
         }
  
-        $.getJSON( "/administration/products/get/", request, function( data, status, xhr ) {
+        $.getJSON( "/administration/permissions/get/", request, function( data, status, xhr ) {
           cache1[ term ] = data;
           response( data );
         });

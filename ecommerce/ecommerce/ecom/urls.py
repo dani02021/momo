@@ -1,5 +1,5 @@
 from django.contrib.auth import logout
-from django.urls import path, re_path
+from django.urls import include, path, re_path
 
 from ecom import views
 
@@ -42,9 +42,11 @@ urlpatterns = [
     path('administration/accounts/get/', views.adminAccountsGet, name='adminAccountsGet'),
     path('administration/roles/', views.adminRoles, name='adminRoles'),
     path('administration/roles/<int:page>/', views.adminRolesPage, name='adminRolesPage'),
+    path('administration/roles/add/', views.adminAddRole, name='adminAddRole'),
     path('administration/roles/del/', views.adminRemoveRole, name='adminRemoveRole'),
     path('administration/roles/edit/<int:roleid>/', views.adminEditRole, name='adminEditRole'),
     path('administration/permissions/get/', views.adminPermissionsGet, name='adminPermissionsGet'),
+    #path('__debug__/', include('debug_toolbar.urls')),
     re_path(r'^activate_account/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,50})/$',
             views.activateAccount, name='activateAccount'),
     re_path(r'^email-resend/(?P<uidb64>[0-9A-Za-z_\-]+)', views.emailResend, name='emailResend'),
