@@ -58,7 +58,7 @@
                         {% for urole in uroles %}
                         {% if urole.role.name|stringformat:'s' == role.name|stringformat:'s' %} selected {% endif %}
                         {% endfor %}
-                        >{{ role.get_name_display }}</option>
+                        >{{ role.name }}</option>
                         {% endfor %}
                       </select>
                   </div>
@@ -81,6 +81,12 @@
                     <label
                     for="email_confirmed"
                     >Email confirmed</label>
+                  </div>
+                  <div class="form-group mb-3">
+                    <input type="checkbox" name="staff" id="staff" style="bottom: auto;top: 6px;margin-right: 5px;" disabled {% if user.user.is_staff %} checked {% endif %}>
+                    <label
+                    for="staff"
+                    >Staff</label>
                   </div>
                 </div>
                 <div class="col-12">

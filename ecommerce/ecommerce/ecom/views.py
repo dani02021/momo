@@ -438,7 +438,7 @@ def administration(request):
         username = request.POST.get('username', '')
         password = request.POST.get('password')
         user = authenticate(request, username=username, password=password)
-        if user is not None and user.is_staff:
+        if user is not None:
             auth_login(request, user)
             return render(request, 'admin1/index.html', context)
         else:
@@ -912,22 +912,25 @@ def adminAddAccount(request):
     password = request.POST.get('password', '')
     address = request.POST.get('address', '')
     country = request.POST.get('country', '')
+    staff = request.POST.get('staff', '')
 
     users = User.objects.filter((Q(username = username) | Q(email = email)))
-
-    # TODO: Test
     if users:
         ecom_users = EcomUser.objects.filter(deleted = False, user = users.first())
 
-        if not ecom_users:
+        if ecom_users:
             messages.error(request, 'account_exists')
             return redirect('adminAccounts')
-        
-        ecom_users.delete()
     
+    if staff == 'on':
+        staff = True
+    else:
+        staff = False
+
     user = User.objects.create_user(username, email, password)
     user.first_name = first_name
     user.last_name = last_name
+    user.is_staff = staff
     user.save()
 
     EcomUser.objects.create(user = user, address = address, country = country, email_confirmed = True)

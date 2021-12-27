@@ -26,6 +26,17 @@ class EcomUser(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     deleted = models.BooleanField(default=False)
 
+class EcomStaff(models.Model):
+    def __str__(self) -> str:
+        return self.user.username
+    def ecom_delete(self):
+        self.deleted = True
+        self.save()
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    deleted = models.BooleanField(default=False)
+
 class Permission(models.Model):
     def ecom_delete(self):
         self.deleted = True

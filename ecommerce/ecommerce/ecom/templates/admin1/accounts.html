@@ -71,7 +71,7 @@
                 <th scope="col">USERNAME</th>
                 <th scope="col">FULL NAME</th>
                 <th scope="col">COUNTRY</th>
-                <th scope="col">ADDRESS</th>
+                <th scope="col">STAFF</th>
                 <th scope="col">EMAIL</th>
                 <th scope="col">ACTION</th>
               </tr>
@@ -85,7 +85,7 @@
                 <td><b>{{ item.user.username }}</b></td>
                 <td><b>{{ item.user.first_name|add:' '|add:item.user.last_name }}</b></td>
                 <td><b>{{ item.country }}</b></td>
-                <td><b>{{ item.address }}</b></td>
+                <td><b>{{ item.user.is_staff }}</b></td>
                 <td><b>{{ item.user.email }}</b></td>
                 <td><a href="/administration/accounts/edit/{{ item.id }}/" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
@@ -210,6 +210,14 @@
                 <option value="{{ country.name }}">{{ country.name }}</option>
                 {% endfor %}
               </select>
+            </div>
+            <div class="row">
+              <div class="col-md-11 mx-auto">
+                <input type="checkbox" name="staff" id="staff" style="margin-top: 10px;" {% if user.user.is_staff %} checked {% endif %}>
+                <label
+                for="staff"
+                >Staff</label>
+              </div>
             </div>
             <div class="row">
               <div class="col-md-11 mx-auto"><label id="pass-err" style="color: red; font-weight: 300;"></label></div>
