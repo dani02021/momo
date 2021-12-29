@@ -54,12 +54,12 @@ class Role(models.Model):
     permissions = models.ManyToManyField(Permission)
     deleted = models.BooleanField(default=False)
 
-class EcomUserRole(models.Model):
+class EcomStaffRole(models.Model):
     def ecom_delete(self):
         self.deleted = True
         self.save()
     
-    user = models.ForeignKey(EcomUser, on_delete=models.DO_NOTHING)
+    user = models.ForeignKey(EcomStaff, on_delete=models.DO_NOTHING)
     role = models.ForeignKey(Role, on_delete=models.DO_NOTHING)
     deleted = models.BooleanField(default=False)
 

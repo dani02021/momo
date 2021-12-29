@@ -81,13 +81,13 @@
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
                 <td><b>{{ item.created_at }}</b></td>
-                <td data-id="{{ item.id }}"><b>#{{ item.id }}</b></td>
+                <td data-id="{{ item.user.id }}"><b>#{{ item.user.id }}</b></td>
                 <td><b>{{ item.user.username }}</b></td>
                 <td><b>{{ item.user.first_name|add:' '|add:item.user.last_name }}</b></td>
                 <td><b>{{ item.country }}</b></td>
                 <td><b>{{ item.user.is_staff }}</b></td>
                 <td><b>{{ item.user.email }}</b></td>
-                <td><a href="/administration/accounts/edit/{{ item.id }}/" class="tm-order-edit-link">
+                <td><a href="/administration/accounts/edit/{{ item.user.id }}/" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>
                 </td>

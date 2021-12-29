@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.core.validators import validate_email
+from django.db import connection
 from django.db.models.aggregates import Count, Sum
 from django.db.models.functions.datetime import Trunc
 from django.db.models.query_utils import Q
@@ -309,6 +310,7 @@ def report_items(REPORTS_PER_PAGE, groupby, ord_before, ord_after, page):
 
     pages = give_pages(paginator, page)
 
+    # Combine them all
     items = [ ]
 
     for item in page.object_list:
@@ -327,3 +329,50 @@ def report_items(REPORTS_PER_PAGE, groupby, ord_before, ord_after, page):
         index = index + 1
     
     return paginator, pages, items
+
+class PreparedStatement(object):
+
+    def __init__(self, name, query, vars):
+        self.name = name
+        self.query = query
+        self.vars = vars
+
+    def prepare(self):
+        SQL = "PREPARE %s FROM " % self.name
+        self.__executeQuery(SQL + " %s ;", self.query)
+
+    def get_prepared(self):
+        # store a map of all prepared queries on the current connection
+        return getattr(connection, "__prepared", default={})
+
+    def execute(self, **kwvars):
+
+        if not self.name in self.get_prepared().keys():
+           # Statement will be prepared once per session.
+           self.prepare()
+
+        SQL = "EXECUTE %s " % self.name
+
+        if self.vars:
+            missing_vars = set(self.vars) - set(kwvars)
+            if missing_vars:
+                raise TypeError("Prepared Statement %s requires variables: %s" % (
+                                    self.name, ", ".join(missing_vars) ) )
+
+            param_list = [ var + "=%s" for var in self.vars ]
+            param_vals = [ kwvars[var] for var in self.vars ]
+
+            SQL += "USING " + ", ".join( param_list )
+
+            return self.__executeQuery(SQL, *param_vals)
+        else:
+            return self.__executeQuery(SQL)
+
+    def __executeQuery(self,query, *args):
+        cursor = connection.cursor()
+        if args:
+            cursor.execute(query,args)
+        else:
+            cursor.execute(query)
+        return cursor
+

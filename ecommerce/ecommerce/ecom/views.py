@@ -5,7 +5,8 @@ from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
 from django.core.checks.messages import Error
 from django.db.models.aggregates import Sum
-from django.db.models.fields import DateTimeField
+from django.db.models.expressions import Value
+from django.db.models.fields import CharField, DateTimeField
 from django.http import request
 from django.http.response import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -856,7 +857,22 @@ def adminAccountsPage(request, page):
             active = [True]
             context['pass_active'] = 'on'
         
-        items = EcomUser.objects.filter(deleted=False, user__username__icontains = user, user__email__icontains = email, user__is_staff__in = staff, user__is_active__in = active, country__icontains = country).order_by('-user__date_joined')
+        # TODO: Bug -> accounts id will be the same for some users, because id of ecom_staff could be the same as ecom_user
+        ecom_users = EcomUser.objects.filter(deleted=False, user__username__icontains = user,
+        user__email__icontains = email, user__is_staff__in = staff, user__is_active__in = active,
+        country__icontains = country) \
+        .values('user__username', 'user__email', 'user__is_staff', 'user__first_name','user__last_name', 'user__id', 'country', 'created_at').order_by('-user__date_joined')
+        
+        staff_users = EcomStaff.objects.filter(deleted=False, user__username__icontains = user,
+        user__email__icontains = email, user__is_staff__in = staff, user__is_active__in = active) \
+        .annotate(country=Value("NULL", CharField())) \
+        .values('user__username', 'user__email', 'user__is_staff', 'user__first_name','user__last_name', 'user__id', 'country', 'created_at') \
+        .order_by('-user__date_joined')
+
+        logger.debug(staff_users.query)
+
+        items = ecom_users.union(staff_users)
+
     except (ValueError, ValidationError) as e:
         traceback.print_exc()
         items = { }
@@ -933,7 +949,10 @@ def adminAddAccount(request):
     user.is_staff = staff
     user.save()
 
-    EcomUser.objects.create(user = user, address = address, country = country, email_confirmed = True)
+    if staff:
+        EcomStaff.objects.create(user = user)
+    else:
+        EcomUser.objects.create(user = user, address = address, country = country, email_confirmed = True)
     
     messages.success(request, 'account_created')
     return redirect('adminAccounts')
@@ -943,9 +962,9 @@ def adminAddAccount(request):
 def adminEditAccount(request, accountid):
     if request.method == 'GET':
         context = {
-            'user': EcomUser.objects.get(id=accountid),
+            'user': get_user_model().objects.get(id=accountid),
             'roles': Role.objects.all(),
-            'uroles': EcomUserRole.objects.filter(user = EcomUser.objects.get(id = accountid)),
+            'uroles': EcomStaffRole.objects.filter(user = EcomStaff.objects.get(id = accountid)),
             'selected': 'accounts',
         }
 
@@ -958,7 +977,7 @@ def adminEditAccount(request, accountid):
         country = request.POST.get('country', '')
         email_confirmed = request.POST.get('email_confirmed', '')
         
-        account = EcomUser.objects.get(id = accountid)
+        user = get_user_model().objects.get(id = accountid)
 
         account.user.username = name
         account.user.email = email
@@ -974,10 +993,10 @@ def adminEditAccount(request, accountid):
         account.user.save()
 
         # Update the roles
-        EcomUserRole.objects.filter(user = EcomUser.objects.get(id=accountid)).delete()
+        EcomStaffRole.objects.filter(user = EcomStaff.objects.get(id=accountid)).delete()
 
         for role in roles:
-            EcomUserRole.objects.get_or_create(user = EcomUser.objects.get(id=accountid), role = Role.objects.get(id = role))
+            EcomStaffRole.objects.get_or_create(user = EcomStaff.objects.get(id=accountid), role = Role.objects.get(id = role))
 
         messages.success(request, 'account_edited')
         return redirect('adminAccounts')
