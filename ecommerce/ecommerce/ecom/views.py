@@ -856,6 +856,10 @@ def adminAccountsPage(request, page):
         if active == 'on':
             active = [True]
             context['pass_active'] = 'on'
+        if user == '':
+            user = '%'
+        if email == '':
+            email = '%'
         
         # TODO: Bug -> accounts id will be the same for some users, because id of ecom_staff could be the same as ecom_user
         ecom_users = EcomUser.objects.filter(deleted=False, user__username__icontains = user,
@@ -871,7 +875,10 @@ def adminAccountsPage(request, page):
 
         logger.debug(staff_users.query)
 
-        items = ecom_users.union(staff_users)
+        items = EcomUser.objects.raw("SELECT auth_user.username, auth_user.email, auth_user.is_staff, auth_user.first_name, auth_user.last_name, ecom_ecomstaff.id, created_at, deleted, user_id, NULL as country FROM ecom_ecomstaff inner join auth_user on (ecom_ecomstaff.user_id = auth_user.id) union select auth_user.username, auth_user.email, auth_user.is_staff, auth_user.first_name, auth_user.last_name, ecom_ecomuser.id, created_at, deleted, user_id, country from ecom_ecomuser inner join auth_user on (ecom_ecomuser.user_id = auth_user.id) order by created_at DESC")
+
+        for rec in items:
+            logger.debug(rec)
 
     except (ValueError, ValidationError) as e:
         traceback.print_exc()

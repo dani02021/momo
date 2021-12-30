@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.core.validators import validate_email
 from django.db import connection
+from django.db.backends.utils import CursorWrapper
+from django.db.utils import ProgrammingError
 from django.db.models.aggregates import Count, Sum
 from django.db.models.functions.datetime import Trunc
 from django.db.models.query_utils import Q
@@ -13,6 +15,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.contrib.auth import authenticate, login
 from django.utils import timezone
+from psycopg2.errors import DuplicatePreparedStatement
 
 import ecom.models as models
 from ecom.utils import *
@@ -332,46 +335,65 @@ def report_items(REPORTS_PER_PAGE, groupby, ord_before, ord_after, page):
 
 class PreparedStatement(object):
 
-    def __init__(self, name, query, vars):
+    def __init__(self, name, query, vars, types):
         self.name = name
         self.query = query
         self.vars = vars
+        self.types = types
 
     def prepare(self):
-        SQL = "PREPARE %s FROM " % self.name
-        self.__executeQuery(SQL + " %s ;", self.query)
+        try:
+            SQL = "PREPARE %s %s AS " % (self.name, self.types)
+            self.__executeQuery(SQL + " %s ;" % self.query)
+        except ProgrammingError as e:
+            if isinstance(e.__cause__, DuplicatePreparedStatement):
+                pass
+            traceback.print_exc()
 
     def get_prepared(self):
         # store a map of all prepared queries on the current connection
-        return getattr(connection, "__prepared", default={})
+        try:
+            getattr(connection, "__prepared")
+        except AttributeError:
+            setattr(connection,"__prepared",[])
+        finally:
+            return getattr(connection, "__prepared")
 
-    def execute(self, **kwvars):
+    def execute(self, **kwargs) -> CursorWrapper:
 
-        if not self.name in self.get_prepared().keys():
+        if not self.name in self.get_prepared():
            # Statement will be prepared once per session.
            self.prepare()
 
         SQL = "EXECUTE %s " % self.name
 
         if self.vars:
-            missing_vars = set(self.vars) - set(kwvars)
+            missing_vars = set(self.vars) - set(kwargs)
             if missing_vars:
                 raise TypeError("Prepared Statement %s requires variables: %s" % (
                                     self.name, ", ".join(missing_vars) ) )
 
-            param_list = [ var + "=%s" for var in self.vars ]
-            param_vals = [ kwvars[var] for var in self.vars ]
+            param_vals = [ "'" + kwargs[var] + "'" for var in self.vars ]
 
-            SQL += "USING " + ", ".join( param_list )
+            logger.error(param_vals)
+            logger.error(kwargs)
 
-            return self.__executeQuery(SQL, *param_vals)
+            SQL += "(" + ", ".join( param_vals ) + ")"
+
+            logger.debug(SQL)
+
+            return self.__executeQuery(SQL)
         else:
             return self.__executeQuery(SQL)
-
-    def __executeQuery(self,query, *args):
+    
+    def deallocate(self)  -> CursorWrapper:
+        SQL = "deallocate %s" % self.name
+        return self.__executeQuery(SQL)
+    
+    def __executeQuery(self,query, *args)  -> CursorWrapper:
         cursor = connection.cursor()
         if args:
-            cursor.execute(query,args)
+            cursor.execute(query, args)
         else:
             cursor.execute(query)
         return cursor
