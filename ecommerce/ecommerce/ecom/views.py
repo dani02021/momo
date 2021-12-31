@@ -39,6 +39,8 @@ from ecom.exceptions import NotEnoughQuantityException
 from ecom.generators import generateProducts
 from ecommerce.settings import MEDIA_ROOT
 
+from dqp import execute_stmt
+
 ITEMS = Product.objects.filter(hide=False, deleted=False)
 
 # Create your views here.
@@ -875,10 +877,7 @@ def adminAccountsPage(request, page):
 
         logger.debug(staff_users.query)
 
-        items = EcomUser.objects.raw("SELECT auth_user.username, auth_user.email, auth_user.is_staff, auth_user.first_name, auth_user.last_name, ecom_ecomstaff.id, created_at, deleted, user_id, NULL as country FROM ecom_ecomstaff inner join auth_user on (ecom_ecomstaff.user_id = auth_user.id) union select auth_user.username, auth_user.email, auth_user.is_staff, auth_user.first_name, auth_user.last_name, ecom_ecomuser.id, created_at, deleted, user_id, country from ecom_ecomuser inner join auth_user on (ecom_ecomuser.user_id = auth_user.id) order by created_at DESC")
-
-        for rec in items:
-            logger.debug(rec)
+        execute_stmt(union_users_staff())
 
     except (ValueError, ValidationError) as e:
         traceback.print_exc()

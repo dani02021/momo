@@ -6,6 +6,8 @@ from django.core.paginator import Paginator
 from django.core.validators import validate_email
 from django.db import connection
 from django.db.backends.utils import CursorWrapper
+from django.db.models.manager import BaseManager
+from django.db.models.query import RawQuerySet
 from django.db.utils import ProgrammingError
 from django.db.models.aggregates import Count, Sum
 from django.db.models.functions.datetime import Trunc
@@ -29,6 +31,8 @@ from ecom.PayPalClient import client
 from paypalcheckoutsdk.orders import OrdersCaptureRequest
 
 from ecom.exceptions import NotEnoughQuantityException
+
+from dqp import prepare_sql
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -333,13 +337,18 @@ def report_items(REPORTS_PER_PAGE, groupby, ord_before, ord_after, page):
     
     return paginator, pages, items
 
+@prepare_sql
+def union_users_staff():
+    return "SELECT auth_user.username, auth_user.email, auth_user.is_staff, auth_user.first_name, auth_user.last_name, ecom_ecomstaff.id, created_at, deleted, user_id, NULL as country FROM ecom_ecomstaff inner join auth_user on (ecom_ecomstaff.user_id = auth_user.id) union select auth_user.username, auth_user.email, auth_user.is_staff, auth_user.first_name, auth_user.last_name, ecom_ecomuser.id, created_at, deleted, user_id, country from ecom_ecomuser inner join auth_user on (ecom_ecomuser.user_id = auth_user.id) order by created_at DESC"
+
 class PreparedStatement(object):
 
-    def __init__(self, name, query, vars, types):
+    def __init__(self, name, query, vars, types, model:BaseManager):
         self.name = name
         self.query = query
         self.vars = vars
         self.types = types
+        self.model = model
 
     def prepare(self):
         try:
@@ -359,7 +368,7 @@ class PreparedStatement(object):
         finally:
             return getattr(connection, "__prepared")
 
-    def execute(self, **kwargs) -> CursorWrapper:
+    def execute(self, **kwargs) -> RawQuerySet:
 
         if not self.name in self.get_prepared():
            # Statement will be prepared once per session.
@@ -375,6 +384,10 @@ class PreparedStatement(object):
 
             param_vals = [ "'" + kwargs[var] + "'" for var in self.vars ]
 
+            for indx, var in enumerate(param_vals):
+                if var == '':
+                    param_vals[indx] = "'%'"
+
             logger.error(param_vals)
             logger.error(kwargs)
 
@@ -386,15 +399,10 @@ class PreparedStatement(object):
         else:
             return self.__executeQuery(SQL)
     
-    def deallocate(self)  -> CursorWrapper:
+    def deallocate(self)  -> RawQuerySet:
         SQL = "deallocate %s" % self.name
         return self.__executeQuery(SQL)
     
-    def __executeQuery(self,query, *args)  -> CursorWrapper:
-        cursor = connection.cursor()
-        if args:
-            cursor.execute(query, args)
-        else:
-            cursor.execute(query)
-        return cursor
+    def __executeQuery(self,query)  -> RawQuerySet:
+        return self.model.raw(query)
 
