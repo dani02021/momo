@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'dqp.apps.DQPConfig',
     #"debug_toolbar",
     #"template_profiler_panel",
 ]

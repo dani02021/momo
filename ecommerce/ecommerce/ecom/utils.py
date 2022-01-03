@@ -17,6 +17,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.contrib.auth import authenticate, login
 from django.utils import timezone
+from dqp.decorators import register_prepared_sql
 from psycopg2.errors import DuplicatePreparedStatement
 
 import ecom.models as models
@@ -337,9 +338,31 @@ def report_items(REPORTS_PER_PAGE, groupby, ord_before, ord_after, page):
     
     return paginator, pages, items
 
-@prepare_sql
+@register_prepared_sql
 def union_users_staff():
-    return "SELECT auth_user.username, auth_user.email, auth_user.is_staff, auth_user.first_name, auth_user.last_name, ecom_ecomstaff.id, created_at, deleted, user_id, NULL as country FROM ecom_ecomstaff inner join auth_user on (ecom_ecomstaff.user_id = auth_user.id) union select auth_user.username, auth_user.email, auth_user.is_staff, auth_user.first_name, auth_user.last_name, ecom_ecomuser.id, created_at, deleted, user_id, country from ecom_ecomuser inner join auth_user on (ecom_ecomuser.user_id = auth_user.id) order by created_at DESC"
+    return "SELECT auth_user.username, auth_user.email, auth_user.is_staff, auth_user.first_name, \
+        auth_user.last_name, ecom_ecomstaff.id, created_at, deleted, user_id, NULL as country \
+        FROM ecom_ecomstaff INNER JOIN auth_user on (ecom_ecomstaff.user_id = auth_user.id) \
+        WHERE (NOT ecom_ecomstaff.deleted AND UPPER(auth_user.email::text) LIKE UPPER(%(email)s) \
+        AND auth_user.is_active = %(active)s \
+        AND auth_user.is_staff = %(staff)s \
+        AND UPPER(auth_user.username::text) LIKE UPPER(%(username)s)) \
+        UNION \
+        SELECT auth_user.username, auth_user.email, auth_user.is_staff, auth_user.first_name, \
+        auth_user.last_name, ecom_ecomuser.id, created_at, deleted, user_id, country \
+        FROM ecom_ecomuser INNER JOIN auth_user on (ecom_ecomuser.user_id = auth_user.id) \
+        WHERE (NOT ecom_ecomuser.deleted AND UPPER(auth_user.email::text) LIKE UPPER(%(email)s) \
+        AND auth_user.is_active = %(active)s \
+        AND auth_user.is_staff = %(staff)s \
+        AND UPPER(auth_user.username::text) LIKE UPPER(%(username)s)) \
+        ORDER BY created_at DESC;"
+    
+    """
+    SELECT "auth_user"."username", "auth_user"."email", "auth_user"."is_staff", "auth_user"."first_name",
+    "auth_user"."last_name", "ecom_ecomstaff"."user_id", "ecom_ecomstaff"."created_at", NULL AS "country"
+    FROM "ecom_ecomstaff" INNER JOIN "auth_user" ON ("ecom_ecomstaff"."user_id" = "auth_user"."id")
+    WHERE (NOT "ecom_ecomstaff"."deleted" AND UPPER("auth_user"."email"::text) LIKE UPPER(%%) AND "auth_user"."is_active" IN (False, True) AND "auth_user"."is_staff" IN (False, True) AND UPPER("auth_user"."username"::text) LIKE UPPER(%%)) ORDER BY "auth_user"."date_joined" DESC
+    """
 
 class PreparedStatement(object):
 

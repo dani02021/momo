@@ -81,13 +81,13 @@
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
                 <td><b>{{ item.created_at }}</b></td>
-                <td data-id="{{ item.user.id }}"><b>#{{ item.user.id }}</b></td>
-                <td><b>{{ item.user.username }}</b></td>
-                <td><b>{{ item.user.first_name|add:' '|add:item.user.last_name }}</b></td>
+                <td data-id="{{ item.user_id }}"><b>#{{ item.user_id }}</b></td>
+                <td><b>{{ item.username }}</b></td>
+                <td><b>{{ item.first_name|add:' '|add:item.last_name }}</b></td>
                 <td><b>{{ item.country }}</b></td>
-                <td><b>{{ item.user.is_staff }}</b></td>
-                <td><b>{{ item.user.email }}</b></td>
-                <td><a href="/administration/accounts/edit/{{ item.user.id }}/" class="tm-order-edit-link">
+                <td><b>{{ item.is_staff }}</b></td>
+                <td><b>{{ item.email }}</b></td>
+                <td><a href="/administration/accounts/edit/{{ item.user_id }}/" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>
                 </td>
@@ -213,7 +213,7 @@
             </div>
             <div class="row">
               <div class="col-md-11 mx-auto">
-                <input type="checkbox" name="staff" id="staff" style="margin-top: 10px;" {% if user.user.is_staff %} checked {% endif %}>
+                <input type="checkbox" name="staff" id="staff" style="margin-top: 10px;" {% if user.is_staff %} checked {% endif %}>
                 <label
                 for="staff"
                 >Staff</label>

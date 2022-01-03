@@ -848,36 +848,28 @@ def adminAccountsPage(request, page):
     user = request.GET.get('user', '')
     email = request.GET.get('email', '')
     country = request.GET.get('country', '')
-    staff = request.GET.get('staff', [False, True])
-    active = request.GET.get('active', [False, True])
+    staff = request.GET.get('staff', False)
+    active = request.GET.get('active', False)
 
     try:
         if staff == 'on':
-            staff = [True]
+            staff = True
             context['pass_staff'] = 'on'
         if active == 'on':
-            active = [True]
+            active = True
             context['pass_active'] = 'on'
-        if user == '':
-            user = '%'
-        if email == '':
-            email = '%'
         
         # TODO: Bug -> accounts id will be the same for some users, because id of ecom_staff could be the same as ecom_user
-        ecom_users = EcomUser.objects.filter(deleted=False, user__username__icontains = user,
-        user__email__icontains = email, user__is_staff__in = staff, user__is_active__in = active,
-        country__icontains = country) \
-        .values('user__username', 'user__email', 'user__is_staff', 'user__first_name','user__last_name', 'user__id', 'country', 'created_at').order_by('-user__date_joined')
-        
-        staff_users = EcomStaff.objects.filter(deleted=False, user__username__icontains = user,
-        user__email__icontains = email, user__is_staff__in = staff, user__is_active__in = active) \
-        .annotate(country=Value("NULL", CharField())) \
-        .values('user__username', 'user__email', 'user__is_staff', 'user__first_name','user__last_name', 'user__id', 'country', 'created_at') \
-        .order_by('-user__date_joined')
+        if user == '':
+            userSTM = '%'
+        else:
+            userSTM = user
+        if email == '':
+            emailSTM = '%'
+        else:
+            emailSTM = email
 
-        logger.debug(staff_users.query)
-
-        execute_stmt(union_users_staff())
+        items = execute_stmt(union_users_staff(), {'email': emailSTM, 'active': str(active), 'staff': str(staff), 'username': userSTM})
 
     except (ValueError, ValidationError) as e:
         traceback.print_exc()
