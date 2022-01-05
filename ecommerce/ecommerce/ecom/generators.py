@@ -140,8 +140,6 @@ def generateUsers(n = 10):
                 country = 'Bulgaria',
                 email_confirmed = True
             )
-
-            EcomUserRole.objects.get_or_create(user = ecom_user, role = Role.objects.get(name = "_"))
         except:
             pass
 
@@ -159,14 +157,17 @@ def generateRoles(role_perms:dict):
         
         role.save()
 
-def generateUserRoles(user_roles:dict):
+def generateStaffRoles(user_roles:dict):
     for user, roles in user_roles.items():
         user = get_user_model().objects.get(username=user)
-        ecom_user = EcomUser.objects.get(user=user)
+        ecom_user = EcomStaff.objects.get(user=user)
 
         for role in roles:
-            EcomUserRole.objects.get_or_create(user = ecom_user, role = Role.objects.get(name=role))
+            EcomStaffRole.objects.get_or_create(user = ecom_user, role = Role.objects.get(name=role))
 
 
 #generateOrders()
 #generateUserRoles({'dakata': ['A']})
+#generatePermissions(['staff.read','staff.create','staff.update','staff.delete'])
+#generateRoles({'Admin': ['staff.read','staff.create','staff.update','staff.delete']})
+generateOrders(1000)

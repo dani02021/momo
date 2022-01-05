@@ -20,12 +20,12 @@ def has_permission(perm):
             if request.user.is_superuser:
                 return view_method(request, *args, **kwargs)
             
-            users = EcomUser.objects.filter(user = request.user)
-            if users:
+            users = EcomStaff.objects.filter(user = request.user)
+            if not users:
                 messages.error(request, 'no_permission')
                 return redirect('administration')
             
-            user = EcomStaff.objects.filter(user = request.user)
+            user = EcomStaff.objects.get(user = request.user)
 
             roles = EcomStaffRole.objects.filter(user = user).values_list('role')
 

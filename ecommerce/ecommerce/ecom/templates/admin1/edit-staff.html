@@ -35,33 +35,32 @@
                       >Email</label>
                       <input id="email" class="form-control validate" name="email" value="{{ user.user.email }}" required>
                     </div>
-                    <div class="form-group mb-3">
-                      <label
-                      for="address"
-                      >Address</label>
-                      <input id="address" class="form-control validate" name="address" value="{{ user.address }}" required>
-                    </div>
               </div>
               <div class="col-xl-6 col-lg-6 col-md-12 mx-auto mb-4">
+                  <div class="form-group mb-3">
+                    <label
+                    for="role"
+                        >Roles</label>
+                      <select
+                        class="tm-select-accounts"
+                        name="role"
+                        id="role"
+                        style="width: 100%;height: 50px;"
+                        multiple>
+                        {% for role in roles %}
+                        <option value="{{ role.id }}"
+                        {% for urole in uroles %}
+                        {% if urole.role.name|stringformat:'s' == role.name|stringformat:'s' %} selected {% endif %}
+                        {% endfor %}
+                        >{{ role.name }}</option>
+                        {% endfor %}
+                      </select>
+                  </div>
                   <div class="form-group mb-3">
                     <label
                     for="last_login"
                     >Last login</label>
                     <input id="last_login" disabled style="background-color: #54657d;" class="form-control validate" name="last_login" value="{{ user.user.last_login }}">
-                  </div>
-                  <div class="form-group mb-3">
-                    <label
-                    for="country"
-                    >Country</label>
-                    <input id="country" name="country" class="form-control validate" value="{{ user.country }}" required>
-                  </div>
-                </div>
-                <div class="col-12">
-                  <div class="form-group mb-3">
-                    <input type="checkbox" name="email_confirmed" id="email_confirmed" style="bottom: auto;top: 6px;margin-right: 5px;" {% if user.email_confirmed %} checked {% endif %}>
-                    <label
-                    for="email_confirmed"
-                    >Email confirmed</label>
                   </div>
                 </div>
                 <div class="col-12">
@@ -93,7 +92,7 @@
 </div>
 <script>
   function editAccount(elem) {
-    document.getElementById('edit-form').action = '/administration/accounts/edit/{{ user.id }}/';
+    document.getElementById('edit-form').action = '/administration/staff/edit/{{ user.id }}/';
     document.getElementById('edit-form').submit();
   }
 </script>

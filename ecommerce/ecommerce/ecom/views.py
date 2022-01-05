@@ -517,7 +517,6 @@ def adminProductsGet(request):
     return JsonResponse(list(items), safe=False)
 
 @admin_only
-@has_permission('orders.read')
 def adminOrders(request):
     return adminOrdersPage(request, 1)
 
@@ -848,28 +847,16 @@ def adminAccountsPage(request, page):
     user = request.GET.get('user', '')
     email = request.GET.get('email', '')
     country = request.GET.get('country', '')
-    staff = request.GET.get('staff', False)
-    active = request.GET.get('active', False)
+    active = request.GET.get('active', [False, True])
 
     try:
-        if staff == 'on':
-            staff = True
-            context['pass_staff'] = 'on'
         if active == 'on':
-            active = True
+            active = [True]
             context['pass_active'] = 'on'
         
-        # TODO: Bug -> accounts id will be the same for some users, because id of ecom_staff could be the same as ecom_user
-        if user == '':
-            userSTM = '%'
-        else:
-            userSTM = user
-        if email == '':
-            emailSTM = '%'
-        else:
-            emailSTM = email
-
-        items = execute_stmt(union_users_staff(), {'email': emailSTM, 'active': str(active), 'staff': str(staff), 'username': userSTM})
+        items = EcomUser.objects.filter(deleted=False, user__username__icontains = user,
+            user__email__icontains = email, user__is_active__in = active,
+            country__icontains = country).order_by('-user__date_joined')
 
     except (ValueError, ValidationError) as e:
         traceback.print_exc()
@@ -890,8 +877,8 @@ def adminAccountsPage(request, page):
     context['paginator'] = paginator
     context['page'] = page
     context['pages'] = pages
-    context['items'] = page.object_list
     context['selected'] = 'accounts'
+    context['items'] = page.object_list
     context['countries'] = iso3166.countries
     return render(request, 'admin1/accounts.html', context)
 
@@ -926,43 +913,33 @@ def adminAddAccount(request):
     password = request.POST.get('password', '')
     address = request.POST.get('address', '')
     country = request.POST.get('country', '')
-    staff = request.POST.get('staff', '')
 
     users = User.objects.filter((Q(username = username) | Q(email = email)))
     if users:
         ecom_users = EcomUser.objects.filter(deleted = False, user = users.first())
+        ecom_staff = EcomStaff.objects.filter(deleted = False, user = users.first())
 
-        if ecom_users:
+        if ecom_users or ecom_staff:
             messages.error(request, 'account_exists')
             return redirect('adminAccounts')
-    
-    if staff == 'on':
-        staff = True
-    else:
-        staff = False
 
     user = User.objects.create_user(username, email, password)
     user.first_name = first_name
     user.last_name = last_name
-    user.is_staff = staff
     user.save()
 
-    if staff:
-        EcomStaff.objects.create(user = user)
-    else:
-        EcomUser.objects.create(user = user, address = address, country = country, email_confirmed = True)
+    EcomUser.objects.create(user = user, address = address, country = country, email_confirmed = True)
     
     messages.success(request, 'account_created')
     return redirect('adminAccounts')
 
 @admin_only
 @has_permission('accounts.update')
-def adminEditAccount(request, accountid):
+def adminEditAccount(request, id):
     if request.method == 'GET':
         context = {
-            'user': get_user_model().objects.get(id=accountid),
+            'user': EcomUser.objects.get(id=id),
             'roles': Role.objects.all(),
-            'uroles': EcomStaffRole.objects.filter(user = EcomStaff.objects.get(id = accountid)),
             'selected': 'accounts',
         }
 
@@ -975,7 +952,7 @@ def adminEditAccount(request, accountid):
         country = request.POST.get('country', '')
         email_confirmed = request.POST.get('email_confirmed', '')
         
-        user = get_user_model().objects.get(id = accountid)
+        account = EcomUser.objects.get(id = id)
 
         account.user.username = name
         account.user.email = email
@@ -990,17 +967,133 @@ def adminEditAccount(request, accountid):
         account.save()
         account.user.save()
 
+        """
         # Update the roles
         EcomStaffRole.objects.filter(user = EcomStaff.objects.get(id=accountid)).delete()
 
         for role in roles:
             EcomStaffRole.objects.get_or_create(user = EcomStaff.objects.get(id=accountid), role = Role.objects.get(id = role))
 
+        """
         messages.success(request, 'account_edited')
         return redirect('adminAccounts')
+        
 
 @admin_only
-@has_permission('report.read')
+def adminStaff(request):
+    return adminStaffPage(request, 1)
+
+@admin_only
+@has_permission('staff.read')
+def adminStaffPage(request, page):
+    context = { }
+    ACCOUNTS_PER_PAGE = 20
+    # Get values
+    user = request.GET.get('user', '')
+    email = request.GET.get('email', '')
+
+    try:
+        items = EcomStaff.objects.filter(deleted=False, user__username__icontains = user,
+            user__email__icontains = email).order_by('-user__date_joined')
+
+    except (ValueError, ValidationError) as e:
+        traceback.print_exc()
+        items = { }
+
+    paginator = Paginator(items, ACCOUNTS_PER_PAGE)
+
+    page = paginator.get_page(page)
+
+    pages = give_pages(paginator, page)
+    
+    context['pass_user'] = user
+    context['pass_email'] = email
+
+    context['paginator'] = paginator
+    context['page'] = page
+    context['pages'] = pages
+    context['selected'] = 'staff'
+    context['items'] = page.object_list
+    context['countries'] = iso3166.countries
+    return render(request, 'admin1/staff.html', context)
+
+@admin_only
+@has_permission('staff.delete')
+def adminDelStaff(request):
+    ids = request.POST.getlist('id', '')
+
+    for id in ids:
+        ecom_user = EcomStaff.objects.get(deleted=False, id=id)
+        ecom_user.ecom_delete()
+    
+    messages.success(request, 'account_deleted')
+    return redirect('adminStaff')
+
+@admin_only
+@has_permission('staff.create')
+def adminAddStaff(request):
+    username = request.POST.get('username', '')
+    email = request.POST.get('email', '')
+    first_name = request.POST.get('firstname', '')
+    last_name = request.POST.get('lastname', '')
+    password = request.POST.get('password', '')
+
+    users = User.objects.filter((Q(username = username) | Q(email = email)))
+    if users:
+        user = users.first()
+        ecom_staff = EcomStaff.objects.filter(deleted = False, user = users.first())
+        ecom_users = EcomUser.objects.filter(deleted = False, user = users.first())
+
+        if ecom_staff or ecom_users:
+            messages.error(request, 'account_exists')
+            return redirect('adminStaff')
+    else:
+        user = User.objects.create_user(username, email, password)
+        user.first_name = first_name
+        user.last_name = last_name
+        user.is_staff = True
+        user.save()
+
+    EcomStaff.objects.create(user = user)
+    
+    messages.success(request, 'account_created')
+    return redirect('adminStaff')
+
+@admin_only
+@has_permission('staff.update')
+def adminEditStaff(request, id):
+    if request.method == 'GET':
+        context = {
+            'user': EcomStaff.objects.get(id=id),
+            'roles': Role.objects.all(),
+            'uroles': EcomStaffRole.objects.filter(user__id = id),
+            'selected': 'staff',
+        }
+
+        return render(request, 'admin1/edit-staff.html', context)
+    elif request.method == 'POST':
+        roles = request.POST.getlist('role')
+        name = request.POST.get('name', '')
+        email = request.POST.get('email', '')
+        
+        account = EcomStaff.objects.get(id = id)
+
+        account.user.username = name
+        account.user.email = email
+        
+        account.save()
+        account.user.save()
+
+        # Update the roles
+        EcomStaffRole.objects.filter(user = EcomStaff.objects.get(id=id)).delete()
+
+        for role in roles:
+            EcomStaffRole.objects.get_or_create(user = EcomStaff.objects.get(id=id), role = Role.objects.get(id = role))
+
+        messages.success(request, 'account_edited')
+        return redirect('adminStaff')
+
+@admin_only
 def adminReport(request):
     return adminReportPage(request, 1)
 
