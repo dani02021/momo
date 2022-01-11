@@ -170,4 +170,4 @@ def generateStaffRoles(user_roles:dict):
 #generateUserRoles({'dakata': ['A']})
 #generatePermissions(['staff.read','staff.create','staff.update','staff.delete'])
 #generateRoles({'Admin': ['staff.read','staff.create','staff.update','staff.delete']})
-generateOrders(1000)
+#generateOrders(1000)
