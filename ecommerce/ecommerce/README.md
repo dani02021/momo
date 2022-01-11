@@ -11,7 +11,7 @@ Version: 3
 1. Python 3
 2. Django (3.x.x)
 3. PostgreSQL (>= 12)
-4. Libraries: six, pycrypto, iso3166, paypal-checkout-serversdk, psycopg2, lxml, faker, whitenoise, dj-database-url
+4. Libraries: six, pycrypto, iso3166, paypal-checkout-serversdk, psycopg2, lxml, faker, whitenoise, dj-database-url, django-query-preparer
 5. Web Server: gunicorn
 
 # How to install
