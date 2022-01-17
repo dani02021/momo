@@ -27,7 +27,7 @@ SECRET_KEY = os.environ.get('APP_SECRET_KEY', 'unsafe-secret-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', "True") == "True"
 
-ALLOWED_HOSTS = ['192.168.1.6', 'localhost']
+ALLOWED_HOSTS = ['localhost']
 
 PASSWORD_RESET_TIMEOUT = 259200
 
@@ -89,7 +89,6 @@ DATABASES = {
         'PASSWORD': base64.b64decode(os.environ.get('DB_PASSWORD', '')).decode('utf-8'),
         'HOST': 'localhost',
         'PORT': '6432',
-        'CONN_MAX_AGE': 60,
     }
 }
 

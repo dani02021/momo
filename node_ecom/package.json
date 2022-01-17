@@ -1,0 +1,23 @@
+{
+  "name": "nodejs_ecommerce",
+  "version": "1.0.0",
+  "description": "NodeJS ecommerce project",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dani02021/training-projects.git"
+  },
+  "keywords": [
+    "nodejs",
+    "e-commerce"
+  ],
+  "author": "daniel",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dani02021/training-projects/issues"
+  },
+  "homepage": "https://github.com/dani02021/training-projects#readme"
+}

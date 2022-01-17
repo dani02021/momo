@@ -1,4 +1,5 @@
 import math
+import timeit
 
 class Point:
     def __init__(self, x, y) -> None:
@@ -9,8 +10,11 @@ class Point:
     def __str__(self):
         return "(" + str(self.x) + ", " + str(self.y) + ")"
 
+# python3 -m timeit -s "from random import randint;from square import isPerfectSquare" -n 100000 "isPerfectSquare(randint(0, 100000))"
+# 1.06 nanosec per loop for 100 000 loops with random int [0;100 000)
 def isPerfectSquare(n):
     x = n
+
     if x & 4294967295 == 0:
         x >>= 32
     if x & 65535 == 0:
@@ -24,17 +28,19 @@ def isPerfectSquare(n):
     
     if x & 7 != 1:
         return -1
-	
-    if n < 0:
-        return -1
     
+    return math.sqrt(n)
+
+# python3 -m timeit -s "from random import randint;from square import isPerfectSquare1" -n 100000 "isPerfectSquare1(randint(0, 100000))"
+# 940 nanosec per loop for 100 000 loops with random int [0;100 000)
+def isPerfectSquare1(n):
     nj = n & 0xF
 
     if nj == 0 or nj == 1 or nj == 4 or nj == 9:
         tst = math.sqrt(n)
         tst = int(tst)
-        if tst*tst == n:
-            return tst
+        
+        return tst
     
     return -1
 
@@ -64,8 +70,8 @@ if __name__ == "__main__":
             if a1.x == b.x or a1.y == b.y:
                 continue
 
-            xpos = abs(a1.x - b.x)
-            ypos = abs(a1.y - b.y)
+            xpos = a1.x - b.x
+            ypos = a1.y - b.y
             dist = isPerfectSquare(xpos * xpos + ypos * ypos)
 
             if dist == -1:
