@@ -88,7 +88,7 @@ DATABASES = {
         'USER': os.environ.get('DB_USER', 'telebid'),
         'PASSWORD': base64.b64decode(os.environ.get('DB_PASSWORD', '')).decode('utf-8'),
         'HOST': 'localhost',
-        'PORT': '5432',
+        'PORT': '6432',
     }
 }
 
