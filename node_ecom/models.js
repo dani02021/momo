@@ -1,17 +1,116 @@
 const db = require("./db.js");
 const { Sequelize, Model, DataTypes } = require("sequelize");
+const bcrypt = require("bcrypt");
 
 const User = db.define("user", {
-    name: DataTypes.TEXT,
-    favoriteColor: {
-      type: DataTypes.TEXT,
-      defaultValue: 'green'
-    },
-    age: DataTypes.INTEGER,
-    cash: DataTypes.INTEGER
+  username: {
+    type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  firstName: {
+    type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  lastName: {
+    type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  password: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    set(pass) {
+      const salt = bcrypt.genSaltSync(5);
+      const hash = bcrypt.hashSync(pass, salt, 5);
+      this.setDataValue('password', hash);
+    }
+  },
+  address: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  country: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  emailConfirmed: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false
+  }
+},
+{
+  paranoid: true,
+  timestamp: true
 });
 
+// Add custom methods
+User.prototype.ecomDelete = async function(varSave) {
+  deleted = true;
+  if (varSave) 
+  {
+    await this.save();
+  }
+}
+User.prototype.checkPassword = function(varPass) {
+  return bcrypt.compareSync(varPass, this.password);
+}
+
+const Category = db.define("category", {
+  name: {
+    type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  imageCss: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  }
+},
+{
+  paranoid: true,
+  timestamp: true
+});
+
+const Product = db.define("product", {
+  name: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    unique: true
+  },
+  price: {
+    type: DataTypes.DECIMAL(7, 2),
+    allowNull: false
+  },
+  discountPrice: {
+    type: DataTypes.DECIMAL(7, 2),
+    allowNull: false
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  image: {
+    type: DataTypes.STRING(600),
+    allowNull: true
+  },
+  quantity: {
+    type: DataTypes.INTEGER,
+    defaultValue: 1
+  },
+  hide: {
+    type: DataTypes.BOOLEAN
+  }
+},
+{
+  paranoid: true,
+  timestamp: true
+});
+
+Product.belongsTo(Category, {
+  foreignKey: 'categoryId'
+});
+
+module.exports.Category = Category
+
 (async () => {
-    // await db.sync({ force: true });
-    const jane = await User.create({ name: "Yes" });
+    // await db.sync({ alter: true });
+    // await Category.create({name: "Gym Accessories", imageCss: "fa fa-dumbbell"})
 })();

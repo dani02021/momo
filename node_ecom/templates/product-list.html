@@ -1,0 +1,198 @@
+<!-- Product List Start -->
+<div class="product-view">
+    <div class="container-fluid">
+        <div class="row" style="margin-bottom: 24px;">
+            <!-- Side Bar Start -->
+            <div class="col-lg-3 sidebar">
+                <div class="sidebar-widget category">
+                    <h2 class="title">Category</h2>
+                    <nav class="navbar bg-light">
+                        <ul class="navbar-nav">
+                            <% for(var i = 0; i < categories.length; i++) {
+                                <li class="nav-item">
+                                    <a class="nav-link" href="javascript:addCategory({{ category.id }});">
+                                    <i class="<%= categories[i].image_css %>"></i><%= categories[i].name %></a>
+                                </li>
+                            <% } %>
+                        </ul>
+                    </nav>
+                </div>
+
+                <div class="sidebar-widget brands">
+                    <h2 class="title">Our Brands</h2>
+                    <ul>
+                        <li><a href="#">Nulla </a><span>(45)</span></li>
+                        <li><a href="#">Curabitur </a><span>(34)</span></li>
+                        <li><a href="#">Nunc </a><span>(67)</span></li>
+                        <li><a href="#">Ullamcorper</a><span>(74)</span></li>
+                        <li><a href="#">Fusce </a><span>(89)</span></li>
+                        <li><a href="#">Sagittis</a><span>(28)</span></li>
+                    </ul>
+                </div>
+                <div class="sidebar-widget tag">
+                    <h2 class="title">Filters</h2>
+                    {% for key, value in filters.items %}
+                    <a href="javascript:clearFilter('{{key}}')">{{key}}: {{value}}</a>
+                    {% endfor %}
+                    {% if filters%}
+                    <br>
+                    {% endif %}
+                    <button onclick="javascript:clearFilters();" type="button" class="btn btn-secondary">Clear
+                        filters</button>
+                </div>
+            </div>
+            <!-- Side Bar End -->
+            <div class="col-lg-8">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="product-view-top">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="product-search">
+                                        <input id="searchProduct" type="text" placeholder="Search"
+                                            onkeyup="addSearch(this);">
+                                        <button><i class="fa fa-search" onclick="addSearchC(this);"></i></button>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="product-short">
+                                        <div class="dropdown">
+                                            <div class="dropdown-toggle" data-bs-toggle="dropdown">Product short by
+                                            </div>
+                                            <div class="dropdown-menu dropdown-menu-right">
+                                                <a href="#" class="dropdown-item">Newest</a>
+                                                <a href="#" class="dropdown-item">Popular</a>
+                                                <a href="#" class="dropdown-item">Most sales</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="product-price-range">
+                                        <div class="dropdown">
+                                            <div class="dropdown-toggle" data-bs-toggle="dropdown">Product price range
+                                            </div>
+                                            <div class="dropdown-menu dropdown-menu-right">
+                                                <a href="javascript:addMinMax(0, 50);" class="dropdown-item">$0 to
+                                                    $50</a>
+                                                <a href="javascript:addMinMax(51, 100);" class="dropdown-item">$51 to
+                                                    $100</a>
+                                                <a href="javascript:addMinMax(101, 150);" class="dropdown-item">$101 to
+                                                    $150</a>
+                                                <a href="javascript:addMinMax(151, 200);" class="dropdown-item">$151 to
+                                                    $200</a>
+                                                <a href="javascript:addMinMax(201, 250);" class="dropdown-item">$201 to
+                                                    $250</a>
+                                                <hr class="dropdown-divider">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label for="amount1"
+                                                            style="display: inline-block; margin-left: 10px;">$</label>
+                                                        <input type="number" id="amount1"
+                                                            onchange="javascript:changeMin();"
+                                                            style="display: inline-block; border: 0; width: 50px; display:inline-block;">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="amount2" style="display: inline-block;">$</label>
+                                                        <input type="number" id="amount2"
+                                                            onchange="javascript:changeMax();"
+                                                            style="display: inline-block; border: 0; width: 50px; display:inline-block; margin-right: 10px;">
+                                                    </div>
+                                                </div>
+                                                <div id="slider-range" style="margin-left: 10px; margin-right: 10px;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% for item in items %}
+                    <div class="col-md-4">
+                        <div class="product-item">
+                            <div class="product-title">
+                                <a href="/product-detail/{{ item.id }}"
+                                    style="height: 30px;display: block;text-overflow: ellipsis;overflow: hidden; white-space: nowrap;"
+                                    data-bs-toggle="tooltip" title="{{ item.name }}">{{ item.name }}</a>
+                                <div class="ratting">
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                    <i class="fa fa-star"></i>
+                                </div>
+                            </div>
+                            <div class="product-image">
+                                <a href="product-detail.html" style="height: 254.66px;overflow: hidden;">
+                                    {% if item.image %}
+                                    <img src="{{ item.image.url }}" style="object-fit: cover;" alt="Product Image">
+                                    {% else %}
+                                    <img src="" alt="No Image">
+                                    {% endif %}
+                                </a>
+                                <div class="product-action">
+                                    <a href="#"><i class="fa fa-heart"></i></a>
+                                    <a href="/product-detail/{{ item.id }}"><i class="fa fa-search"></i></a>
+                                </div>
+                            </div>
+                            <div class="product-price">
+                                {% if item.discount_price != item.price %}
+                                <h5 style="color: white; display: inline-block; margin: 0;"><s>{{ item.price }}$</s>
+                                </h5>
+                                <h3 class="discount-price">{{ item.discount_price }}$</h3>
+                                {% else %}
+                                <h3>{{ item.price }}$</h3>
+                                {% endif %}
+                                <a class="btn" href="/product-detail/{{ item.id }}"><i
+                                        class="fa fa-shopping-cart"></i>Buy Now</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Pagination Start -->
+                    {% if paginator %}
+                    <div class="col-md-12">
+                        <nav>
+                            <ul class="pagination justify-content-center">
+                                {% if page.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                    href="javascript:moveToPage({{ page.number|add:"-1"}});">Previous</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="" tabindex="-1">Previous</a>
+                                </li>
+                                {% endif %}
+                                {% for pag in pages %}
+                                {% if page.number|stringformat:'s' == pag|stringformat:'s' %}
+                                <li class="page-item active"><a class="page-link" href="">{{ pag }}</a></li>
+                                {% else %}
+                                <li class="page-item {% if '...' == pag|stringformat:'s' %}disabled{% endif %}"><a class="page-link" href="javascript:moveToPage({{ pag }});">
+                                    {{ pag }}</a></li>
+                                {% endif %}
+                                {% endfor %}
+                                {% if page.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                    href="javascript:moveToPage({{ page.number|add:"1"}});">Next</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="">Next</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Product List End -->
+
+    {% endblock %}

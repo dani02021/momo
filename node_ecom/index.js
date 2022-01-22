@@ -10,7 +10,10 @@ const app = new Koa();
 const router = new KoaRouter();
 
 router.get("/products", async ctx => {
-  ctx.body = 'Products here!'
+  console.log(Object.keys(models));
+  await models.Category.findAll().then(categories => {
+    ctx.render('product-list', {categories: categories})
+  })
 });
 
 router.get("/products/:page", async ctx => {
