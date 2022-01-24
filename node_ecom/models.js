@@ -108,7 +108,16 @@ Product.belongsTo(Category, {
   foreignKey: 'categoryId'
 });
 
-module.exports.Category = Category
+function category() {
+  return Category;
+}
+
+function product() {
+  return Product;
+}
+
+module.exports.category = category;
+module.exports.product = product;
 
 (async () => {
     // await db.sync({ alter: true });

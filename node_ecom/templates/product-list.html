@@ -8,10 +8,10 @@
                     <h2 class="title">Category</h2>
                     <nav class="navbar bg-light">
                         <ul class="navbar-nav">
-                            <% for(var i = 0; i < categories.length; i++) {
+                            <% for(var i = 0; i < categories.length; i++) { %>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="javascript:addCategory({{ category.id }});">
-                                    <i class="<%= categories[i].image_css %>"></i><%= categories[i].name %></a>
+                                    <a class="nav-link" href="javascript:addCategory(<%= categories[i].id %>);">
+                                    <i class="<%= categories[i].imageCss %>"></i><%= categories[i].name %></a>
                                 </li>
                             <% } %>
                         </ul>
@@ -109,13 +109,13 @@
                         </div>
                     </div>
 
-                    {% for item in items %}
+                    <% for(var i = 0; i < products.length; i++) { %>
                     <div class="col-md-4">
                         <div class="product-item">
                             <div class="product-title">
-                                <a href="/product-detail/{{ item.id }}"
+                                <a href="/product-detail/<%= products[i].id %>"
                                     style="height: 30px;display: block;text-overflow: ellipsis;overflow: hidden; white-space: nowrap;"
-                                    data-bs-toggle="tooltip" title="{{ item.name }}">{{ item.name }}</a>
+                                    data-bs-toggle="tooltip" title="<%= products[i].name %>"><%= products[i].name %></a>
                                 <div class="ratting">
                                     <i class="fa fa-star"></i>
                                     <i class="fa fa-star"></i>
@@ -126,73 +126,69 @@
                             </div>
                             <div class="product-image">
                                 <a href="product-detail.html" style="height: 254.66px;overflow: hidden;">
-                                    {% if item.image %}
-                                    <img src="{{ item.image.url }}" style="object-fit: cover;" alt="Product Image">
-                                    {% else %}
+                                    <% if(products[i].image) { %>
+                                    <img src="/media/<%= products[i].image %>" style="object-fit: cover;" alt="Product Image">
+                                    <% } else { %>
                                     <img src="" alt="No Image">
-                                    {% endif %}
+                                    <% } %>
                                 </a>
                                 <div class="product-action">
                                     <a href="#"><i class="fa fa-heart"></i></a>
-                                    <a href="/product-detail/{{ item.id }}"><i class="fa fa-search"></i></a>
+                                    <a href="/product-detail/<%= products[i].id %>"><i class="fa fa-search"></i></a>
                                 </div>
                             </div>
                             <div class="product-price">
-                                {% if item.discount_price != item.price %}
-                                <h5 style="color: white; display: inline-block; margin: 0;"><s>{{ item.price }}$</s>
+                                <% if(products[i].discountPrice != products[i].price) { %>
+                                <h5 style="color: white; display: inline-block; margin: 0;"><s><%= products[i].price %>$</s>
                                 </h5>
-                                <h3 class="discount-price">{{ item.discount_price }}$</h3>
-                                {% else %}
-                                <h3>{{ item.price }}$</h3>
-                                {% endif %}
+                                <h3 class="discount-price"><%= products[i].discountPrice %>$</h3>
+                                <% } else { %>
+                                <h3><%= products[i].price %>$</h3>
+                                <% } %>
                                 <a class="btn" href="/product-detail/{{ item.id }}"><i
                                         class="fa fa-shopping-cart"></i>Buy Now</a>
                             </div>
                         </div>
                     </div>
-                    {% endfor %}
+                    <% } %>
 
                     <!-- Pagination Start -->
-                    {% if paginator %}
                     <div class="col-md-12">
                         <nav>
                             <ul class="pagination justify-content-center">
-                                {% if page.has_previous %}
+                                <% if(page > 1) { %>
                                 <li class="page-item">
                                     <a class="page-link"
-                                    href="javascript:moveToPage({{ page.number|add:"-1"}});">Previous</a>
+                                    href="javascript:moveToPage(<%= page - 1 %>);">Previous</a>
                                 </li>
-                                {% else %}
+                                <% }else { %>
                                 <li class="page-item disabled">
                                     <a class="page-link" href="" tabindex="-1">Previous</a>
                                 </li>
-                                {% endif %}
-                                {% for pag in pages %}
-                                {% if page.number|stringformat:'s' == pag|stringformat:'s' %}
-                                <li class="page-item active"><a class="page-link" href="">{{ pag }}</a></li>
-                                {% else %}
-                                <li class="page-item {% if '...' == pag|stringformat:'s' %}disabled{% endif %}"><a class="page-link" href="javascript:moveToPage({{ pag }});">
-                                    {{ pag }}</a></li>
-                                {% endif %}
-                                {% endfor %}
-                                {% if page.has_next %}
+                                <% } %>
+                                <% for(var i = 0; i < pages.length; i++) { %>
+                                <% if(pages[i] == page) { %>
+                                <li class="page-item active"><a class="page-link" href=""><%= page %></a></li>
+                                <% }else { %>
+                                <li class="page-item <% if (pages[i] == '...') {%> disabled <% } %>"><a class="page-link" href="javascript:moveToPage(<%= pages[i] %>);">
+                                    <%= pages[i] %></a></li>
+                                <% } %>
+                                <% } %>
+                                <% if(page < lastPage) { %>
                                 <li class="page-item">
                                     <a class="page-link"
-                                    href="javascript:moveToPage({{ page.number|add:"1"}});">Next</a>
+                                    href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
                                 </li>
-                                {% else %}
+                                <% }else { %>
                                 <li class="page-item disabled">
                                     <a class="page-link" href="">Next</a>
                                 </li>
-                                {% endif %}
+                                <% } %>
                             </ul>
                         </nav>
                     </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
     <!-- Product List End -->
-
-    {% endblock %}

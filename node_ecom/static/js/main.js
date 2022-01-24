@@ -340,16 +340,16 @@ function moveToPage(page) {
     if(hasPage()) {
         replacePage(page);
     } else {
-        window.location.pathname += page + "/";
+        window.location.pathname += "/" + page;
     }
 }
 
 function hasPage() {
-    return new RegExp("[0-9]+/$").test(window.location.pathname);
+    return new RegExp("/[0-9]+").test(window.location.pathname);
 }
 
 function replacePage(page) {
-    window.location.pathname = window.location.pathname.replace(new RegExp("[0-9]+/$"), page + "/");
+    window.location.pathname = window.location.pathname.replace(new RegExp("/[0-9]+"), "/" + page);
 }
 
 function checkRegisterForm() {
