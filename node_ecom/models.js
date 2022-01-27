@@ -5,7 +5,13 @@ const bcrypt = require("bcrypt");
 const User = db.define("user", {
   username: {
     type: DataTypes.STRING(50),
+    unique: true,
     allowNull: false
+  },
+  email: {
+    type: DataTypes.STRING(50),
+    unique: true,
+    allowNull: true
   },
   firstName: {
     type: DataTypes.STRING(50),
@@ -34,7 +40,8 @@ const User = db.define("user", {
   },
   emailConfirmed: {
     type: DataTypes.BOOLEAN,
-    allowNull: false
+    allowNull: false,
+    defaultValue: false
   }
 },
 {
@@ -116,8 +123,13 @@ function product() {
   return Product;
 }
 
+function user() {
+  return User;
+}
+
 module.exports.category = category;
 module.exports.product = product;
+module.exports.user = user;
 
 (async () => {
     // await db.sync({ alter: true });

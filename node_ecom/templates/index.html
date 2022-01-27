@@ -8,6 +8,12 @@
                         <li class="nav-item">
                             <a class="nav-link" href="#"><i class="fa fa-shopping-bag"></i>Best Selling</a>
                         </li>
+                        <% for(var i = 0; i < categories.length; i++) { %>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/products/?cat=<%= categories[i].id%>">
+                                <i class="<%= categories[i].imageCss %>"></i><%= categories[i].name %></a>
+                            </li>
+                        <% } %>
                     </ul>
                 </nav>
             </div>
@@ -165,10 +171,11 @@
             <h1>Recent Products</h1>
         </div>
         <div class="row align-items-center product-slider product-slider-4">
+            <% for(var i = 0; i < products.length; i++) { %>
             <div class="col-lg-3">
                 <div class="product-item">
                     <div class="product-title" style="height: 90px;display: block;text-overflow: ellipsis;overflow: hidden; white-space: nowrap;">
-                        <a href="#"></a>
+                        <a href="#"><%= products[i].name %></a>
                         <div class="ratting">
                             <i class="fa fa-star"></i>
                             <i class="fa fa-star"></i>
@@ -178,7 +185,12 @@
                         </div>
                     </div>
                     <div class="product-image">
-                        <a href="product-detail.html" style="height: 300.66px;overflow: hidden;">
+                        <a href="/product-detail" style="height: 300.66px;overflow: hidden;">
+                            <% if(products[i].image) { %>
+                            <img src="/media/<%= products[i].image %>" style="object-fit: cover;" alt="Product Image">
+                            <% } else { %>
+                            <img src="" alt="No Image">
+                            <% } %>
                         </a>
                         <div class="product-action">
                             <a href="#"><i class="fa fa-cart-plus"></i></a>
@@ -187,10 +199,25 @@
                         </div>
                     </div>
                     <div class="product-price">
-                        <a class="btn" href="/product-detail/"><i class="fa fa-shopping-cart"></i>Buy Now</a>
+                        <% if (products[i].discountPrice != products[i].price) { %>
+                        <h5 style="color: white; display: inline-block; margin: 0;"><s><%= products[i].price %>$</s>
+                        </h5>
+                        <h3 class="discount-price"><%= products[i].discountPrice %>$</h3>
+                        <% } else { %>
+                        <h3><%= products[i].price %>$</h3>
+                        <% } %>
+                        <br>
+                        <% if(products[i].quantity == 0) { %>
+                        <h4 style="color: grey;">Out of Stock</h4>
+                        <% } else if (products[i].quantity <= 10) { %><h4 style="color: red;">Only <%= products[i].quantity %> Left!</h4>
+                        <% } else { %>
+                        <h4 style="color: #AAFF00;">In Stock</h4>
+                        <% } %>
+                        <a class="btn" href="/product-detail/<%= products[i].id %>"><i class="fa fa-shopping-cart"></i>Buy Now</a>
                     </div>
                 </div>
             </div>
+            <% } %>
         </div>
     </div>
 </div>

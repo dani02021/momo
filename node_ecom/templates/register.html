@@ -1,0 +1,84 @@
+<!-- Login Start -->
+<div class="row justify-content-md-center">
+    <div class="col col-lg-2"></div>
+    <div class="col-md-auto"><b>Register Form</b></div>
+    <div class="col col-lg-2"></div>
+</div>
+<div class="container">
+    <div class="row justify-content-md-center">
+        <div class="col-md-auto">
+            <div class="row justify-content-md-center">
+                <div class="login">
+                    <div class="container-fluid">
+                        <div class="col-lg-auto">
+                            <div class="register-form">
+                                <form action="/register" onsubmit="return checkRegisterForm();" method="post">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label>Username</label>
+                                            <input class="form-control" type="text" placeholder="Username"
+                                                name="username" id="username" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>E-mail</label>
+                                            <input class="form-control" type="email" placeholder="E-mail" name="email"
+                                                id="email" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>Password</label>
+                                            <input class="form-control" type="password" placeholder="Password"
+                                                name="password1" id="password1" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>Confirm Password</label>
+                                            <input class="form-control" type="password" placeholder="Password"
+                                                name="password2" id="password2" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>First Name</label>
+                                            <input class="form-control" type="text" placeholder="First Name"
+                                                name="first" id="first">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>Last Name</label>
+                                            <input class="form-control" type="text" placeholder="Last Name" name="last"
+                                                id="last">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>Address</label>
+                                            <input class="form-control" type="text" placeholder="Address" name="address"
+                                                id="address">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>Country</label>
+                                            <input class="form-control" type="text" placeholder="Country" name="country"
+                                            id="country">
+                                        </div>
+                                        {% if messages %}
+                                        {% for message in messages %}
+                                        {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}
+                                        <div class="col-md-6">
+                                            <label class="form-label" id="errorMsg" style="color: red;">{{ message }}</label>
+                                        </div>
+                                        {% endif %}
+                                        {% endfor %}
+                                        {% else %}
+                                        <div class="col-md-6">
+                                            <label class="form-label" id="errorMsg" style="color: red;"></label>
+                                        </div>
+                                        {% endif %}
+                                        <div class="col-md-12">
+                                            <button class="btn" type="submit">Submit</button>
+                                        </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+<!-- Login End -->
+{% endblock %}

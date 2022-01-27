@@ -58,7 +58,7 @@
                                         <ul class="dropdown-menu" aria-labelledby="navbarDarkDropdownMenuLink">
                                             <li><a class="dropdown-item" data-bs-toggle="modal"
                                                     data-bs-target="#loginModal" href="">Login</a></li>
-                                            <li><a class="dropdown-item" href="/register/">Register</a></li>
+                                            <li><a class="dropdown-item" href="/register">Register</a></li>
                                         </ul>
                                     </li>
                                 </ul>
@@ -71,8 +71,8 @@
                                             My Account
                                         </a>
                                         <ul class="dropdown-menu" aria-labelledby="navbarDarkDropdownMenuLink">
-                                            <li><a class="dropdown-item" href="/my-account/">My Account</a></li>
-                                            <li><a class="dropdown-item" href="/logout/">Log out</a></li>
+                                            <li><a class="dropdown-item" href="/my-account">My Account</a></li>
+                                            <li><a class="dropdown-item" href="/logout">Log out</a></li>
                                         </ul>
                                     </li>
                                 </ul>
@@ -83,7 +83,31 @@
         </div>
         </nav>
     </div>
+    <!-- Nav Bar End-->
+    <% if(locals.messages) { %>
+    <% for(i in messages) { %>
+    <% if(messages.hasOwnProperty(i)) { %>
+    <% if(i == 'registerSuccess') { %>
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas fa-check" style="margin-right: 10px;"></i>
+            <div>
+                <%= messages[i] %>
+            </div>
+        </div>
     </div>
+    <% } %>
+    <% if(i == 'userExists') { %>
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas fa-check" style="margin-right: 10px;"></i>
+            <div>
+                <%= messages[i] %>
+            </div>
+        </div>
+    </div>
+    <% } %>
+    <% } %>
+    <% } %>
+    <% } %>
     <!-- Modal Start -->
     <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -240,9 +264,9 @@
         $("#amount2").val($("#slider-range").slider("values", 1))
 
         // Alert fade auto
-        //$( ".alert" ).delay(3000).slideUp(200, function() {
-        //    $(this).alert('close')
-        //})
+        $( ".alert" ).delay(3000).slideUp(200, function() {
+            $(this).alert('close')
+        })
     </script>
 </body>
 

@@ -31,12 +31,14 @@
                 </div>
                 <div class="sidebar-widget tag">
                     <h2 class="title">Filters</h2>
-                    {% for key, value in filters.items %}
-                    <a href="javascript:clearFilter('{{key}}')">{{key}}: {{value}}</a>
-                    {% endfor %}
-                    {% if filters%}
+                    <% for(var i in filters) { %>
+                    <% if (filters.hasOwnProperty(i)) { %>
+                    <a href="javascript:clearFilter('i')"><%= i %>: <%= filters[i] %></a>
+                    <% } %>
+                    <% } %>
+                    <% if(filters) {%>
                     <br>
-                    {% endif %}
+                    <% } %>
                     <button onclick="javascript:clearFilters();" type="button" class="btn btn-secondary">Clear
                         filters</button>
                 </div>
