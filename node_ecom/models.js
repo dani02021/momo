@@ -42,6 +42,13 @@ const User = db.define("user", {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false
+  },
+  lastLogin: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  verificationToken: {
+    type: DataTypes.STRING
   }
 },
 {
@@ -100,10 +107,12 @@ const Product = db.define("product", {
   },
   quantity: {
     type: DataTypes.INTEGER,
-    defaultValue: 1
+    defaultValue: 1,
+    allowNull: false
   },
   hide: {
-    type: DataTypes.BOOLEAN
+    type: DataTypes.BOOLEAN,
+    allowNull: false
   }
 },
 {

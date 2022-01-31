@@ -105,6 +105,15 @@
         </div>
     </div>
     <% } %>
+    <% if(i == 'verfError') { %>
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas fa-check" style="margin-right: 10px;"></i>
+            <div>
+                <%= messages[i] %>
+            </div>
+        </div>
+    </div>
+    <% } %>
     <% } %>
     <% } %>
     <% } %>

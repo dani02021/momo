@@ -5,6 +5,9 @@ const path = require("path");
 const serve = require('koa-static');
 const render = require("koa-ejs");
 const utilsEcom = require("./utils.js");
+const session = require('koa-session');
+
+require('dotenv').config();
 
 const { Sequelize } = require("sequelize");
 const Op = Sequelize.Op;
@@ -17,8 +20,10 @@ const User = models.user();
 const app = new Koa();
 const router = new KoaRouter();
 
+app.keys = [process.env.COOKIE_SECRET];
+
 // Router functions
-async function getIndex(ctx, messages) {
+async function getIndex(ctx) {
   let categories, products;
 
   await Category.findAll().then((categoriesv) => categories = categoriesv);
@@ -36,10 +41,13 @@ async function getIndex(ctx, messages) {
   await ctx.render('index', {
     categories: categories,
     products: products,
-    messages: messages
-  })
+    messages: ctx.session.messages
+  });
+
+  // Remove the message
+  ctx.session.messages = null;
 }
-async function getProducts(ctx, messages) {
+async function getProducts(ctx) {
   // Get filters
   let filters = {}, filtersToReturn = {};
 
@@ -76,11 +84,11 @@ async function getProducts(ctx, messages) {
     filters['search'] = ''
   }
 
-  let categories, products, page;
+  let categories, products, page = 1;
   await Category.findAll().then((categoriesv) => categories = categoriesv);
 
   if (ctx.params.page) {
-    page = ctx.params.page
+    page = parseInt(ctx.params.page)
   }
 
   let count = 0;
@@ -89,9 +97,8 @@ async function getProducts(ctx, messages) {
   let offset = 0;
 
   if (ctx.params.page) {
-    let offset = (ctx.params.page - 1) * limit;
+    offset = (parseInt(ctx.params.page) - 1) * limit;
   }
-
 
   let whereParam = {
     hide: false,
@@ -146,9 +153,16 @@ router.post("/register", async ctx => {
   if(!unique) 
   {
     let message = {'userExists': 'User already exists with this email or username'}
-    await ctx.render('register', {messages: message})
-  } else 
+    ctx.session.messages = messages;
+    await ctx.render('register')
+  } 
+  else 
   {
+    // Send email
+    let token = utilsEcom.generateEmailVerfToken();
+
+    utilsEcom.sendEmail(ctx.request.body.email, token);
+
     User.create({
       username: ctx.request.body.username,
       email: ctx.request.body.email,
@@ -157,10 +171,38 @@ router.post("/register", async ctx => {
       lastName: ctx.request.body.last,
       address: ctx.request.body.address,
       country: ctx.request.body.country,
+      verificationToken: token,
     });
   
-    let messages = {'registerSuccess': 'Please validate your e-mail'}
-    await getIndex(ctx, messages)
+    let messages = {'registerSuccess': 'Please validate your e-mail!'};
+    ctx.redirect('/')
+  }
+});
+
+router.get('/verify_account/:token', async ctx => {
+  let token = ctx.params.token;
+  let ok = false;
+
+  await User.findOne({
+    where: {
+      verificationToken: token,
+      emailConfirmed: false
+    }
+  }).then(async (userv) => {
+    await userv.set({emailConfirmed: true});
+    await userv.save();
+
+    ok = true;
+  });
+
+  if(ok) {
+    let messages = {'registerSuccess': 'Your email is validated!'};
+    ctx.session.messages = messages;
+    ctx.redirect('/')
+  } else {
+    let messages = {'verfError': 'Invalid token!!'};
+    ctx.session.messages = messages;
+    ctx.redirect('/')
   }
 })
 
@@ -171,6 +213,12 @@ render(app, {
   cache: false,
   debug: false,
 });
+
+app.use(session({
+  key: process.env.COOKIE_SECRET,
+  maxAge: 2 * 7 * 24 * 60 * 60 * 1000, // 2 weeks
+  renew: true
+}, app));
 
 app.use(serve('./static'));
 
