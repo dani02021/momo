@@ -87,7 +87,7 @@
     <% if(locals.messages) { %>
     <% for(i in messages) { %>
     <% if(messages.hasOwnProperty(i)) { %>
-    <% if(i == 'registerSuccess') { %>
+    <% if(i == 'registerSuccess' || i == 'loginSuccess') { %>
         <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
             <i class="fas fa-check" style="margin-right: 10px;"></i>
             <div>
@@ -98,7 +98,7 @@
     <% } %>
     <% if(i == 'userExists') { %>
         <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
-            <i class="fas fa-check" style="margin-right: 10px;"></i>
+            <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
             <div>
                 <%= messages[i] %>
             </div>
@@ -107,7 +107,7 @@
     <% } %>
     <% if(i == 'verfError') { %>
         <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
-            <i class="fas fa-check" style="margin-right: 10px;"></i>
+            <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
             <div>
                 <%= messages[i] %>
             </div>

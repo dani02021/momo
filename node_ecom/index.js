@@ -16,6 +16,7 @@ const models = require("./models.js");
 const Category = models.category();
 const Product = models.product();
 const User = models.user();
+const Session = models.session();
 
 const app = new Koa();
 const router = new KoaRouter();
@@ -189,6 +190,9 @@ router.get('/verify_account/:token', async ctx => {
       emailConfirmed: false
     }
   }).then(async (userv) => {
+    if(userv == null)
+      return;
+
     await userv.set({emailConfirmed: true});
     await userv.save();
 
@@ -200,11 +204,47 @@ router.get('/verify_account/:token', async ctx => {
     ctx.session.messages = messages;
     ctx.redirect('/')
   } else {
-    let messages = {'verfError': 'Invalid token!!'};
+    let messages = {'verfError': 'Invalid token!'};
     ctx.session.messages = messages;
     ctx.redirect('/')
   }
-})
+});
+
+router.post("/login", async ctx => {
+  let ok = false, auth = false;
+
+  await User.findOne({
+    where: {
+      username = ctx.request.username
+    }
+  }).then(async userv => {
+    if(userv == null)
+      return;
+
+      ok = true;
+  });
+
+  if(ok) 
+  {
+    // User is found
+    if(auth) 
+    {
+      let messages = {'loginSuccess': 'Successful login!'};
+      ctx.session.messages = messages;
+      ctx.session.login = utilsEcom.generateSessionKey();
+
+      Session.create({key: ctx.session.login, expirationDate: })
+      ctx.redirect('/')
+    }
+  }
+  else 
+  {
+    // User not found
+    let messages = {'loginError': 'User not found!'};
+    ctx.session.messages = messages;
+    ctx.redirect('/')
+  }
+});
 
 render(app, {
   root: path.join(__dirname, "templates"),

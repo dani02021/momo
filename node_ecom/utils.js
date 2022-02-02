@@ -2,6 +2,8 @@ const crypto = require('crypto');
 const nodemailer = require("nodemailer");
 require('dotenv').config();
 
+const PRODUCTS_PER_PAGE = 12;
+
 const transport = nodemailer.createTransport({
     pool: true,
     service: 'gmail',
@@ -15,12 +17,8 @@ const transport = nodemailer.createTransport({
 transport.verify(function (error, success) {
     if (error) {
       console.log(error);
-    } else {
-      console.log("Server is ready to take our messages");
     }
   });
-
-const PRODUCTS_PER_PAGE = 12;
 
 function givePages(page, lastPage) {
     var delta = 1,
@@ -51,6 +49,10 @@ function givePages(page, lastPage) {
     return rangeWithDots;
 }
 
+function generateSessionKey() {
+    return crypto.randomBytes(20).toString('hex');
+}
+
 // Generate email verification token
 function generateEmailVerfToken() {
     return crypto.randomBytes(60).toString('hex');
@@ -62,7 +64,7 @@ async function sendEmail(email, token) {
         from: "danielgudjenev@gmail.com",
         to: email,
         subject: "Email Verification NodeJS",
-        text: `Here is your link: http://localhost:3000/verify_account?${token}`,
+        text: `Here is your link: http://localhost:3000/verify_account/${token}`,
     };
 
     transport.sendMail(message);
@@ -71,7 +73,7 @@ async function sendEmail(email, token) {
 // Constants
 module.exports.PRODUCTS_PER_PAGE = PRODUCTS_PER_PAGE;
 
-
+// Methods
 module.exports.givePages = givePages;
 module.exports.generateEmailVerfToken = generateEmailVerfToken;
 module.exports.sendEmail = sendEmail;

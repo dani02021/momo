@@ -57,16 +57,19 @@ const User = db.define("user", {
 });
 
 // Add custom methods
-User.prototype.ecomDelete = async function(varSave) {
+User.prototype.ecomDelete = async function(varSave) 
+{
   deleted = true;
   if (varSave) 
   {
     await this.save();
   }
-}
-User.prototype.checkPassword = function(varPass) {
+};
+
+User.prototype.authenticate = function(varPass) 
+{
   return bcrypt.compareSync(varPass, this.password);
-}
+};
 
 const Category = db.define("category", {
   name: {
@@ -120,6 +123,21 @@ const Product = db.define("product", {
   timestamp: true
 });
 
+const Session = db.define("session", {
+  key: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  },
+  expireDate: {
+    type: DataTypes.DATE
+  },
+},
+{
+  paranoid: false,
+  timestamp: false
+});
+
 Product.belongsTo(Category, {
   foreignKey: 'categoryId'
 });
@@ -136,9 +154,14 @@ function user() {
   return User;
 }
 
+function session() {
+  return Session;
+}
+
 module.exports.category = category;
 module.exports.product = product;
 module.exports.user = user;
+module.exports.session = session;
 
 (async () => {
     // await db.sync({ alter: true });
