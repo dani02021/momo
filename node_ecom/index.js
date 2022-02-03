@@ -202,11 +202,12 @@ router.get('/verify_account/:token', async ctx => {
   if(ok) {
     let messages = {'registerSuccess': 'Your email is validated!'};
     ctx.session.messages = messages;
-    ctx.redirect('/')
+    ctx.redirect('/');
   } else {
     let messages = {'verfError': 'Invalid token!'};
     ctx.session.messages = messages;
-    ctx.redirect('/')
+    ctx.redirect('/');
+    console.log(ctx.session);
   }
 });
 
@@ -215,7 +216,7 @@ router.post("/login", async ctx => {
 
   await User.findOne({
     where: {
-      username = ctx.request.username
+      username: ctx.request.body.username
     }
   }).then(async userv => {
     if(userv == null)
@@ -233,7 +234,7 @@ router.post("/login", async ctx => {
       ctx.session.messages = messages;
       ctx.session.login = utilsEcom.generateSessionKey();
 
-      Session.create({key: ctx.session.login, expirationDate: })
+      // Session.create({key: ctx.session.login, expirationDate: })
       ctx.redirect('/')
     }
   }
@@ -255,8 +256,9 @@ render(app, {
 });
 
 app.use(session({
+  store: utilsEcom.configPostgreSessions(),
   key: process.env.COOKIE_SECRET,
-  maxAge: 2 * 7 * 24 * 60 * 60 * 1000, // 2 weeks
+  maxAge: utilsEcom.SESSION_MAX_AGE, // 2 weeks
   renew: true
 }, app));
 

@@ -129,9 +129,12 @@ const Session = db.define("session", {
     allowNull: false,
     unique: true
   },
-  expireDate: {
-    type: DataTypes.DATE
+  maxAge: {
+    type: DataTypes.INTEGER
   },
+  expire: {
+    type: DataTypes.DATE
+  }
 },
 {
   paranoid: false,
