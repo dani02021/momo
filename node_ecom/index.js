@@ -42,7 +42,7 @@ async function getIndex(ctx) {
   await ctx.render('index', {
     categories: categories,
     products: products,
-    messages: ctx.session.messages
+    session: ctx.session
   });
 
   // Remove the message
@@ -110,14 +110,13 @@ async function getProducts(ctx) {
 
   if (filters.cat)
     whereParam['categoryId'] = filters.cat
-
-    await Product.findAndCountAll({
-      where: whereParam,
-      limit: limit,
-      offset: offset
-    }
-    ).then((productsv) => {products = productsv.rows; count = productsv.count});
-
+  
+  await Product.findAndCountAll({
+    where: whereParam,
+    limit: limit,
+    offset: offset
+  }).then((productsv) => {products = productsv.rows; count = productsv.count});
+  
   await ctx.render('product-list', {
     categories: categories,
     products: products,
@@ -149,12 +148,15 @@ router.post("/register", async ctx => {
       ]
     }
   }
-  ).then((userv) => {if(userv === null || userv.length === 0) unique = true;}); // User already exists
+  ).then((userv) => {
+    if(userv === null || userv.length === 0)
+        unique = true;
+  }); // User already exists
 
   if(!unique) 
   {
     let message = {'userExists': 'User already exists with this email or username'}
-    ctx.session.messages = messages;
+    ctx.session.messages = message;
     await ctx.render('register')
   } 
   else 
@@ -207,44 +209,50 @@ router.get('/verify_account/:token', async ctx => {
     let messages = {'verfError': 'Invalid token!'};
     ctx.session.messages = messages;
     ctx.redirect('/');
-    console.log(ctx.session);
   }
 });
 
 router.post("/login", async ctx => {
-  let ok = false, auth = false;
+  let userFound = false;
 
   await User.findOne({
     where: {
       username: ctx.request.body.username
     }
-  }).then(async userv => {
+  }).then(userv => {
     if(userv == null)
       return;
 
-      ok = true;
+      if(userv.authenticate(ctx.request.body.password)) 
+      {
+        let messages = {'loginSuccess': 'Successful login!'};
+        ctx.session.messages = messages;
+        ctx.session.username = ctx.request.body.username;
+      }
+      else 
+      {
+        let messages = {'loginErrorPass': 'Wrong password!'};
+        ctx.session.messages = messages;
+      }
+
+      userFound = true;
   });
 
-  if(ok) 
-  {
-    // User is found
-    if(auth) 
-    {
-      let messages = {'loginSuccess': 'Successful login!'};
-      ctx.session.messages = messages;
-      ctx.session.login = utilsEcom.generateSessionKey();
-
-      // Session.create({key: ctx.session.login, expirationDate: })
-      ctx.redirect('/')
-    }
-  }
-  else 
+  if(!userFound) 
   {
     // User not found
-    let messages = {'loginError': 'User not found!'};
+    let messages = {'loginErrorUser': 'User not found!'};
     ctx.session.messages = messages;
-    ctx.redirect('/')
   }
+
+  ctx.redirect('/');
+});
+
+router.get('/logout', async ctx => {
+  ctx.session.messages = {'logout': 'Log-out successful!'};
+  ctx.session.username = null
+
+  ctx.redirect('/')
 });
 
 render(app, {

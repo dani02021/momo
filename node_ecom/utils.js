@@ -77,20 +77,22 @@ async function sendEmail(email, token) {
 function configPostgreSessions() {
     return {
       // Get session object by key. 
-      get: (key, maxAge, { rolling }) => 
+      get: async (key, maxAge, { rolling }) => 
       {
-        let ok = false;
-        Session.findOne({where: {key: key}}).then(sessionv => { if(sessionv) ok = true })
-        return ok;
+        let session;
+        await Session.findOne({where: {key: key}}).then(sessionv => { session = sessionv; })
+        return session;
       },
   
       // Set session object for key, with a maxAge (in ms).
-      set: (key, session, maxAge, { rolling, changed }) => 
-        Session.create({key: key, expire: session._expire, maxAge: maxAge}),
+      set: async (key, session, maxAge, { rolling, changed }) => 
+      {
+        await Session.upsert({key: key, expire: session._expire, maxAge: maxAge, messages: session.messages, username: session.username})
+      },
   
       // Destroy session for key.
-      destroy: key => 
-        Session.findOne({where: {key: key}}).then(session => session.destroy()),
+      destroy: async key => 
+        await Session.findOne({where: {key: key}}).then(session => session.destroy()),
     }
   }
 

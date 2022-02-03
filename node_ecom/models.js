@@ -134,6 +134,12 @@ const Session = db.define("session", {
   },
   expire: {
     type: DataTypes.DATE
+  },
+  messages: {
+    type: DataTypes.JSONB
+  },
+  username: {
+    type: DataTypes.STRING(50)
   }
 },
 {
@@ -166,7 +172,7 @@ module.exports.product = product;
 module.exports.user = user;
 module.exports.session = session;
 
+// Alter the database
 (async () => {
     // await db.sync({ alter: true });
-    // await Category.create({name: "Gym Accessories", imageCss: "fa fa-dumbbell"})
 })();
