@@ -1,0 +1,385 @@
+{% extends 'admin1/base.html' %}
+{% load static %}
+{% block content %}
+{% for message in messages %}
+{% if message|stringformat:'s' == 'product_edited' %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+  <strong>Product edited!</strong>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+{% if message|stringformat:'s' == 'product_deleted' %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+  <strong>Selected products are deleted!</strong>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+{% if message|stringformat:'s' == 'product_edit_error_price' %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+  <strong>Error: Product price is not correct!</strong>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+{% if message|stringformat:'s' == 'product_edit_error_unknown' %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+  <strong>Error: An unknown error has occured!</strong>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+{% endfor %}
+<div class="container mt-5">
+  <div class="row tm-content-row">
+    <div class="col-sm-12 col-md-12 col-lg-8 col-xl-8 tm-block-col">
+      <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1000px;">
+        <h2 class="tm-block-title">Products</h2>
+        <div class="container">
+          <form action="/administration/products/" method="get" onsubmit="checkProductFilter(this);">
+            <div class="row">
+              <div class="col">
+                <select name="category" class="form-select">
+                  <option value="-1" selected disabled>Select category</option>
+                  {% for category in categories %}
+                  <option value="{{ category.id }}" {% if category.name|stringformat:'s' == pass_cat|stringformat:'s' %} selected {% endif %}>{{ category.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-sm-3">
+                <input name="name" class="form-select" style="background-image: none" placeholder="Product name" value="{{ pass_name }}">
+              </div>
+              <div class="col-sm-3">
+                <input name="min-price" class="form-universal" placeholder="Min Price" value="{{ pass_minprice }}">
+              </div>
+              <div class="col-sm-3">
+                <input name="max-price" class="form-universal" placeholder="Max Price" value="{{ pass_maxprice }}"><br>
+              </div>
+            </div>
+            <div class="row" style="margin-bottom: 12px;">
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
+                <a href="/administration/products/" class="btn btn-primary text-uppercase">Clear filters</a>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="tm-product-table-container">
+          <table id="table1" class="table table-hover tm-table-small tm-product-table">
+            <thead>
+              <tr>
+                <th scope="col">&nbsp;</th>
+                <th scope="col">PRODUCT NO.</th>
+                <th scope="col">PRODUCT NAME</th>
+                <th scope="col">PRICE</th>
+                <th scope="col">DISCOUNT PRICE</th>
+                <th scope="col">IN STOCK</th>
+                <th scope="col">CATEGORY</th>
+                <th scope="col">&nbsp;</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in items %}
+              <tr>
+                <th scope="row"><input type="checkbox" /></th>
+                <td data-id="{{ item.id }}"><b>#{{ item.id }}</b></td>
+                <td class="tm-product-name">{{ item.name }}</td>
+                <td style="text-align: right;">{{ item.price }} $</td>
+                <td style="text-align: right;">{{ item.discount_price }} $</td>
+                <td style="text-align: right;">{{ item.quantity }}</td>
+                <td>{{ item.category }}</td>
+                <td><a href="/administration/products/edit/{{ item.id }}" class="tm-order-edit-link">
+                    <i class="far fa-edit tm-order-edit-icon"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <!-- table container -->
+        <div class="d-grid gap-2">
+          <a href="#" class="btn btn-primary text-uppercase mb-3" data-bs-target="#add-product"
+            data-bs-toggle="modal">Add new product</a>
+          <button class="btn btn-primary text-uppercase" data-bs-target="#rem-product" data-bs-toggle="modal"
+            data-bs-dismiss="modal">
+            Delete selected products
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-12 col-md-12 col-lg-4 col-xl-4 tm-block-col">
+      <div class="tm-bg-primary-dark tm-block tm-block-product-categories">
+        <h2 class="tm-block-title">Product Categories</h2>
+        <div class="tm-product-table-container">
+          <table class="table tm-table-small tm-product-table">
+            <tbody>
+              {% for category in categories %}
+              <tr>
+                <td class="tm-product-name">{{ category.name }}</td>
+                <td class="text-center">
+                  <a href="/administration/products/remove-cat/" data-id="{{ category.id }}"
+                    class="tm-product-delete-link" onclick="showRemModal(this);return false;">
+                    <i class="far fa-trash-alt tm-product-delete-icon"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <!-- table container -->
+        <button class="btn btn-primary btn-block text-uppercase mb-3" onclick="showAddModal(this);">
+          Add new category
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Pagination Start -->
+{% if paginator %}
+<div class="col-md-12">
+  <nav>
+    <ul class="pagination justify-content-center">
+      {% if page.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'-1'}});">Previous</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled">
+        <a class="page-link" href="" tabindex="-1">Previous</a>
+      </li>
+      {% endif %}
+      {% for pag in pages %}
+      {% if page.number|stringformat:'s' == pag|stringformat:'s' %}
+      <li class="page-item active"><a class="page-link" href="">{{ pag }}</a></li>
+      {% else %}
+      <li class="page-item {% if '...' == pag|stringformat:'s' %}disabled{% endif %}"><a class="page-link" href="javascript:moveToPage({{ pag }});">
+          {{ pag }}</a></li>
+      {% endif %}
+      {% endfor %}
+      {% if page.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'1'}});">Next</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled">
+        <a class="page-link" href="">Next</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
+<!-- Modal -->
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="remove-cat" tabindex="-1"
+  aria-labelledby="remove-cat" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="remove-cat-title">Are you sure?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Please confirm to delete the category
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <form id="remove-cat-form" action="/administration/products/remove-cat/" method="post">
+          {% csrf_token %}
+          <input id="remove-cat-id" value="" hidden>
+          <button type="submit" class="btn btn-primary">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="add-cat" tabindex="-1" aria-labelledby="add-cat" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="add-cat-title">Add new category</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="add-cat-form" action="/administration/products/add-cat/" method="post">
+        {% csrf_token %}
+        <div class="modal-body">
+          <label class="control-label" for="add-cat-name">Category Name</label>
+          <div>
+            <input name="name" id="add-cat-name" required>
+          </div>
+          <label class="control-label" for="add-cat-image">Category CSS image</label>
+          <div>
+            <input name="image" id="add-cat-image" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+</div>
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-product" tabindex="-1"
+  aria-labelledby="add-order" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Product</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="add-product-form" action="/administration/products/add/" enctype="multipart/form-data" method="post">
+        <div class="modal-body" style="padding-right: 48px;">
+          <div class="row">
+            <div class="col-md-5 mx-auto">
+              <label>Product Name:</label>
+              <div>
+                <input name="name" required></input>
+              </div>
+            </div>
+            <div class="col-md-5 mx-auto">
+              <label>Quantity</label>
+              <div>
+                <input name="quantity" type="number" required></input>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-5 mx-auto">
+              <label>Price (USD):</label>
+              <div>
+                <input name="price" type="number" required></input>
+              </div>
+            </div>
+            <div class="col-md-5 mx-auto">
+              <label>Discount Price (USD):</label>
+              <div>
+                <input name="discount-price" type="number" required></input>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-5 mx-auto">
+              <label>Select image:</label>
+              <div>
+                <input type="file" name="image" type="number" accept="image/*" required></input>
+              </div>
+            </div>
+            <div class="col-md-5 mx-auto">
+              <label>Category:</label>
+              <div>
+                <select name="category" id="category">
+                  {% for category in categories %}
+                  <option value="{{ category.id }}">{{ category.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-11 mx-auto">
+              <label>Description:</label>
+              <div>
+                <textarea name="description" id="description" cols="47" rows="10"
+                  style="min-height: 200px; height: 200px;" placeholder="Description"></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-11 mx-auto">
+              <input type="checkbox" name="hide" id="hide" style="bottom: auto;top: 6px;margin-right: 5px;">
+              <label>Hide</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary">Add</button>
+      </form>
+    </div>
+  </div>
+</div>
+</div>
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="rem-product" tabindex="-1"
+  aria-labelledby="rem-product" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="remove-cat-title">Delete Products</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <h4><b>Are you sure?</b></h4>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+        <form id="rem-product-form" action="/administration/products/del/" method="post"
+          onsubmit="return deleteProducts(this);">
+          {% csrf_token %}
+          <button type="submit" data-bs-dismiss="modal" class="btn btn-primary">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showRemModal(elem) {
+    var myModal = new bootstrap.Modal(document.getElementById('remove-cat'), {
+      keyboard: false,
+      backdrop: 'static'
+    })
+
+    document.getElementById('remove-cat-id') = elem.dataset.id;
+
+    myModal.toggle();
+
+    return false;
+  }
+
+  function showAddModal(elem) {
+    var myModal = new bootstrap.Modal(document.getElementById('add-cat'))
+
+    myModal.toggle();
+
+    return false;
+  }
+
+  function deleteProducts(elem) {
+    var table = document.getElementById('table1');
+    var ok = false;
+
+    for (const inp of table.getElementsByTagName('input')) {
+      if (!inp.checked)
+        continue;
+      
+      var row = inp.parentElement.parentElement;
+      var elems = row.getElementsByTagName('td');
+
+      for (const elem of elems) {
+        if("id" in elem.dataset) {
+          var id = elem.innerText.match(/\d+/)[0];
+        }
+      }
+
+      input = document.createElement('input');
+      input.hidden = 'hidden';
+      input.type = 'number';
+      input.defaultValue = id;
+      input.name = 'id';
+      document.getElementById('rem-product-form').appendChild(input);
+      ok = true;
+    }
+
+    return ok;
+  }
+
+  function checkProductFilter(form) {
+    for (const elem of form.elements) {
+      if (elem.value === '')
+        elem.disabled = true;
+    }
+  }
+</script>
+
+{% endblock %}

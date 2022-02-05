@@ -17,6 +17,7 @@ const Category = models.category();
 const Product = models.product();
 const User = models.user();
 const Session = models.session();
+const Role = models.role();
 
 const app = new Koa();
 const router = new KoaRouter();
@@ -254,6 +255,38 @@ router.get('/logout', async ctx => {
 
   ctx.redirect('/')
 });
+
+router.get('/admin', async ctx => {
+  await User.findOne({where: {username: ctx.session.dataValues.username }}).then(async user => {
+    await ctx.render('/admin/index', {
+      session: ctx.session,
+      user: user,
+      layout: "/admin/base" })
+  });
+});
+
+router.get('/admin/login', async ctx => {
+  let adminExist = false
+
+  if (ctx.session.dataValues.username) 
+  {
+    await User.findOne({
+      where: {
+        username: ctx.session.dataValues.username
+      },
+      include: Role})
+      .then(user => {
+        if(user)
+          adminExist = true
+      });
+  }
+
+  if (adminExist) {
+    ctx.redirect('/admin');
+  }
+
+  await ctx.render('/admin/login', { layout: false })
+})
 
 render(app, {
   root: path.join(__dirname, "templates"),

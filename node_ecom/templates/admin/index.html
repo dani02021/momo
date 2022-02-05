@@ -1,0 +1,196 @@
+<!-- Start -->
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <p class="text-white mt-5 mb-5">Welcome back, <b><%= user.firstName %></b></p>
+        </div>
+    </div>
+    <!-- row -->
+    <div class="row tm-content-row">
+        <div class="col-sm-12 col-md-12 col-lg-6 col-xl-6 tm-block-col">
+            <div class="tm-bg-primary-dark tm-block">
+                <h2 class="tm-block-title">Latest Hits</h2>
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+        <div class="col-sm-12 col-md-12 col-lg-6 col-xl-6 tm-block-col">
+            <div class="tm-bg-primary-dark tm-block">
+                <h2 class="tm-block-title">Performance</h2>
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+        <div class="col-sm-12 col-md-12 col-lg-6 col-xl-6 tm-block-col">
+            <div class="tm-bg-primary-dark tm-block tm-block-taller">
+                <h2 class="tm-block-title">Storage Information</h2>
+                <div id="pieChartContainer">
+                    <canvas id="pieChart" class="chartjs-render-monitor" width="200" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-12 col-md-12 col-lg-6 col-xl-6 tm-block-col">
+            <div class="tm-bg-primary-dark tm-block tm-block-taller tm-block-overflow">
+                <h2 class="tm-block-title">Notification List</h2>
+                <div class="tm-notification-items">
+                    <div class="media tm-notification-item">
+                        <div class="tm-gray-circle"><img src="img/notification-01.jpg" alt="Avatar Image"
+                                class="rounded-circle"></div>
+                        <div class="media-body">
+                            <p class="mb-2"><b>Jessica</b> and <b>6 others</b> sent you new <a href="#"
+                                    class="tm-notification-link">product updates</a>. Check new orders.</p>
+                            <span class="tm-small tm-text-color-secondary">6h ago.</span>
+                        </div>
+                    </div>
+                    <div class="media tm-notification-item">
+                        <div class="tm-gray-circle"><img src="img/notification-02.jpg" alt="Avatar Image"
+                                class="rounded-circle"></div>
+                        <div class="media-body">
+                            <p class="mb-2"><b>Oliver Too</b> and <b>6 others</b> sent you existing <a href="#"
+                                    class="tm-notification-link">product updates</a>. Read more reports.</p>
+                            <span class="tm-small tm-text-color-secondary">6h ago.</span>
+                        </div>
+                    </div>
+                    <div class="media tm-notification-item">
+                        <div class="tm-gray-circle"><img src="img/notification-03.jpg" alt="Avatar Image"
+                                class="rounded-circle"></div>
+                        <div class="media-body">
+                            <p class="mb-2"><b>Victoria</b> and <b>6 others</b> sent you <a href="#"
+                                    class="tm-notification-link">order updates</a>. Read order information.</p>
+                            <span class="tm-small tm-text-color-secondary">6h ago.</span>
+                        </div>
+                    </div>
+                    <div class="media tm-notification-item">
+                        <div class="tm-gray-circle"><img src="img/notification-01.jpg" alt="Avatar Image"
+                                class="rounded-circle"></div>
+                        <div class="media-body">
+                            <p class="mb-2"><b>Laura Cute</b> and <b>6 others</b> sent you <a href="#"
+                                    class="tm-notification-link">product records</a>.</p>
+                            <span class="tm-small tm-text-color-secondary">6h ago.</span>
+                        </div>
+                    </div>
+                    <div class="media tm-notification-item">
+                        <div class="tm-gray-circle"><img src="img/notification-02.jpg" alt="Avatar Image"
+                                class="rounded-circle"></div>
+                        <div class="media-body">
+                            <p class="mb-2"><b>Samantha</b> and <b>6 others</b> sent you <a href="#"
+                                    class="tm-notification-link">order stuffs</a>.</p>
+                            <span class="tm-small tm-text-color-secondary">6h ago.</span>
+                        </div>
+                    </div>
+                    <div class="media tm-notification-item">
+                        <div class="tm-gray-circle"><img src="img/notification-03.jpg" alt="Avatar Image"
+                                class="rounded-circle"></div>
+                        <div class="media-body">
+                            <p class="mb-2"><b>Sophie</b> and <b>6 others</b> sent you <a href="#"
+                                    class="tm-notification-link">product updates</a>.</p>
+                            <span class="tm-small tm-text-color-secondary">6h ago.</span>
+                        </div>
+                    </div>
+                    <div class="media tm-notification-item">
+                        <div class="tm-gray-circle"><img src="img/notification-01.jpg" alt="Avatar Image"
+                                class="rounded-circle"></div>
+                        <div class="media-body">
+                            <p class="mb-2"><b>Lily A</b> and <b>6 others</b> sent you <a href="#"
+                                    class="tm-notification-link">product updates</a>.</p>
+                            <span class="tm-small tm-text-color-secondary">6h ago.</span>
+                        </div>
+                    </div>
+                    <div class="media tm-notification-item">
+                        <div class="tm-gray-circle"><img src="img/notification-02.jpg" alt="Avatar Image"
+                                class="rounded-circle"></div>
+                        <div class="media-body">
+                            <p class="mb-2"><b>Amara</b> and <b>6 others</b> sent you <a href="#"
+                                    class="tm-notification-link">product updates</a>.</p>
+                            <span class="tm-small tm-text-color-secondary">6h ago.</span>
+                        </div>
+                    </div>
+                    <div class="media tm-notification-item">
+                        <div class="tm-gray-circle"><img src="img/notification-03.jpg" alt="Avatar Image"
+                                class="rounded-circle"></div>
+                        <div class="media-body">
+                            <p class="mb-2"><b>Cinthela</b> and <b>6 others</b> sent you <a href="#"
+                                    class="tm-notification-link">product updates</a>.</p>
+                            <span class="tm-small tm-text-color-secondary">6h ago.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 tm-block-col">
+            <div class="tm-bg-primary-dark tm-block tm-block-taller tm-block-scroll">
+                <h2 class="tm-block-title">Orders List</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">TIMESTAMP</th>
+                            <th scope="col">ORDER NO.</th>
+                            <th scope="col">USER</th>
+                            <th scope="col">PRODUCTS</th>
+                            <th scope="col">STATUS</th>
+                            <th scope="col">&nbsp;</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        {% if item.status|stringformat:'s' != '0' %}
+                        <tr>
+                            <td>{{ item.ordered_at }}</td>
+                            <th scope="row"><b>#{{ item.id }}</b></th>
+                            <td class="tm-product-name">{{ item.user.user.username }}</td>
+                            <td>{{ item.get_items_count }}</td>
+                            <td>
+                                {% if item.status|stringformat:'s' == '1' %}
+                                <div class="tm-status-circle pending"></div>
+                                {% elif item.status|stringformat:'s' == '2' %}
+                                <div class="tm-status-circle moving"></div>
+                                {% elif item.status|stringformat:'s' == '3' %}
+                                <div class="tm-status-circle cancelled"></div>
+                                {% elif item.status|stringformat:'s' == '4' %}
+                                <div class="tm-status-circle cancelled"></div>
+                                {% elif item.status|stringformat:'s' == '5' %}
+                                <div class="tm-status-circle moving"></div>
+                                {% endif %}
+                                {{ item.get_status_display }}
+                            </td>
+                            <td><a href="/administration/orders/edit/{{ item.id }}" class="tm-order-edit-link">
+                                    <i class="far fa-edit tm-order-edit-icon"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.6.0/chart.min.js"
+    integrity="sha512-GMGzUEevhWh8Tc/njS0bDpwgxdCJLQBWG3Z2Ct+JGOpVnEmjvNx6ts4v6A2XJf1HOrtOsfhv3hBKpK9kE5z8AQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+    Chart.defaults.color = 'white';
+    let ctxLine,
+        ctxBar,
+        ctxPie,
+        optionsLine,
+        optionsBar,
+        optionsPie,
+        configLine,
+        configBar,
+        configPie,
+        lineChart;
+    barChart, pieChart;
+    // DOM is ready
+    $(function () {
+        drawLineChart(); // Line Chart
+        drawBarChart(); // Bar Chart
+        drawPieChart(); // Pie Chart
+
+        $(window).resize(function () {
+            updateLineChart();
+            updateBarChart();
+        });
+    })
+</script>
+{% endblock %}

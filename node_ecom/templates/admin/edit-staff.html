@@ -1,0 +1,99 @@
+{% extends 'admin1/base.html' %}
+{% load static %}
+{% block content %}
+
+    <div class="container tm-mt-big tm-mb-big">
+      <div class="row">
+        <div class="col-xl-9 col-lg-10 col-md-12 col-sm-12 mx-auto">
+          <div class="tm-bg-primary-dark tm-block tm-block-h-auto">
+            <div class="row">
+              <div class="col-12">
+                <h2 class="tm-block-title d-inline-block">Edit Account #{{ user.id }}</h2>
+              </div>
+            </div>
+            <form id="edit-form" action="" enctype="multipart/form-data" onsubmit="return false;" method="post" class="tm-edit-account-form">
+              <div class="row tm-edit-account-row">
+                <div class="col-xl-6 col-lg-6 col-md-12">
+                    {% csrf_token %}
+                    <div class="form-group mb-3">
+                      <label
+                        for="name"
+                        >Username
+                      </label>
+                      <input
+                        id="name"
+                        name="name"
+                        type="text"
+                        value="{{ user.user.username }}"
+                        class="form-control validate"
+                        required
+                      />
+                    </div>
+                    <div class="form-group mb-3">
+                      <label
+                      for="email"
+                      >Email</label>
+                      <input id="email" class="form-control validate" name="email" value="{{ user.user.email }}" required>
+                    </div>
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-12 mx-auto mb-4">
+                  <div class="form-group mb-3">
+                    <label
+                    for="role"
+                        >Roles</label>
+                      <select
+                        class="tm-select-accounts"
+                        name="role"
+                        id="role"
+                        style="width: 100%;height: 50px;"
+                        multiple>
+                        {% for role in roles %}
+                        <option value="{{ role.id }}"
+                        {% for urole in uroles %}
+                        {% if urole.role.name|stringformat:'s' == role.name|stringformat:'s' %} selected {% endif %}
+                        {% endfor %}
+                        >{{ role.name }}</option>
+                        {% endfor %}
+                      </select>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label
+                    for="last_login"
+                    >Last login</label>
+                    <input id="last_login" disabled style="background-color: #54657d;" class="form-control validate" name="last_login" value="{{ user.user.last_login }}">
+                  </div>
+                </div>
+                <div class="col-12">
+                  <button type="submit" class="btn btn-primary btn-block" data-bs-target="#update-account" data-bs-toggle="modal">Update</button>
+                </div>
+              </div>
+            </div>
+            </form>
+        </div>
+      </div>
+    </div>
+    <!-- Modal -->
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="update-account" tabindex="-1" aria-labelledby="update-account" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="remove-cat-title">Update Account</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+      <h4><b>Are you sure?</b></h4>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+        <button type="submit" data-bs-dismiss="modal" class="btn btn-primary" onclick="editAccount(this);">Update</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  function editAccount(elem) {
+    document.getElementById('edit-form').action = '/administration/staff/edit/{{ user.id }}/';
+    document.getElementById('edit-form').submit();
+  }
+</script>
+{% endblock %}
