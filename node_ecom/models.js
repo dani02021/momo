@@ -51,23 +51,20 @@ const User = db.define("user", {
     type: DataTypes.STRING
   }
 },
-{
-  paranoid: true,
-  timestamp: true
-});
+  {
+    paranoid: true,
+    timestamp: true
+  });
 
 // Add custom methods
-User.prototype.ecomDelete = async function(varSave) 
-{
+User.prototype.ecomDelete = async function (varSave) {
   deleted = true;
-  if (varSave) 
-  {
+  if (varSave) {
     await this.save();
   }
 };
 
-User.prototype.authenticate = function(varPass) 
-{
+User.prototype.authenticate = function (varPass) {
   return bcrypt.compareSync(varPass, this.password);
 };
 
@@ -87,11 +84,11 @@ const Role = db.define("role", {
   }
 });
 
-Role.belongsToMany(Permission, {through: 'role_permissions'});
-Permission.belongsToMany(Role, {through: 'role_permissions'});
+Role.belongsToMany(Permission, { through: 'role_permissions' });
+Permission.belongsToMany(Role, { through: 'role_permissions' });
 
-Role.belongsToMany(User, {through: 'user_role'});
-User.belongsToMany(Role, {through: 'user_role'});
+Role.belongsToMany(User, { through: 'user_role' });
+User.belongsToMany(Role, { through: 'user_role' });
 
 const Category = db.define("category", {
   name: {
@@ -103,10 +100,10 @@ const Category = db.define("category", {
     allowNull: false
   }
 },
-{
-  paranoid: true,
-  timestamp: true
-});
+  {
+    paranoid: true,
+    timestamp: true
+  });
 
 const Product = db.define("product", {
   name: {
@@ -140,10 +137,10 @@ const Product = db.define("product", {
     allowNull: false
   }
 },
-{
-  paranoid: true,
-  timestamp: true
-});
+  {
+    paranoid: true,
+    timestamp: true
+  });
 
 const Session = db.define("session", {
   key: {
@@ -164,13 +161,53 @@ const Session = db.define("session", {
     type: DataTypes.STRING(50)
   }
 },
-{
-  paranoid: false,
-  timestamp: false
-});
+  {
+    paranoid: false,
+    timestamp: false
+  });
 
 Product.belongsTo(Category, {
   foreignKey: 'categoryId'
+});
+
+
+const PayPalTransaction = db.define("paypaltransacion", {
+  transactionId: {
+    type: DataTypes.STRING,
+    defaultValue: ''
+  },
+  requestId: {
+    type: DataTypes.UUID,
+    allowNull: false
+  },
+  statusCode: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  status: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  emailAdress: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  firstName: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  lastName: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  phoneNumber: {
+    type: DataTypes.STRING,
+    allowNull: false
+  }
+},
+{
+  paranoid: false,
+  timestamp: false
 });
 
 const OrderItem = db.define("orderitem", {
@@ -179,60 +216,72 @@ const OrderItem = db.define("orderitem", {
     defaultValue: 1
   }
 },
-{
-  paranoid: true,
-  timestamp: true
-});
+  {
+    paranoid: true,
+    timestamp: true
+  });
 
 OrderItem.belongsTo(Product, {
   foreignKey: 'productId'
 });
 
-OrderItem.prototype.getTotal = function() {
+OrderItem.prototype.getTotal = function () {
   return this.getProduct().discountPrice * this.quantity;
 };
 
 const Order = db.define("order", {
-  
+  ordered_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  status: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  price: {
+    type: DataTypes.DECIMAL(12, 2),
+    defaultValue: 0
+  }
+},
+{
+  paranoid: false,
+  timestamp: false
 });
-    def __str__(self) -> str:
-        return 'Order ID: ' + str(self.id)
-    def get_items(self):
-        return self.items.all()
-    def get_items_count(self):
-        return len(self.get_items())
-    def get_total(self):
-        return sum([item.get_total() for item in self.items.all()])
-    def datetimeHTML(self):
-        if self.ordered_at is None:
-            return ''
-        return self.ordered_at.strftime('%Y-%m-%dT%H:%M')
-    def ecom_delete(self):
-        self.deleted = True
-        for item in self.items.all():
-            item.ecom_delete()
-        self.save()
-    
-    class OrderStatus(models.IntegerChoices):
-        NOT_ORDERED = 0, _('Not Ordered')
-        PENDING = 1, _('Pending')
-        SHIPPED = 2, _('Shipped')
-        REFUSED = 3, _('Refused')
-        DECLINED = 4, _('Declined')
-        COMPLETED = 5, _('Completed')
-        NOT_PAYED = 6, _('Not Payed')
-        PAYER_ACTION_REQUIRED = 7, _('Payer Action Required')
 
-        # __empty__ = _('(Unknown)')
-    
-    id = models.BigAutoField(primary_key=True)
-    items = models.ManyToManyField(OrderItem)
-    user = models.ForeignKey(EcomUser, on_delete=models.DO_NOTHING)
-    ordered_at = models.DateTimeField(blank=True, null=True)
-    status = models.IntegerField(choices=OrderStatus.choices, default=OrderStatus.NOT_PAYED)
-    transaction_id = models.ForeignKey(PayPalTransaction, on_delete=DO_NOTHING, null=True, blank=True) # Remove nullable, if there are no auto-generated orders
-    price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    deleted = models.BooleanField(default=False)
+Order.hasMany(OrderItem, { foreignKey: 'items' });
+Order.hasOne(User, { foreignKey: 'userId' });
+// Order.hasOne(PayPalTransaction, { foreignKey: 'transactionId', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
+
+User.belongsTo(Order);
+OrderItem.belongsTo(Order);
+// PayPalTransaction.belongsTo(Order);
+
+Order.prototype.getItems = function () {
+  return this.getOrderItems();
+}
+
+Order.prototype.getItemsCount = function () {
+  return this.getOrderItems().length;
+}
+
+Order.prototype.getTotal = function () {
+  var total;
+  this.getOrderItems().forEach(function (item, index) {
+    total += item.getTotal();
+  });
+  
+}
+
+/* Order statuses
+NOT_ORDERED = 0, _('Not Ordered')
+PENDING = 1, _('Pending')
+SHIPPED = 2, _('Shipped')
+REFUSED = 3, _('Refused')
+DECLINED = 4, _('Declined')
+COMPLETED = 5, _('Completed')
+NOT_PAYED = 6, _('Not Payed')
+PAYER_ACTION_REQUIRED = 7, _('Payer Action Required')
+*/
 
 function category() {
   return Category;
@@ -267,73 +316,73 @@ module.exports.role = role;
 
 // Alter the database
 (async () => {
-    // await db.sync({ alter: true });
+  // await db.sync({ alter: true });
 
-    // Create the roles
+  // Create the roles
 
-    /*
-    Role.create({name: 'Admin'});
-    Role.create({name: 'Moderator'});
-    Role.create({name: 'Vendor'});
-    Role.create({name: 'Support'});
-    */
+  /*
+  Role.create({name: 'Admin'});
+  Role.create({name: 'Moderator'});
+  Role.create({name: 'Vendor'});
+  Role.create({name: 'Support'});
+  */
 
-    // Create the permissions
+  // Create the permissions
 
-    /*
-    Permission.create({name: 'orders.create'});
-    Permission.create({name: 'orders.read'});
-    Permission.create({name: 'orders.update'});
-    Permission.create({name: 'orders.delete'});
-    Permission.create({name: 'products.create'});
-    Permission.create({name: 'products.read'});
-    Permission.create({name: 'products.update'});
-    Permission.create({name: 'products.delete'});
-    Permission.create({name: 'categories.create'});
-    Permission.create({name: 'categories.delete'});
-    Permission.create({name: 'accounts.create'});
-    Permission.create({name: 'accounts.read'});
-    Permission.create({name: 'accounts.update'});
-    Permission.create({name: 'accounts.delete'});
-    Permission.create({name: 'roles.create'});
-    Permission.create({name: 'roles.read'});
-    Permission.create({name: 'roles.update'});
-    Permission.create({name: 'roles.delete'});
-    Permission.create({name: 'staff.create'});
-    Permission.create({name: 'staff.read'});
-    Permission.create({name: 'staff.update'});
-    Permission.create({name: 'staff.delete'});
-    Permission.create({name: 'report.read'});
-    */
+  /*
+  Permission.create({name: 'orders.create'});
+  Permission.create({name: 'orders.read'});
+  Permission.create({name: 'orders.update'});
+  Permission.create({name: 'orders.delete'});
+  Permission.create({name: 'products.create'});
+  Permission.create({name: 'products.read'});
+  Permission.create({name: 'products.update'});
+  Permission.create({name: 'products.delete'});
+  Permission.create({name: 'categories.create'});
+  Permission.create({name: 'categories.delete'});
+  Permission.create({name: 'accounts.create'});
+  Permission.create({name: 'accounts.read'});
+  Permission.create({name: 'accounts.update'});
+  Permission.create({name: 'accounts.delete'});
+  Permission.create({name: 'roles.create'});
+  Permission.create({name: 'roles.read'});
+  Permission.create({name: 'roles.update'});
+  Permission.create({name: 'roles.delete'});
+  Permission.create({name: 'staff.create'});
+  Permission.create({name: 'staff.read'});
+  Permission.create({name: 'staff.update'});
+  Permission.create({name: 'staff.delete'});
+  Permission.create({name: 'report.read'});
+  */
 
-    // Create associations
+  // Create associations
 
-    /*
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'orders.create'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'orders.read'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'orders.update'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'orders.delete'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'products.create'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'products.read'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'products.update'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'products.delete'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'categories.create'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'categories.delete'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'accounts.create'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'accounts.read'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'accounts.update'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'accounts.delete'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'roles.create'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'roles.read'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'roles.update'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'roles.delete'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'staff.create'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'staff.read'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'staff.update'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'staff.delete'}}).then(perm => {role.addPermission(perm);})});
-    Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'report.read'}}).then(perm => {role.addPermission(perm);})});
-    */
+  /*
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'orders.create'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'orders.read'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'orders.update'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'orders.delete'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'products.create'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'products.read'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'products.update'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'products.delete'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'categories.create'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'categories.delete'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'accounts.create'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'accounts.read'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'accounts.update'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'accounts.delete'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'roles.create'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'roles.read'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'roles.update'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'roles.delete'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'staff.create'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'staff.read'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'staff.update'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'staff.delete'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'report.read'}}).then(perm => {role.addPermission(perm);})});
+  */
 
-    // User.findOne({where: {username: 'dakata2'}}).then(user => {Role.findOne({where: {name: 'Admin'}}).then(role => {user.addRole(role);})});
-    
+  // User.findOne({where: {username: 'dakata2'}}).then(user => {Role.findOne({where: {name: 'Admin'}}).then(role => {user.addRole(role);})});
+
 })();
