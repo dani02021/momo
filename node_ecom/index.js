@@ -196,7 +196,7 @@ router.get('/verify_account/:token', async ctx => {
     if(userv == null)
       return;
 
-    await userv.set({emailConfirmed: true});
+    userv.set({emailConfirmed: true});
     await userv.save();
 
     ok = true;
@@ -257,16 +257,26 @@ router.get('/logout', async ctx => {
 });
 
 router.get('/admin', async ctx => {
-  await User.findOne({where: {username: ctx.session.dataValues.username }}).then(async user => {
-    await ctx.render('/admin/index', {
-      session: ctx.session,
-      user: user,
-      layout: "/admin/base" })
-  });
+  // Clear old messages
+  ctx.session.messages = null;
+
+  if(ctx.session.dataValues.username) 
+  {
+    await User.findOne({ where: {username: ctx.session.dataValues.username }, include: Role}).then(async user => {
+      await ctx.render('/admin/index', {
+        session: ctx.session,
+        user: user,
+        layout: "/admin/base" })
+    });
+  }
+  else ctx.redirect("/admin/login")
 });
 
 router.get('/admin/login', async ctx => {
   let adminExist = false
+
+  // Clear old messages
+  ctx.session.messages = null;
 
   if (ctx.session.dataValues.username) 
   {
@@ -277,16 +287,79 @@ router.get('/admin/login', async ctx => {
       include: Role})
       .then(user => {
         if(user)
-          adminExist = true
+          ctx.redirect('/admin');
       });
   }
 
-  if (adminExist) {
-    ctx.redirect('/admin');
+  await ctx.render('/admin/login', { layout: "/admin/base", session: ctx.session });
+});
+
+router.post('/admin/login', async ctx => {
+  let userFound = false;
+
+  await User.findOne({
+    where: {
+      username: ctx.request.body.username
+    }, include: Role
+  }).then(userv => {
+      if(!userv)
+        return;
+
+      if(userv.authenticate(ctx.request.body.password)) 
+      {
+        let messages = {'loginSuccess': 'Successful login!'};
+        ctx.session.messages = messages;
+        ctx.session.username = ctx.request.body.username;
+      }
+      else 
+      {
+        let messages = {'loginErrorPass': 'Wrong password!'};
+        ctx.session.messages = messages;
+      }
+
+      userFound = true;
+  });
+
+  if(!userFound) 
+  {
+    // User not found
+    let messages = {'loginErrorUser': 'User not found!'};
+    ctx.session.messages = messages;
   }
 
-  await ctx.render('/admin/login', { layout: false })
-})
+  ctx.redirect('/admin');
+});
+
+router.get('/admin/products', async ctx => {
+  if (ctx.session.dataValues.username) 
+  {
+    await User.findOne({
+      where: {
+        username: ctx.session.dataValues.username
+      },
+      include: Role})
+      .then(async user => {
+        console.log('ab')
+        user.getRoles().then(async roles => {
+          console.log('abc')
+          roles.forEach(async function (role, index) {
+            console.log('abc1')
+            role.getPermissions().then(async perms => {
+              console.log('abc2')
+              perms.forEach(async function (perm, index) {
+                console.log(perm.name)
+                if(perm.name == 'products.read') {
+                  await ctx.render('/admin/products', {layout: '/admin/base', session: ctx.session});
+                }
+              });
+            });
+          });
+        });
+      });
+  }
+
+  ctx.redirect('/admin/login');
+});
 
 render(app, {
   root: path.join(__dirname, "templates"),

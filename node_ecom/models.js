@@ -383,6 +383,6 @@ module.exports.role = role;
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'report.read'}}).then(perm => {role.addPermission(perm);})});
   */
 
-  // User.findOne({where: {username: 'dakata2'}}).then(user => {Role.findOne({where: {name: 'Admin'}}).then(role => {user.addRole(role);})});
+  // User.findOne({where: {username: 'dgyudzhenev'}}).then(user => {Role.findOne({where: {name: 'Admin'}}).then(role => {user.addRole(role);})});
 
 })();
