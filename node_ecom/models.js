@@ -57,14 +57,50 @@ const User = db.define("user", {
   });
 
 // Add custom methods
-User.prototype.ecomDelete = async function (varSave) {
-  deleted = true;
-  if (varSave) {
-    await this.save();
-  }
+User.prototype.authenticate = function (varPass) {
+  return bcrypt.compareSync(varPass, this.password);
 };
 
-User.prototype.authenticate = function (varPass) {
+const Staff = db.define("staff", {
+  username: {
+    type: DataTypes.STRING(50),
+    unique: true,
+    allowNull: false
+  },
+  email: {
+    type: DataTypes.STRING(50),
+    unique: true,
+    allowNull: true
+  },
+  firstName: {
+    type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  lastName: {
+    type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  password: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    set(pass) {
+      const salt = bcrypt.genSaltSync(5);
+      const hash = bcrypt.hashSync(pass, salt, 5);
+      this.setDataValue('password', hash);
+    }
+  },
+  lastLogin: {
+    type: DataTypes.DATE,
+    allowNull: true
+  }
+},
+  {
+    paranoid: true,
+    timestamp: true
+  });
+
+// Add custom methods
+Staff.prototype.authenticate = function (varPass) {
   return bcrypt.compareSync(varPass, this.password);
 };
 
@@ -87,8 +123,8 @@ const Role = db.define("role", {
 Role.belongsToMany(Permission, { through: 'role_permissions' });
 Permission.belongsToMany(Role, { through: 'role_permissions' });
 
-Role.belongsToMany(User, { through: 'user_role' });
-User.belongsToMany(Role, { through: 'user_role' });
+Role.belongsToMany(Staff, { through: 'staff_role' });
+Staff.belongsToMany(Role, { through: 'staff_role' });
 
 const Category = db.define("category", {
   name: {
@@ -295,6 +331,10 @@ function user() {
   return User;
 }
 
+function staff() {
+  return Staff;
+}
+
 function session() {
   return Session;
 }
@@ -310,6 +350,7 @@ function role() {
 module.exports.category = category;
 module.exports.product = product;
 module.exports.user = user;
+module.exports.staff = staff;
 module.exports.session = session;
 module.exports.permission = permission;
 module.exports.role = role;
@@ -383,6 +424,18 @@ module.exports.role = role;
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'report.read'}}).then(perm => {role.addPermission(perm);})});
   */
 
-  // User.findOne({where: {username: 'dgyudzhenev'}}).then(user => {Role.findOne({where: {name: 'Admin'}}).then(role => {user.addRole(role);})});
+  // Staff.findOne({where: {username: 'dakata'}}).then(user => {Role.findOne({where: {name: 'Admin'}}).then(role => {user.addRole(role);})});
+
+  // Make staff
+
+  /*
+  Staff.create({
+    username: 'dakata',
+    email: 'danielgudjenev@gmail.com',
+    password: '123456789',
+    firstName: 'Daniel',
+    lastName: 'Gyudzhenev',
+  });
+  */
 
 })();

@@ -1,11 +1,14 @@
 const Koa = require('koa');
 const KoaRouter = require('koa-router');
-const KoaBodyParser = require('koa-bodyparser');
+const KoaBodyParser = require('koa-better-body');
 const path = require("path");
 const serve = require('koa-static');
 const render = require("koa-ejs");
 const utilsEcom = require("./utils.js");
 const session = require('koa-session');
+
+const fs = require('fs');
+const mv = require('mv');
 
 require('dotenv').config();
 
@@ -16,6 +19,7 @@ const models = require("./models.js");
 const Category = models.category();
 const Product = models.product();
 const User = models.user();
+const Staff = models.staff();
 const Session = models.session();
 const Role = models.role();
 
@@ -128,7 +132,7 @@ async function getAdminProducts(ctx) {
   ctx.session.messages = null;
 
   // Get filters
-  let filters = {}, filtersToReturn = {};
+  let filters = {}, filtersToReturn = {}, permFound = false;
 
   if (ctx.query.category) {
     filters['category'] = ctx.query.category;
@@ -156,8 +160,6 @@ async function getAdminProducts(ctx) {
     filters['name'] = '';
   }
 
-  console.log(filters.maxprice)
-
   let whereParam = {
     hide: false,
     name: { [Op.iLike]: `%${filters.name}%` },
@@ -171,7 +173,7 @@ async function getAdminProducts(ctx) {
     whereParam['categoryId'] = filters.category
 
   if (ctx.session.dataValues.username) {
-    await User.findOne({
+    await Staff.findOne({
       where: {
         username: ctx.session.dataValues.username
       },
@@ -243,7 +245,7 @@ router.get("/products", async ctx => getProducts(ctx));
 router.get("/products/:page", async ctx => getProducts(ctx));
 
 router.get("/register", async ctx => {
-  await ctx.render('register')
+  await ctx.render('register', { session: ctx.session });
 });
 
 router.post("/register", async ctx => {
@@ -334,6 +336,10 @@ router.post("/login", async ctx => {
       let messages = { 'loginSuccess': 'Successful login!' };
       ctx.session.messages = messages;
       ctx.session.username = ctx.request.body.username;
+
+      user.update({
+        lastLogin: Sequelize.NOW
+      });
     }
     else {
       let messages = { 'loginErrorPass': 'Wrong password!' };
@@ -364,7 +370,7 @@ router.get('/admin', async ctx => {
   ctx.session.messages = null;
 
   if (ctx.session.dataValues.username) {
-    await User.findOne({ where: { username: ctx.session.dataValues.username }, include: Role }).then(async user => {
+    await Staff.findOne({ where: { username: ctx.session.dataValues.username }, include: Role }).then(async user => {
       await ctx.render('/admin/index', {
         session: ctx.session,
         user: user,
@@ -376,21 +382,25 @@ router.get('/admin', async ctx => {
 });
 
 router.get('/admin/login', async ctx => {
-  let adminExist = false
-
   // Clear old messages
   ctx.session.messages = null;
 
   if (ctx.session.dataValues.username) {
-    await User.findOne({
+    await Staff.findOne({
       where: {
         username: ctx.session.dataValues.username
       },
       include: Role
     })
-      .then(user => {
-        if (user)
-          ctx.redirect('/admin');
+      .then(async user => {
+        if (user) 
+        {
+          await user.update({
+            lastLogin: Sequelize.NOW
+          });
+
+          await ctx.redirect('/admin');
+        }
       });
   }
 
@@ -400,7 +410,7 @@ router.get('/admin/login', async ctx => {
 router.post('/admin/login', async ctx => {
   let userFound = false;
 
-  await User.findOne({
+  await Staff.findOne({
     where: {
       username: ctx.request.body.username
     }, include: Role
@@ -430,6 +440,13 @@ router.post('/admin/login', async ctx => {
   ctx.redirect('/admin');
 });
 
+router.get('/admin/logout', async ctx => {
+  ctx.session.messages = { 'logout': 'Log-out successful!' };
+  ctx.session.username = null
+
+  ctx.redirect('/admin/login');
+});
+
 router.get('/admin/products', async ctx => getAdminProducts(ctx));
 router.get('/admin/products/:page', async ctx => getAdminProducts(ctx));
 
@@ -450,6 +467,91 @@ router.get('/admin/products/edit/:id', async ctx => {
       categories: categories
     });
   });
+});
+
+
+router.post('/admin/products/edit/:id', async ctx => {
+  // Check the values
+
+  let price = parseFloat(ctx.request.body.price).toFixed(2);
+  let discountPrice = parseFloat(ctx.request.body.discountPrice).toFixed(2);
+
+  if(price > 9999.99 || price < 0 || discountPrice > 9999.99 || discountPrice < 0) 
+  {
+    ctx.session.messages = {'productErrorPrice': 'Product has invalid price (0 - 9999.99)'};
+    ctx.redirect('/admin/products/edit/' + ctx.params.id);
+    return;
+  }
+
+  // Upload the image
+  mv(ctx.request.files[0].path + '/' + ctx.request.files[0].name, __dirname + '/static/media/id' + ctx.params.id, function (err) {
+    if (err)
+      throw err;
+    
+    console.log('success file move ' + ctx.params.id);
+  });
+  await ctx.redirect('/admin/products/edit/' + ctx.params.id);
+
+  /*
+  image = request.FILES.get('image', '')
+        name = request.POST.get('name', '')
+        category = request.POST.get('category', '')
+        price = request.POST.get('price', '')
+        discount_price = request.POST.get('discount-price', '')
+        quantity = request.POST.get('quantity', '')
+        description = request.POST.get('description', '')
+        hide = request.POST.get('hide', '')
+
+        # Check the values
+        try:
+            if float(price) > 9999.99 or float(price) < 0 \
+                or float(discount_price) > 9999.99 or float(discount_price) < 0:
+                messages.error(request, 'product_edit_error_price')
+                return redirect('adminProducts')
+        except Exception as e:
+            traceback.print_exc()
+            messages.error(request, 'product_edit_error_unknown')
+            return redirect('adminProducts')
+        
+        product = Product.objects.get(id = productid)
+
+        if image != '':
+            # Upload the image
+            try:
+                os.mkdir(os.path.join(MEDIA_ROOT, 'id'+str(productid)))
+            except:
+                pass
+
+            # save the uploaded file inside that folder.
+            full_filename = os.path.join(MEDIA_ROOT, 'id'+str(productid), image.name)
+            fout = open(full_filename, 'wb+')
+            file_content = ContentFile( image.read() )
+            # Iterate through the chunks.
+            for chunk in file_content.chunks():
+                fout.write(chunk)
+            fout.close()
+
+            product.image = 'id'+str(productid) + os.sep + image.name
+        
+        # Finish the table
+        
+        product.name = name
+        product.category = Category.objects.get(id = category)
+        product.price = price
+        product.discount_price = discount_price
+        product.quantity = quantity
+        product.description = description
+
+        if hide == 'on':
+            product.hide = True
+        else:
+            product.hide = False
+        
+        product.save()
+
+        messages.success(request, 'product_edited')
+        return redirect('adminProducts')
+        */
 });
 
 router.post('/admin/products/delete', async ctx => {

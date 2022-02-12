@@ -32,7 +32,6 @@
               <div class="form-group mb-3">
                 <label for="category">Category</label>
                 <select class="custom-select tm-select-accounts" name="category" id="category" required>
-                  {% for cat in categories %}
                   <% for(i = 0; i < categories.length; i++) { %>
                   <option value="<%= categories[i].id %>" <% if(product.categoryId == categories[i].id) {%> selected <% } %> ><%= categories[i].name %>
                   </option>
@@ -64,7 +63,7 @@
               </div>
             </div>
             <div class="col-12">
-              <button type="submit" class="btn btn-primary btn-block" data-bs-target="#update-order"
+              <button type="submit" class="btn btn-primary btn-block" data-bs-target="#update-product"
                 data-bs-toggle="modal">Update</button>
             </div>
           </div>
@@ -74,33 +73,6 @@
   </div>
 </div>
 <!-- Modal -->
-<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-order-orderitem" tabindex="-1"
-  aria-labelledby="add-order-orderitem" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="add-orderitem-title">Add Order</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <label>Product:</label>
-        <div>
-          <input name="product" id="product">
-        </div>
-        <label>Quantity:</label>
-        <div>
-          <input type="number" id="orderitem-quantity" name="orderitem-quantity" placeholder="Quantity">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-target="#add-order" data-bs-toggle="modal"
-          data-bs-dismiss="modal" data-bs-dismiss="modal">Back</button>
-        <button type="button" onclick="addOrderItemModal(this);" class="btn btn-primary"
-          data-bs-dismiss="modal">Add</button>
-      </div>
-    </div>
-  </div>
-</div>
 <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="update-product" tabindex="-1"
   aria-labelledby="update-product" aria-hidden="true">
   <div class="modal-dialog">
@@ -121,27 +93,6 @@
 </div>
 
 <script>
-
-  function addOrderItemModal(elem) {
-    option = document.createElement('option');
-    e = document.getElementById('orderitem-select');
-    q = document.getElementById('orderitem-quantity');
-    items = document.getElementById('edit-order-items');
-
-    for (var i = 0; i < items.length; i++) {
-      if (items.options[i].text.startsWith(e.options[e.selectedIndex].text)) {
-        items.options[i].text = e.options[e.selectedIndex].text + ', ' + (parseInt(items.options[i].text.split(', ')[1]) + parseInt(q.value));
-        items.options[i].value = e.options[e.selectedIndex].value + ', ' + items.options[i].text.split(', ')[1];
-        return;
-      }
-    }
-
-    option.text = e.options[e.selectedIndex].text + ', ' + q.value;
-    option.value = e.options[e.selectedIndex].value + ', ' + q.value;
-    option.selected = 'true'
-    items.add(option);
-  }
-
   function editProduct(elem) {
     document.getElementById('edit-form').action = '/admin/products/edit/<%= product.id %>';
     document.getElementById('edit-form').submit();

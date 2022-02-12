@@ -115,14 +115,6 @@
 
         <% for(i in session.dataValues.messages) { %>
         <% if(session.dataValues.messages.hasOwnProperty(i)) { %>
-        <% if(i == 'noPermission') { %>
-        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
-            <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
-            <div>
-                You don't have permission for this action!
-            </div>
-        </div>
-        <% } %>
         <% if(i == 'loginErrorPass') { %>
             <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
                 <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
@@ -154,6 +146,15 @@
                     Successful login!
                 </div>
             </div>
+        <% } %>
+        <% if(i == 'logout') { %>
+            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+                <i class="fas fa-check-triangle" style="margin-right: 10px;"></i>
+                <div>
+                    <%= session.dataValues.messages[i] %>
+                </div>
+            </div>
+        </div>
         <% } %>
         <% } %>
         <% } %>

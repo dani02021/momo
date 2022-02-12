@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "koa-better-body": "^3.3.9",
     "koa-bodyparser": "^4.3.0",
     "koa-session": "^6.2.0"
   }
