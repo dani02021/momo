@@ -143,7 +143,7 @@
             <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
                 <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
                 <div>
-                    You don't have permission for this action!
+                    <%= session.dataValues.messages[i] %>
                 </div>
             </div>
             <% } %>
@@ -171,6 +171,12 @@
             </div>
         </footer>
 
+        <script>
+            // Alert fade auto
+            $( ".alert" ).delay(3000).slideUp(200, function() {
+                $(this).alert('close')
+            })
+        </script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.2/dist/js/bootstrap.bundle.js"></script>
         <script src="/js/tooplate-scripts.js"></script>
         <script src="/js/moment.min.js"></script>

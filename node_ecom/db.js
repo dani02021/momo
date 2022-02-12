@@ -5,6 +5,8 @@ module.exports = new Sequelize('ecommercenodejs', process.env.DB_USER, Buffer.fr
     // the sql dialect of the database
     // currently supported: 'mysql', 'sqlite', 'postgres', 'mssql'
     dialect: 'postgres',
+
+    //logging: false,
   
     // custom port; default: dialect default
     port: 6432,

@@ -38,7 +38,7 @@ async function getIndex(ctx) {
     ],
     limit: 10
   }
-  ).then((productsv) => {products = productsv});
+  ).then((productsv) => { products = productsv });
 
   await ctx.render('index', {
     categories: categories,
@@ -49,40 +49,34 @@ async function getIndex(ctx) {
   // Remove the message
   ctx.session.messages = null;
 }
+
 async function getProducts(ctx) {
   // Get filters
   let filters = {}, filtersToReturn = {};
 
-  if(ctx.query.cat) 
-  {
+  if (ctx.query.cat) {
     filters['cat'] = ctx.query.cat
     filtersToReturn['Category'] = ctx.query.cat
   }
-  if(ctx.query.minval) 
-  {
+  if (ctx.query.minval) {
     filters['minval'] = ctx.query.minval
     filtersToReturn['Min price'] = ctx.query.minval
   }
-  else 
-  {
+  else {
     filters['minval'] = 0
   }
-  if(ctx.query.maxval) 
-  {
+  if (ctx.query.maxval) {
     filters['maxval'] = ctx.query.maxval
     filtersToReturn['Max price'] = ctx.query.maxval
   }
-  else 
-  {
+  else {
     filters['maxval'] = 99999
   }
-  if(ctx.query.search) 
-  {
+  if (ctx.query.search) {
     filters['search'] = ctx.query.search
     filtersToReturn['Search'] = ctx.query.search
   }
-  else 
-  {
+  else {
     filters['search'] = ''
   }
 
@@ -104,21 +98,22 @@ async function getProducts(ctx) {
 
   let whereParam = {
     hide: false,
-    name: {[Op.iLike]: `%${filters.search}%`},
-    discountPrice: {[Op.gte]: filters.minval},
-    discountPrice: {[Op.lte]: filters.maxval},
+    name: { [Op.iLike]: `%${filters.search}%` },
+    discountPrice: { [Op.gte]: filters.minval },
+    discountPrice: { [Op.lte]: filters.maxval },
   }
 
   if (filters.cat)
     whereParam['categoryId'] = filters.cat
-  
+
   await Product.findAndCountAll({
     where: whereParam,
     limit: limit,
     offset: offset
-  }).then((productsv) => {products = productsv.rows; count = productsv.count});
-  
+  }).then((productsv) => { products = productsv.rows; count = productsv.count });
+
   await ctx.render('product-list', {
+    session: ctx.session,
     categories: categories,
     products: products,
     filters: filtersToReturn,
@@ -128,11 +123,124 @@ async function getProducts(ctx) {
   });
 }
 
-router.get("/", async ctx => getIndex(ctx, null));
+async function getAdminProducts(ctx) {
+  // Clear old messages
+  ctx.session.messages = null;
 
-router.get("/products", async ctx => getProducts(ctx, null));
+  // Get filters
+  let filters = {}, filtersToReturn = {};
 
-router.get("/products/:page", async ctx => getProducts(ctx, null));
+  if (ctx.query.category) {
+    filters['category'] = ctx.query.category;
+    filtersToReturn['category'] = ctx.query.category;
+  }
+  if (ctx.query.minprice) {
+    filters['minprice'] = ctx.query.minprice;
+    filtersToReturn['minprice'] = ctx.query.minprice;
+  }
+  else {
+    filters['minprice'] = 0;
+  }
+  if (ctx.query.maxprice) {
+    filters['maxprice'] = ctx.query.maxprice;
+    filtersToReturn['maxprice'] = ctx.query.maxprice;
+  }
+  else {
+    filters['maxprice'] = 99999;
+  }
+  if (ctx.query.name) {
+    filters['name'] = ctx.query.name;
+    filtersToReturn['name'] = ctx.query.name;
+  }
+  else {
+    filters['name'] = '';
+  }
+
+  console.log(filters.maxprice)
+
+  let whereParam = {
+    hide: false,
+    name: { [Op.iLike]: `%${filters.name}%` },
+    [Op.and]: [
+      { discountPrice: { [Op.gte]: filters.minprice } },
+      { discountPrice: { [Op.lte]: filters.maxprice } }
+    ]
+  }
+
+  if (filters.category)
+    whereParam['categoryId'] = filters.category
+
+  if (ctx.session.dataValues.username) {
+    await User.findOne({
+      where: {
+        username: ctx.session.dataValues.username
+      },
+      include: Role
+    })
+      .then(async user => {
+        await user.getRoles().then(async roles => {
+          for (i = 0; i < roles.length; i++) {
+            await roles[i].getPermissions().then(async perms => {
+              for (y = 0; y < perms.length; y++) {
+                if (perms[y].name == 'products.read') {
+                  let categories, products;
+                  await Category.findAll().then((categoriesv) => categories = categoriesv);
+
+                  // Paginator
+                  let page = 1;
+                  let count = 0;
+
+                  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+                  let offset = 0;
+                  if (ctx.params.page) {
+                    page = parseInt(ctx.params.page);
+                    offset = (parseInt(ctx.params.page) - 1) * limit;
+                  }
+
+                  await Product.findAndCountAll({
+                    where: whereParam,
+                    limit: limit,
+                    offset: offset
+                  }).then((productsv) => { products = productsv.rows; count = productsv.count });
+
+                  let categoriesNames = {};
+
+                  for (let i = 0; i < categories.length; i++) {
+                    categoriesNames[categories[i].id] = categories[i].name;
+                  }
+
+                  await ctx.render('/admin/products', {
+                    layout: '/admin/base',
+                    session: ctx.session,
+                    products: products,
+                    categories: categories,
+                    categoriesNames: categoriesNames, // Find better way
+                    filters: filtersToReturn,
+                    page: page,
+                    lastPage: count,
+                    pages: utilsEcom.givePages(page, Math.ceil(count / utilsEcom.PRODUCTS_PER_PAGE))
+                  });
+
+                  permFound = true;
+                }
+              }
+            });
+          }
+        });
+      });
+
+    if (!permFound) {
+      ctx.session.messages = { 'noPermission': 'You don\'t have permission to see products' }
+      await ctx.redirect('/admin');
+    }
+  }
+}
+
+router.get("/", async ctx => getIndex(ctx));
+
+router.get("/products", async ctx => getProducts(ctx));
+
+router.get("/products/:page", async ctx => getProducts(ctx));
 
 router.get("/register", async ctx => {
   await ctx.render('register')
@@ -150,18 +258,16 @@ router.post("/register", async ctx => {
     }
   }
   ).then((userv) => {
-    if(userv === null || userv.length === 0)
-        unique = true;
+    if (userv === null || userv.length === 0)
+      unique = true;
   }); // User already exists
 
-  if(!unique) 
-  {
-    let message = {'userExists': 'User already exists with this email or username'}
+  if (!unique) {
+    let message = { 'userExists': 'User already exists with this email or username' }
     ctx.session.messages = message;
     await ctx.render('register')
-  } 
-  else 
-  {
+  }
+  else {
     // Send email
     let token = utilsEcom.generateEmailVerfToken();
 
@@ -177,8 +283,8 @@ router.post("/register", async ctx => {
       country: ctx.request.body.country,
       verificationToken: token,
     });
-  
-    let messages = {'registerSuccess': 'Please validate your e-mail!'};
+
+    let messages = { 'registerSuccess': 'Please validate your e-mail!' };
     ctx.redirect('/')
   }
 });
@@ -193,21 +299,21 @@ router.get('/verify_account/:token', async ctx => {
       emailConfirmed: false
     }
   }).then(async (userv) => {
-    if(userv == null)
+    if (userv == null)
       return;
 
-    userv.set({emailConfirmed: true});
+    userv.set({ emailConfirmed: true });
     await userv.save();
 
     ok = true;
   });
 
-  if(ok) {
-    let messages = {'registerSuccess': 'Your email is validated!'};
+  if (ok) {
+    let messages = { 'registerSuccess': 'Your email is validated!' };
     ctx.session.messages = messages;
     ctx.redirect('/');
   } else {
-    let messages = {'verfError': 'Invalid token!'};
+    let messages = { 'verfError': 'Invalid token!' };
     ctx.session.messages = messages;
     ctx.redirect('/');
   }
@@ -221,28 +327,25 @@ router.post("/login", async ctx => {
       username: ctx.request.body.username
     }
   }).then(userv => {
-    if(userv == null)
+    if (userv == null)
       return;
 
-      if(userv.authenticate(ctx.request.body.password)) 
-      {
-        let messages = {'loginSuccess': 'Successful login!'};
-        ctx.session.messages = messages;
-        ctx.session.username = ctx.request.body.username;
-      }
-      else 
-      {
-        let messages = {'loginErrorPass': 'Wrong password!'};
-        ctx.session.messages = messages;
-      }
+    if (userv.authenticate(ctx.request.body.password)) {
+      let messages = { 'loginSuccess': 'Successful login!' };
+      ctx.session.messages = messages;
+      ctx.session.username = ctx.request.body.username;
+    }
+    else {
+      let messages = { 'loginErrorPass': 'Wrong password!' };
+      ctx.session.messages = messages;
+    }
 
-      userFound = true;
+    userFound = true;
   });
 
-  if(!userFound) 
-  {
+  if (!userFound) {
     // User not found
-    let messages = {'loginErrorUser': 'User not found!'};
+    let messages = { 'loginErrorUser': 'User not found!' };
     ctx.session.messages = messages;
   }
 
@@ -250,7 +353,7 @@ router.post("/login", async ctx => {
 });
 
 router.get('/logout', async ctx => {
-  ctx.session.messages = {'logout': 'Log-out successful!'};
+  ctx.session.messages = { 'logout': 'Log-out successful!' };
   ctx.session.username = null
 
   ctx.redirect('/')
@@ -260,13 +363,13 @@ router.get('/admin', async ctx => {
   // Clear old messages
   ctx.session.messages = null;
 
-  if(ctx.session.dataValues.username) 
-  {
-    await User.findOne({ where: {username: ctx.session.dataValues.username }, include: Role}).then(async user => {
+  if (ctx.session.dataValues.username) {
+    await User.findOne({ where: { username: ctx.session.dataValues.username }, include: Role }).then(async user => {
       await ctx.render('/admin/index', {
         session: ctx.session,
         user: user,
-        layout: "/admin/base" })
+        layout: "/admin/base"
+      })
     });
   }
   else ctx.redirect("/admin/login")
@@ -278,15 +381,15 @@ router.get('/admin/login', async ctx => {
   // Clear old messages
   ctx.session.messages = null;
 
-  if (ctx.session.dataValues.username) 
-  {
+  if (ctx.session.dataValues.username) {
     await User.findOne({
       where: {
         username: ctx.session.dataValues.username
       },
-      include: Role})
+      include: Role
+    })
       .then(user => {
-        if(user)
+        if (user)
           ctx.redirect('/admin');
       });
   }
@@ -302,63 +405,86 @@ router.post('/admin/login', async ctx => {
       username: ctx.request.body.username
     }, include: Role
   }).then(userv => {
-      if(!userv)
-        return;
+    if (!userv)
+      return;
 
-      if(userv.authenticate(ctx.request.body.password)) 
-      {
-        let messages = {'loginSuccess': 'Successful login!'};
-        ctx.session.messages = messages;
-        ctx.session.username = ctx.request.body.username;
-      }
-      else 
-      {
-        let messages = {'loginErrorPass': 'Wrong password!'};
-        ctx.session.messages = messages;
-      }
+    if (userv.authenticate(ctx.request.body.password)) {
+      let messages = { 'loginSuccess': 'Successful login!' };
+      ctx.session.messages = messages;
+      ctx.session.username = ctx.request.body.username;
+    }
+    else {
+      let messages = { 'loginErrorPass': 'Wrong password!' };
+      ctx.session.messages = messages;
+    }
 
-      userFound = true;
+    userFound = true;
   });
 
-  if(!userFound) 
-  {
+  if (!userFound) {
     // User not found
-    let messages = {'loginErrorUser': 'User not found!'};
+    let messages = { 'loginErrorUser': 'User not found!' };
     ctx.session.messages = messages;
   }
 
   ctx.redirect('/admin');
 });
 
-router.get('/admin/products', async ctx => {
-  if (ctx.session.dataValues.username) 
-  {
-    await User.findOne({
-      where: {
-        username: ctx.session.dataValues.username
-      },
-      include: Role})
-      .then(async user => {
-        console.log('ab')
-        user.getRoles().then(async roles => {
-          console.log('abc')
-          roles.forEach(async function (role, index) {
-            console.log('abc1')
-            role.getPermissions().then(async perms => {
-              console.log('abc2')
-              perms.forEach(async function (perm, index) {
-                console.log(perm.name)
-                if(perm.name == 'products.read') {
-                  await ctx.render('/admin/products', {layout: '/admin/base', session: ctx.session});
-                }
-              });
-            });
-          });
-        });
-      });
-  }
+router.get('/admin/products', async ctx => getAdminProducts(ctx));
+router.get('/admin/products/:page', async ctx => getAdminProducts(ctx));
 
-  ctx.redirect('/admin/login');
+router.get('/admin/products/edit/:id', async ctx => {
+  let categories = {};
+
+  await Category.findAll().then((categoriesv) => categories = categoriesv);
+
+  await Product.findOne({
+    where: {
+      id: ctx.params.id
+    }
+  }).then(async product => {
+    await ctx.render('admin/edit-product', {
+      layout: 'admin/base',
+      session: ctx.session,
+      product: product,
+      categories: categories
+    });
+  });
+});
+
+router.post('/admin/products/delete', async ctx => {
+  ids = ctx.request.body.id;
+
+  await Product.destroy({
+    where: {
+      id: ids
+    }
+  });
+
+  ctx.session.messages = { 'productDeleted': 'All products are successfuly deleted!' }
+
+  ctx.redirect('/admin/products');
+});
+
+router.post('/admin/categories/add', async ctx => {
+  await Category.findOrCreate({
+    where: {
+      name: ctx.request.body.name,
+      imageCss: ctx.request.body.image
+    }
+  });
+
+  await ctx.redirect('/admin/products')
+});
+
+router.post('/admin/categories/remove', async ctx => {
+  await Category.destroy({
+    where: {
+      id: ctx.request.body.id
+    }
+  });
+
+  await ctx.redirect('/admin/products');
 });
 
 render(app, {

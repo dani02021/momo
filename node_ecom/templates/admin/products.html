@@ -1,62 +1,61 @@
-{% extends 'admin1/base.html' %}
-{% load static %}
-{% block content %}
-{% for message in messages %}
-{% if message|stringformat:'s' == 'product_edited' %}
+<% for(i in session.dataValues.messages) { %>
+<% if(session.dataValues.messages.hasOwnProperty(i)) { %>
+<% if(i == 'productEdited') { %>
 <div class="alert alert-warning alert-dismissible fade show" role="alert">
   <strong>Product edited!</strong>
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-{% endif %}
-{% if message|stringformat:'s' == 'product_deleted' %}
+<% } %>
+<% if(i == 'productDeleted') { %>
 <div class="alert alert-warning alert-dismissible fade show" role="alert">
   <strong>Selected products are deleted!</strong>
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-{% endif %}
-{% if message|stringformat:'s' == 'product_edit_error_price' %}
+<% } %>
+<% if(i == 'productEditErrorPrice') { %>
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
   <strong>Error: Product price is not correct!</strong>
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-{% endif %}
-{% if message|stringformat:'s' == 'product_edit_error_unknown' %}
+<% } %>
+<% if(i == 'productEditErrorUnknown') { %>
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
   <strong>Error: An unknown error has occured!</strong>
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-{% endif %}
-{% endfor %}
+<% } %>
+<% } %>
+<% } %>
 <div class="container mt-5">
   <div class="row tm-content-row">
     <div class="col-sm-12 col-md-12 col-lg-8 col-xl-8 tm-block-col">
       <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1000px;">
         <h2 class="tm-block-title">Products</h2>
         <div class="container">
-          <form action="/administration/products/" method="get" onsubmit="checkProductFilter(this);">
+          <form action="/admin/products" method="get" onsubmit="checkProductFilter(this);">
             <div class="row">
               <div class="col">
                 <select name="category" class="form-select">
                   <option value="-1" selected disabled>Select category</option>
-                  {% for category in categories %}
-                  <option value="{{ category.id }}" {% if category.name|stringformat:'s' == pass_cat|stringformat:'s' %} selected {% endif %}>{{ category.name }}</option>
-                  {% endfor %}
+                  <% for(var i = 0; i < categories.length; i++) { %>
+                  <option value="<%= categories[i].id %>" <% if(categories[i].id == filters['category']) { %> selected <% } %> > <%= categories[i].name %></option>
+                  <% } %>
                 </select>
               </div>
               <div class="col-sm-3">
-                <input name="name" class="form-select" style="background-image: none" placeholder="Product name" value="{{ pass_name }}">
+                <input name="name" class="form-select" style="background-image: none" placeholder="Product name" value="<%= filters['name'] %>">
               </div>
               <div class="col-sm-3">
-                <input name="min-price" class="form-universal" placeholder="Min Price" value="{{ pass_minprice }}">
+                <input name="minprice" class="form-universal" placeholder="Min Price" value="<%= filters['minprice'] %>">
               </div>
               <div class="col-sm-3">
-                <input name="max-price" class="form-universal" placeholder="Max Price" value="{{ pass_maxprice }}"><br>
+                <input name="maxprice" class="form-universal" placeholder="Max Price" value="<%= filters['maxprice'] %>"><br>
               </div>
             </div>
             <div class="row" style="margin-bottom: 12px;">
               <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
-                <a href="/administration/products/" class="btn btn-primary text-uppercase">Clear filters</a>
+                <a href="/admin/products" class="btn btn-primary text-uppercase">Clear filters</a>
               </div>
             </div>
           </form>
@@ -76,21 +75,21 @@
               </tr>
             </thead>
             <tbody>
-              {% for item in items %}
+              <% for(var i = 0; i < products.length; i++) { %>
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td data-id="{{ item.id }}"><b>#{{ item.id }}</b></td>
-                <td class="tm-product-name">{{ item.name }}</td>
-                <td style="text-align: right;">{{ item.price }} $</td>
-                <td style="text-align: right;">{{ item.discount_price }} $</td>
-                <td style="text-align: right;">{{ item.quantity }}</td>
-                <td>{{ item.category }}</td>
-                <td><a href="/administration/products/edit/{{ item.id }}" class="tm-order-edit-link">
+                <td data-id="<%= products[i].id %>"><b>#<%= products[i].id %></b></td>
+                <td class="tm-product-name"><%= products[i].name %></td>
+                <td style="text-align: right;"><%= products[i].price %> $</td>
+                <td style="text-align: right;"><%= products[i].discountPrice %> $</td>
+                <td style="text-align: right;"><%= products[i].quantity %></td>
+                <td><%= categoriesNames[products[i].categoryId] %></td>
+                <td><a href="/admin/products/edit/<%= products[i].id %>" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>
                 </td>
               </tr>
-              {% endfor %}
+              <% } %>
             </tbody>
           </table>
         </div>
@@ -111,17 +110,17 @@
         <div class="tm-product-table-container">
           <table class="table tm-table-small tm-product-table">
             <tbody>
-              {% for category in categories %}
+              <% for(var i = 0; i < categories.length; i++) { %>
               <tr>
-                <td class="tm-product-name">{{ category.name }}</td>
+                <td class="tm-product-name"><%= categories[i].name %></td>
                 <td class="text-center">
-                  <a href="/administration/products/remove-cat/" data-id="{{ category.id }}"
+                  <a href="/admin/categories/remove" data-id="<%= categories[i].id %>"
                     class="tm-product-delete-link" onclick="showRemModal(this);return false;">
                     <i class="far fa-trash-alt tm-product-delete-icon"></i>
                   </a>
                 </td>
               </tr>
-              {% endfor %}
+              <% } %>
             </tbody>
           </table>
         </div>
@@ -134,40 +133,38 @@
   </div>
 </div>
 <!-- Pagination Start -->
-{% if paginator %}
 <div class="col-md-12">
   <nav>
     <ul class="pagination justify-content-center">
-      {% if page.has_previous %}
+      <% if(page > 1) { %>
       <li class="page-item">
-        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'-1'}});">Previous</a>
+        <a class="page-link" href="javascript:moveToPage(<%= page - 1 %>);">Previous</a>
       </li>
-      {% else %}
+      <% } else { %>
       <li class="page-item disabled">
         <a class="page-link" href="" tabindex="-1">Previous</a>
       </li>
-      {% endif %}
-      {% for pag in pages %}
-      {% if page.number|stringformat:'s' == pag|stringformat:'s' %}
-      <li class="page-item active"><a class="page-link" href="">{{ pag }}</a></li>
-      {% else %}
-      <li class="page-item {% if '...' == pag|stringformat:'s' %}disabled{% endif %}"><a class="page-link" href="javascript:moveToPage({{ pag }});">
-          {{ pag }}</a></li>
-      {% endif %}
-      {% endfor %}
-      {% if page.has_next %}
+      <% } %>
+      <% for(var i = 0; i < pages.length; i++) { %>
+      <% if(pages[i] == page) { %>
+      <li class="page-item active"><a class="page-link" href=""><%= page %></a></li>
+      <% } else { %>
+      <li class="page-item <% if (pages[i] == '...') {%> disabled <% } %>"><a class="page-link" href="javascript:moveToPage(<%= pages[i] %>);">
+        <%= pages[i] %></a></li>
+      <% } %>
+      <% } %>
+      {<% if(page < lastPage) { %>
       <li class="page-item">
-        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'1'}});">Next</a>
+        <a class="page-link" href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
       </li>
-      {% else %}
+      <% } else { %>
       <li class="page-item disabled">
         <a class="page-link" href="">Next</a>
       </li>
-      {% endif %}
+      <% } %>
     </ul>
   </nav>
 </div>
-{% endif %}
 <!-- Modal -->
 <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="remove-cat" tabindex="-1"
   aria-labelledby="remove-cat" aria-hidden="true">
@@ -182,9 +179,8 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <form id="remove-cat-form" action="/administration/products/remove-cat/" method="post">
-          {% csrf_token %}
-          <input id="remove-cat-id" value="" hidden>
+        <form id="remove-cat-form" action="/admin/categories/remove" method="post">
+          <input id="remove-cat-id" name="id" value="" hidden>
           <button type="submit" class="btn btn-primary">Delete</button>
         </form>
       </div>
@@ -199,8 +195,7 @@
         <h5 class="modal-title" id="add-cat-title">Add new category</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="add-cat-form" action="/administration/products/add-cat/" method="post">
-        {% csrf_token %}
+      <form id="add-cat-form" action="/admin/categories/add" method="post">
         <div class="modal-body">
           <label class="control-label" for="add-cat-name">Category Name</label>
           <div>
@@ -213,7 +208,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary">Delete</button>
+          <button type="submit" class="btn btn-primary">Add</button>
       </form>
     </div>
   </div>
@@ -268,9 +263,9 @@
               <label>Category:</label>
               <div>
                 <select name="category" id="category">
-                  {% for category in categories %}
-                  <option value="{{ category.id }}">{{ category.name }}</option>
-                  {% endfor %}
+                  <% for(var i = 0; i < categories.length; i++) { %>
+                    <option value="<%= categories[i].id %>"> <%= categories[i].name %></option>
+                  <% } %>
                 </select>
               </div>
             </div>
@@ -293,7 +288,6 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          {% csrf_token %}
           <button type="submit" class="btn btn-primary">Add</button>
       </form>
     </div>
@@ -313,9 +307,8 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-        <form id="rem-product-form" action="/administration/products/del/" method="post"
+        <form id="rem-product-form" action="/admin/products/delete" method="post"
           onsubmit="return deleteProducts(this);">
-          {% csrf_token %}
           <button type="submit" data-bs-dismiss="modal" class="btn btn-primary">Delete</button>
         </form>
       </div>
@@ -330,7 +323,7 @@
       backdrop: 'static'
     })
 
-    document.getElementById('remove-cat-id') = elem.dataset.id;
+    document.getElementById('remove-cat-id').value = elem.dataset.id;
 
     myModal.toggle();
 
@@ -381,5 +374,3 @@
     }
   }
 </script>
-
-{% endblock %}
