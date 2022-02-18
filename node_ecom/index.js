@@ -1,7 +1,7 @@
 const Koa = require('koa');
 const KoaRouter = require('koa-router');
 const KoaBodyParser = require('koa-better-body');
-const path = require("path");
+const path = require('path');
 const serve = require('koa-static');
 const render = require("koa-ejs");
 const utilsEcom = require("./utils.js");
@@ -180,6 +180,9 @@ async function getAdminProducts(ctx) {
       include: Role
     })
       .then(async user => {
+        if(user == null)
+          return;
+        
         await user.getRoles().then(async roles => {
           for (i = 0; i < roles.length; i++) {
             await roles[i].getPermissions().then(async perms => {
@@ -202,7 +205,10 @@ async function getAdminProducts(ctx) {
                   await Product.findAndCountAll({
                     where: whereParam,
                     limit: limit,
-                    offset: offset
+                    offset: offset,
+                    order: [
+                      ['createdAt', 'DESC']
+                    ]
                   }).then((productsv) => { products = productsv.rows; count = productsv.count });
 
                   let categoriesNames = {};
@@ -254,8 +260,8 @@ router.post("/register", async ctx => {
   await User.findOne({
     where: {
       [Op.or]: [
-        { email: ctx.request.body.email },
-        { username: ctx.request.body.username }
+        { email: ctx.request.fields.email },
+        { username: ctx.request.fields.username }
       ]
     }
   }
@@ -273,16 +279,16 @@ router.post("/register", async ctx => {
     // Send email
     let token = utilsEcom.generateEmailVerfToken();
 
-    utilsEcom.sendEmail(ctx.request.body.email, token);
+    utilsEcom.sendEmail(ctx.request.fields.email, token);
 
     User.create({
-      username: ctx.request.body.username,
-      email: ctx.request.body.email,
-      password: ctx.request.body.password1,
-      firstName: ctx.request.body.first,
-      lastName: ctx.request.body.last,
-      address: ctx.request.body.address,
-      country: ctx.request.body.country,
+      username: ctx.request.fields.username,
+      email: ctx.request.fields.email,
+      password: ctx.request.fields.password1,
+      firstName: ctx.request.fields.first,
+      lastName: ctx.request.fields.last,
+      address: ctx.request.fields.address,
+      country: ctx.request.fields.country,
       verificationToken: token,
     });
 
@@ -326,18 +332,18 @@ router.post("/login", async ctx => {
 
   await User.findOne({
     where: {
-      username: ctx.request.body.username
+      username: ctx.request.fields.username
     }
   }).then(userv => {
     if (userv == null)
       return;
 
-    if (userv.authenticate(ctx.request.body.password)) {
+    if (userv.authenticate(ctx.request.fields.password)) {
       let messages = { 'loginSuccess': 'Successful login!' };
       ctx.session.messages = messages;
-      ctx.session.username = ctx.request.body.username;
+      ctx.session.username = ctx.request.fields.username;
 
-      user.update({
+      userv.update({
         lastLogin: Sequelize.NOW
       });
     }
@@ -371,14 +377,20 @@ router.get('/admin', async ctx => {
 
   if (ctx.session.dataValues.username) {
     await Staff.findOne({ where: { username: ctx.session.dataValues.username }, include: Role }).then(async user => {
-      await ctx.render('/admin/index', {
-        session: ctx.session,
-        user: user,
-        layout: "/admin/base"
-      })
+      if(user == null) 
+      {
+        await ctx.redirect("/admin/login");
+      } else 
+      {
+        await ctx.render('/admin/index', {
+          session: ctx.session,
+          user: user,
+          layout: "/admin/base"
+        });
+      }
     });
   }
-  else ctx.redirect("/admin/login")
+  else ctx.redirect("/admin/login");
 });
 
 router.get('/admin/login', async ctx => {
@@ -412,16 +424,16 @@ router.post('/admin/login', async ctx => {
 
   await Staff.findOne({
     where: {
-      username: ctx.request.body.username
+      username: ctx.request.fields.username
     }, include: Role
   }).then(userv => {
     if (!userv)
       return;
 
-    if (userv.authenticate(ctx.request.body.password)) {
+    if (userv.authenticate(ctx.request.fields.password)) {
       let messages = { 'loginSuccess': 'Successful login!' };
       ctx.session.messages = messages;
-      ctx.session.username = ctx.request.body.username;
+      ctx.session.username = ctx.request.fields.username;
     }
     else {
       let messages = { 'loginErrorPass': 'Wrong password!' };
@@ -450,7 +462,122 @@ router.get('/admin/logout', async ctx => {
 router.get('/admin/products', async ctx => getAdminProducts(ctx));
 router.get('/admin/products/:page', async ctx => getAdminProducts(ctx));
 
+router.post('/admin/products/add', async ctx => {
+  let price = parseFloat(parseFloat(ctx.request.fields.price).toFixed(2));
+  let discountPrice = parseFloat(parseFloat(ctx.request.fields.discountPrice).toFixed(2));
+
+  if(price > 9999.99 || price < 0 || discountPrice > 9999.99 || discountPrice < 0) 
+  {
+    ctx.session.messages = {'productErrorPrice': 'Product has invalid price (0 - 9999.99)'};
+    ctx.redirect('/admin/products/');
+    return;
+  }
+
+  let defaultParams = {
+    name: ctx.request.fields.name,
+    price: price,
+    discountPrice: discountPrice,
+    quantity: ctx.request.fields.quantity,
+    description: ctx.request.fields.description,
+    categoryId: ctx.request.fields.category
+  };
+
+  if(ctx.request.fields.hide == 'on') 
+  {
+    defaultParams.hide = true;
+  } else 
+  {
+    defaultParams.hide = false;
+  }
+
+  const [product, created] = await Product.findOrCreate({
+    where: {
+      name: ctx.request.fields.name
+    },
+    defaults: defaultParams
+  });
+
+  if(!created) 
+  {
+    console.log(product);
+    ctx.session.messages = {'productExist': `The product with name: ${ctx.request.fields.name} already exists!`};
+    ctx.redirect('/admin/products');
+  }
+  else 
+  {
+    if(ctx.request.files.length && ctx.request.files[0].size != 0) 
+    {
+      fs.renameSync(ctx.request.files[0].path + '', __dirname + '/static/media/id' + product.id + '/' + ctx.request.files[0].name, function (err) {
+      if (err)
+        throw err;
+      });
+
+      await product.update({
+        image: 'id' + product.id + '/' + ctx.request.files[0].name
+      });
+    }
+  }
+  ctx.session.messages = {'productCreated': `Product with id ${product.id} has been created!`};
+  await ctx.redirect('/admin/products');
+  /*
+  image = request.FILES.get('image', '')
+    name = request.POST.get('name', '')
+    category = request.POST.get('category', '')
+    price = request.POST.get('price', '')
+    discount_price = request.POST.get('discount-price', '')
+    quantity = request.POST.get('quantity', '')
+    description = request.POST.get('description', '')
+    hide = request.POST.get('hide', '')
+        
+    # Check the values
+    try:
+        if float(price) > 9999.99 or float(price) < 0 \
+            or float(discount_price) > 9999.99 or float(discount_price) < 0:
+            messages.error(request, 'product_edit_error_price')
+            return redirect('adminProducts')
+    except Exception as e:
+        traceback.print_exc()
+        messages.error(request, 'product_edit_error_unknown')
+        return redirect('adminProducts')
+    
+    if hide == 'on':
+        hide = True
+    else:
+        hide = False
+
+    product = Product.objects.create(name = name, category=Category.objects.get(id=category), price = price, discount_price = discount_price, quantity = quantity, description = description, hide = hide)
+    
+    productid = product.id
+
+    if image != '':
+        # Upload the image
+        try:
+            os.mkdir(os.path.join(MEDIA_ROOT, 'id'+str(productid)))
+        except:
+            pass
+
+        # save the uploaded file inside that folder.
+        full_filename = os.path.join(MEDIA_ROOT, 'id'+str(productid), image.name)
+        fout = open(full_filename, 'wb+')
+        file_content = ContentFile( image.read() )
+        # Iterate through the chunks.
+        for chunk in file_content.chunks():
+            fout.write(chunk)
+        fout.close()
+
+        product.image = 'id'+str(productid) + os.sep + image.name
+        product.save()
+
+    messages.success(request, 'product_created')
+    return redirect('adminProducts')
+  */
+});
+
 router.get('/admin/products/edit/:id', async ctx => {
+
+  // Clear the messages
+  ctx.session.messages = null;
+
   let categories = {};
 
   await Category.findAll().then((categoriesv) => categories = categoriesv);
@@ -471,10 +598,11 @@ router.get('/admin/products/edit/:id', async ctx => {
 
 
 router.post('/admin/products/edit/:id', async ctx => {
+
   // Check the values
 
-  let price = parseFloat(ctx.request.body.price).toFixed(2);
-  let discountPrice = parseFloat(ctx.request.body.discountPrice).toFixed(2);
+  let price = parseFloat(parseFloat(ctx.request.fields.price).toFixed(2));
+  let discountPrice = parseFloat(parseFloat(ctx.request.fields.discountPrice).toFixed(2));
 
   if(price > 9999.99 || price < 0 || discountPrice > 9999.99 || discountPrice < 0) 
   {
@@ -483,79 +611,48 @@ router.post('/admin/products/edit/:id', async ctx => {
     return;
   }
 
+  let updateParams = {
+    name: ctx.request.fields.name,
+    price: price,
+    discountPrice: discountPrice,
+    quantity: ctx.request.fields.quantity,
+    description: ctx.request.fields.description,
+    categoryId: ctx.request.fields.category
+  }
+
   // Upload the image
-  mv(ctx.request.files[0].path + '/' + ctx.request.files[0].name, __dirname + '/static/media/id' + ctx.params.id, function (err) {
-    if (err)
-      throw err;
-    
-    console.log('success file move ' + ctx.params.id);
+  if(ctx.request.files.length && ctx.request.files[0].size != 0) 
+  {
+    console.log(ctx.request.files[0]);
+    fs.renameSync(ctx.request.files[0].path + '', __dirname + '/static/media/id' + ctx.params.id + '/' + ctx.request.files[0].name, function (err) {
+      if (err)
+        throw err;
+    });
+
+    updateParams.image = 'id' + ctx.params.id + '/' + ctx.request.files[0].name;
+  }
+
+  if(ctx.request.fields.hide == 'on') 
+  {
+    updateParams.hide = true;
+  } else 
+  {
+    updateParams.hide = false;
+  }
+
+  await Product.update(updateParams,
+  {
+    where: {
+      id: ctx.params.id
+    }
   });
+
+  ctx.session.messages = {'productEdited': `Product with id ${ctx.params.id} was edited!`}
   await ctx.redirect('/admin/products/edit/' + ctx.params.id);
-
-  /*
-  image = request.FILES.get('image', '')
-        name = request.POST.get('name', '')
-        category = request.POST.get('category', '')
-        price = request.POST.get('price', '')
-        discount_price = request.POST.get('discount-price', '')
-        quantity = request.POST.get('quantity', '')
-        description = request.POST.get('description', '')
-        hide = request.POST.get('hide', '')
-
-        # Check the values
-        try:
-            if float(price) > 9999.99 or float(price) < 0 \
-                or float(discount_price) > 9999.99 or float(discount_price) < 0:
-                messages.error(request, 'product_edit_error_price')
-                return redirect('adminProducts')
-        except Exception as e:
-            traceback.print_exc()
-            messages.error(request, 'product_edit_error_unknown')
-            return redirect('adminProducts')
-        
-        product = Product.objects.get(id = productid)
-
-        if image != '':
-            # Upload the image
-            try:
-                os.mkdir(os.path.join(MEDIA_ROOT, 'id'+str(productid)))
-            except:
-                pass
-
-            # save the uploaded file inside that folder.
-            full_filename = os.path.join(MEDIA_ROOT, 'id'+str(productid), image.name)
-            fout = open(full_filename, 'wb+')
-            file_content = ContentFile( image.read() )
-            # Iterate through the chunks.
-            for chunk in file_content.chunks():
-                fout.write(chunk)
-            fout.close()
-
-            product.image = 'id'+str(productid) + os.sep + image.name
-        
-        # Finish the table
-        
-        product.name = name
-        product.category = Category.objects.get(id = category)
-        product.price = price
-        product.discount_price = discount_price
-        product.quantity = quantity
-        product.description = description
-
-        if hide == 'on':
-            product.hide = True
-        else:
-            product.hide = False
-        
-        product.save()
-
-        messages.success(request, 'product_edited')
-        return redirect('adminProducts')
-        */
 });
 
 router.post('/admin/products/delete', async ctx => {
-  ids = ctx.request.body.id;
+  ids = ctx.request.fields.id;
 
   await Product.destroy({
     where: {
@@ -571,8 +668,8 @@ router.post('/admin/products/delete', async ctx => {
 router.post('/admin/categories/add', async ctx => {
   await Category.findOrCreate({
     where: {
-      name: ctx.request.body.name,
-      imageCss: ctx.request.body.image
+      name: ctx.request.fields.name,
+      imageCss: ctx.request.fields.image
     }
   });
 
@@ -582,7 +679,7 @@ router.post('/admin/categories/add', async ctx => {
 router.post('/admin/categories/remove', async ctx => {
   await Category.destroy({
     where: {
-      id: ctx.request.body.id
+      id: ctx.request.fields.id
     }
   });
 

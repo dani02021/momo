@@ -170,6 +170,7 @@ const Product = db.define("product", {
   },
   hide: {
     type: DataTypes.BOOLEAN,
+    defaultValue: false,
     allowNull: false
   }
 },

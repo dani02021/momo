@@ -18,6 +18,12 @@
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 <% } %>
+<% if(i == 'productExist') { %>
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong><%= messages[i] %></strong>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  <% } %>
 <% if(i == 'productEditErrorUnknown') { %>
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
   <strong>Error: An unknown error has occured!</strong>
@@ -222,7 +228,7 @@
         <h5 class="modal-title">Add Product</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="add-product-form" action="/administration/products/add/" enctype="multipart/form-data" method="post">
+      <form id="add-product-form" action="/admin/products/add/" enctype="multipart/form-data" method="post">
         <div class="modal-body" style="padding-right: 48px;">
           <div class="row">
             <div class="col-md-5 mx-auto">
@@ -248,7 +254,7 @@
             <div class="col-md-5 mx-auto">
               <label>Discount Price (USD):</label>
               <div>
-                <input name="discount-price" type="number" required></input>
+                <input name="discountPrice" type="number" required></input>
               </div>
             </div>
           </div>
@@ -256,7 +262,7 @@
             <div class="col-md-5 mx-auto">
               <label>Select image:</label>
               <div>
-                <input type="file" name="image" type="number" accept="image/*" required></input>
+                <input type="file" name="image" type="number" accept="image/*"></input>
               </div>
             </div>
             <div class="col-md-5 mx-auto">

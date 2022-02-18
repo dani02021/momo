@@ -1,3 +1,13 @@
+<% for(i in session.dataValues.messages) { %>
+<% if(session.dataValues.messages.hasOwnProperty(i)) { %>
+<% if(i == 'productEdited') { %>
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+  <strong>Product edited!</strong>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+<% } %>
+<% } %>
+<% } %>
 <div class="container tm-mt-big tm-mb-big">
   <div class="row">
     <div class="col-xl-9 col-lg-10 col-md-12 col-sm-12 mx-auto">
@@ -39,8 +49,8 @@
                 </select>
               </div>
               <div class="form-group mb-3">
-                <label for="discount-price">Discount Price (USD)</label>
-                <input id="discount-price" type="number" class="form-control validate" name="discount-price"
+                <label for="discountPrice">Discount Price (USD)</label>
+                <input id="discountPrice" type="number" class="form-control validate" name="discountPrice"
                   value="<%= product.discountPrice %>">
               </div>
               <div class="form-group mb-3">
