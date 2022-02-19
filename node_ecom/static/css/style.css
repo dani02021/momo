@@ -993,14 +993,14 @@ h2 {
     color: #ffffff;
 }
 
-.product-view .product-short,
+.product-view .product-sort,
 .product-view .product-price-range {
     position: relative;
     width: 100%;
     text-align: right;
 }
 
-.product-view .product-short .dropdown .dropdown-toggle,
+.product-view .product-sort .dropdown .dropdown-toggle,
 .product-view .product-price-range .dropdown .dropdown-toggle {
     display: block;
     width: 100%;
@@ -1014,19 +1014,19 @@ h2 {
     transition: all .3s;
 }
 
-.product-view .product-short .dropdown .dropdown-toggle:hover,
+.product-view .product-sort .dropdown .dropdown-toggle:hover,
 .product-view .product-price-range .dropdown .dropdown-toggle:hover {
     color: #FF6F61;
     border-color: #FF6F61;
 }
 
-.product-view .product-short .dropdown .dropdown-toggle::after,
+.product-view .product-sort .dropdown .dropdown-toggle::after,
 .product-view .product-price-range .dropdown .dropdown-toggle::after {
     float: right;
     margin-top: 10px;
 }
 
-.product-view .product-short .dropdown-menu,
+.product-view .product-sort .dropdown-menu,
 .product-view .product-price-range .dropdown-menu {
     margin: -1px 0 0 0;
     border-radius: 0;

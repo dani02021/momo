@@ -1,32 +1,31 @@
-{% extends 'admin1/base.html' %}
-{% load static %}
-{% block content %}
-{% for message in messages %}
-{% if message|stringformat:'s' == 'account_exists' %}
+<% for(i in session.dataValues.messages) { %>
+<% if(session.dataValues.messages.hasOwnProperty(i)) { %>
+<% if(i == 'accountExists') { %>
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-  <strong>Account already exists!</strong>
+  <strong>Account already exists! <%= session.dataValues.messages[i] %></strong>
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-{% endif %}
-{% if message|stringformat:'s' == 'account_created' %}
+<% } %>
+<% if(i == 'accountCreated') { %>
 <div class="alert alert-success alert-dismissible fade show" role="alert">
   <strong>Account is created!</strong>
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-{% endif %}
-{% if message|stringformat:'s' == 'account_deleted' %}
+<% } %>
+<% if(i == 'accountDeleted') { %>
 <div class="alert alert-warning alert-dismissible fade show" role="alert">
   <strong>Selected accounts are deleted!</strong>
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-{% endif %}
-{% if message|stringformat:'s' == 'account_edited' %}
+<% } %>
+<% if(i == 'accountEdited') { %>
 <div class="alert alert-success alert-dismissible fade show" role="alert">
   <strong>Account is edited!</strong>
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-{% endif %}
-{% endfor %}
+<% } %>
+<% } %>
+<% } %>
 <div class="container mt-5">
   <div class="row tm-content-row">
     <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
@@ -72,21 +71,21 @@
               </tr>
             </thead>
             <tbody>
-              {% for item in items %}
+              <% for (i = 0; i < users.length; i++) { %>
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b>{{ item.created_at }}</b></td>
-                <td data-id="{{ item.id }}"><b>#{{ item.id }}</b></td>
-                <td><b>{{ item.user.username }}</b></td>
-                <td><b>{{ item.user.first_name|add:' '|add:item.user.last_name }}</b></td>
-                <td><b>{{ item.country }}</b></td>
-                <td><b>{{ item.user.email }}</b></td>
+                <td><b><%= users[i].created_at %></b></td>
+                <td data-id="{{ item.id }}"><b>#<% users[i].id %></b></td>
+                <td><b><%= users[i].username %></b></td>
+                <td><b><%= users[i].firstName + ' ' + users[i].lastName %></b></td>
+                <td><b><%= users[i].country %></b></td>
+                <td><b><%= users[i].email %></b></td>
                 <td><a href="/administration/accounts/edit/{{ item.id }}/" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>
                 </td>
               </tr>
-              {% endfor %}
+              <% } %>
             </tbody>
           </table>
         </div>
@@ -104,40 +103,38 @@
   </div>
 </div>
 <!-- Pagination Start -->
-{% if paginator %}
 <div class="col-md-12">
   <nav>
     <ul class="pagination justify-content-center">
-      {% if page.has_previous %}
+      <% if(page > 1) { %>
       <li class="page-item">
-        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'-1'}});">Previous</a>
+        <a class="page-link" href="javascript:moveToPage(<%= page - 1 %>);">Previous</a>
       </li>
-      {% else %}
+      <% } else { %>
       <li class="page-item disabled">
         <a class="page-link" href="" tabindex="-1">Previous</a>
       </li>
-      {% endif %}
-      {% for pag in pages %}
-      {% if page.number|stringformat:'s' == pag|stringformat:'s' %}
-      <li class="page-item active"><a class="page-link" href="">{{ pag }}</a></li>
-      {% else %}
-      <li class="page-item {% if '...' == pag|stringformat:'s' %}disabled{% endif %}"><a class="page-link" href="javascript:moveToPage({{ pag }});">
-          {{ pag }}</a></li>
-      {% endif %}
-      {% endfor %}
-      {% if page.has_next %}
+      <% } %>
+      <% for(var i = 0; i < pages.length; i++) { %>
+      <% if(pages[i] == page) { %>
+      <li class="page-item active"><a class="page-link" href=""><%= page %></a></li>
+      <% } else { %>
+      <li class="page-item <% if (pages[i] == '...') {%> disabled <% } %>"><a class="page-link" href="javascript:moveToPage(<%= pages[i] %>);">
+        <%= pages[i] %></a></li>
+      <% } %>
+      <% } %>
+      {<% if(page < lastPage) { %>
       <li class="page-item">
-        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'1'}});">Next</a>
+        <a class="page-link" href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
       </li>
-      {% else %}
+      <% } else { %>
       <li class="page-item disabled">
         <a class="page-link" href="">Next</a>
       </li>
-      {% endif %}
+      <% } %>
     </ul>
   </nav>
 </div>
-{% endif %}
 <!-- Modal -->
 <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-account" tabindex="-1"
   aria-labelledby="add-account" aria-hidden="true">
@@ -198,12 +195,7 @@
             </div>
             <div class="col-md-5 mx-auto">
               <label>Country:</label>
-              <select id="country" name="country" style="width: 100%;">
-                <option disabled selected>-- Select a Country --</option>
-                {% for country in countries %}
-                <option value="{{ country.name }}">{{ country.name }}</option>
-                {% endfor %}
-              </select>
+              <input id="country" name="country">
             </div>
             <div class="row">
               <div class="col-md-11 mx-auto"><label id="pass-err" style="color: red; font-weight: 300;"></label></div>
@@ -212,7 +204,6 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          {% csrf_token %}
           <button type="submit" class="btn btn-primary">Add</button>
         </div>
       </form>
@@ -234,7 +225,6 @@
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
         <form id="rem-account-form" action="/administration/accounts/del/" method="post"
           onsubmit="return deleteAccounts(this);">
-          {% csrf_token %}
           <button type="submit" data-bs-dismiss="modal" class="btn btn-primary">Delete</button>
         </form>
       </div>
@@ -311,5 +301,3 @@
     }
   }
 </script>
-
-{% endblock %}

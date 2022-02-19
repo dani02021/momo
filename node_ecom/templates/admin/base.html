@@ -30,7 +30,7 @@
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav mx-auto h-100">
                         <li class="nav-item">
-                            <a class="nav-link {% if selected|stringformat:'s' == 'dashboard' %}active{% endif %}"
+                            <a class="nav-link <% if (selected == 'dashboard') { %> active <% } %>"
                                 href="/admin">
                                 <i class="fas fa-tachometer-alt"></i>
                                 Dashboard
@@ -45,7 +45,7 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if selected|stringformat:'s' == 'products' %}active{% endif %}"
+                            <a class="nav-link <% if (selected == 'products') { %> active <% } %>"
                                 href="/admin/products">
                                 <i class="fas fa-shopping-cart"></i>
                                 Products
@@ -60,8 +60,8 @@
                         </li>
 
                         <li class="nav-item">
-                            <a class="nav-link {% if selected|stringformat:'s' == 'accounts' %}active{% endif %}"
-                                href="/administration/accounts/">
+                            <a class="nav-link <% if (selected == 'accounts') { %> active <% } %>"
+                                href="/admin/accounts/">
                                 <i class="far fa-user"></i>
                                 Accounts
                             </a>

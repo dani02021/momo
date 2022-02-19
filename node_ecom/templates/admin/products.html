@@ -6,6 +6,12 @@
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 <% } %>
+<% if(i == 'productCreated') { %>
+  <div class="alert alert-success alert-dismissible fade show" role="alert">
+    <strong><%= session.dataValues.messages[i] %></strong>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  <% } %>
 <% if(i == 'productDeleted') { %>
 <div class="alert alert-warning alert-dismissible fade show" role="alert">
   <strong>Selected products are deleted!</strong>
@@ -20,7 +26,7 @@
 <% } %>
 <% if(i == 'productExist') { %>
   <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <strong><%= messages[i] %></strong>
+    <strong><%= session.dataValues.messages[i] %></strong>
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
   <% } %>

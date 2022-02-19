@@ -57,9 +57,9 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <div class="product-short">
+                                    <div class="product-sort">
                                         <div class="dropdown">
-                                            <div class="dropdown-toggle" data-bs-toggle="dropdown">Product short by
+                                            <div class="dropdown-toggle" data-bs-toggle="dropdown">Product sort by
                                             </div>
                                             <div class="dropdown-menu dropdown-menu-right">
                                                 <a href="#" class="dropdown-item">Newest</a>
@@ -193,4 +193,18 @@
             </div>
         </div>
     </div>
+    <script>
+        // Pass the filters
+        var searchParams = new URLSearchParams(window.location.search);
+        
+        if(searchParams.get('search')) {
+            document.getElementById('searchProduct').value = searchParams.get('search');
+        }
+
+        if(searchParams.get('minval') && searchParams.get('maxval')) {
+            document.getElementById('amount1').value = searchParams.get('minval');
+            document.getElementById('amount2').value = searchParams.get('maxval');
+            alert(document.getElementById('amount2').value);
+        }
+    </script>
     <!-- Product List End -->

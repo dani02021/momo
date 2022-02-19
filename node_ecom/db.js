@@ -9,7 +9,7 @@ module.exports = new Sequelize('ecommercenodejs', process.env.DB_USER, Buffer.fr
     //logging: false,
   
     // custom port; default: dialect default
-    port: 6432,
+    port: 5432,
   
     // pool configuration used to pool database connections
     pool: {

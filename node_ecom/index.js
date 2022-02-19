@@ -128,9 +128,6 @@ async function getProducts(ctx) {
 }
 
 async function getAdminProducts(ctx) {
-  // Clear old messages
-  ctx.session.messages = null;
-
   // Get filters
   let filters = {}, filtersToReturn = {}, permFound = false;
 
@@ -180,9 +177,9 @@ async function getAdminProducts(ctx) {
       include: Role
     })
       .then(async user => {
-        if(user == null)
+        if (user == null)
           return;
-        
+
         await user.getRoles().then(async roles => {
           for (i = 0; i < roles.length; i++) {
             await roles[i].getPermissions().then(async perms => {
@@ -219,6 +216,7 @@ async function getAdminProducts(ctx) {
 
                   await ctx.render('/admin/products', {
                     layout: '/admin/base',
+                    selected: 'products',
                     session: ctx.session,
                     products: products,
                     categories: categories,
@@ -240,8 +238,64 @@ async function getAdminProducts(ctx) {
     if (!permFound) {
       ctx.session.messages = { 'noPermission': 'You don\'t have permission to see products' }
       await ctx.redirect('/admin');
+    } else {
+      // Clear old messages
+      ctx.session.messages = null;
     }
   }
+}
+
+async function getAdminAccounts(ctx) {
+  // Get filters
+  let filters = {}, filtersToReturn = {};
+
+  if (ctx.query.user) {
+    filters['user'] = ctx.query.user;
+    filtersToReturn['user'] = ctx.query.user;
+  }
+  if (ctx.query.email) {
+    filters['email'] = ctx.query.email;
+    filtersToReturn['email'] = ctx.query.email;
+  }
+  if (ctx.query.country) {
+    filters['country'] = ctx.query.country;
+    filtersToReturn['country'] = ctx.query.country;
+  }
+  if (ctx.query.name) {
+    filters['name'] = ctx.query.name;
+    filtersToReturn['name'] = ctx.query.name;
+  }
+  else {
+    filters['name'] = '';
+  }
+
+  let categories = {};
+
+  const result = await User.findAndCountAll();
+
+  let page = 1;
+
+  if (ctx.params.page) {
+    page = parseInt(ctx.params.page)
+  }
+
+  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let offset = 0;
+
+  if (ctx.params.page) {
+    offset = (parseInt(ctx.params.page) - 1) * limit;
+  }
+
+  await ctx.render('admin/accounts', {
+    layout: 'admin/base',
+    selected: 'accounts',
+    session: ctx.session,
+    users: result.rows,
+    filters: filtersToReturn,
+    page: page,
+    lastPage: result.count,
+    pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
+  });
 }
 
 router.get("/", async ctx => getIndex(ctx));
@@ -377,12 +431,11 @@ router.get('/admin', async ctx => {
 
   if (ctx.session.dataValues.username) {
     await Staff.findOne({ where: { username: ctx.session.dataValues.username }, include: Role }).then(async user => {
-      if(user == null) 
-      {
+      if (user == null) {
         await ctx.redirect("/admin/login");
-      } else 
-      {
+      } else {
         await ctx.render('/admin/index', {
+          selected: 'dashboard',
           session: ctx.session,
           user: user,
           layout: "/admin/base"
@@ -405,8 +458,7 @@ router.get('/admin/login', async ctx => {
       include: Role
     })
       .then(async user => {
-        if (user) 
-        {
+        if (user) {
           await user.update({
             lastLogin: Sequelize.NOW
           });
@@ -466,9 +518,8 @@ router.post('/admin/products/add', async ctx => {
   let price = parseFloat(parseFloat(ctx.request.fields.price).toFixed(2));
   let discountPrice = parseFloat(parseFloat(ctx.request.fields.discountPrice).toFixed(2));
 
-  if(price > 9999.99 || price < 0 || discountPrice > 9999.99 || discountPrice < 0) 
-  {
-    ctx.session.messages = {'productErrorPrice': 'Product has invalid price (0 - 9999.99)'};
+  if (price > 9999.99 || price < 0 || discountPrice > 9999.99 || discountPrice < 0) {
+    ctx.session.messages = { 'productErrorPrice': 'Product has invalid price (0 - 9999.99)' };
     ctx.redirect('/admin/products/');
     return;
   }
@@ -482,11 +533,9 @@ router.post('/admin/products/add', async ctx => {
     categoryId: ctx.request.fields.category
   };
 
-  if(ctx.request.fields.hide == 'on') 
-  {
+  if (ctx.request.fields.hide == 'on') {
     defaultParams.hide = true;
-  } else 
-  {
+  } else {
     defaultParams.hide = false;
   }
 
@@ -494,83 +543,47 @@ router.post('/admin/products/add', async ctx => {
     where: {
       name: ctx.request.fields.name
     },
+    paranoid: false,
     defaults: defaultParams
   });
 
-  if(!created) 
-  {
-    console.log(product);
-    ctx.session.messages = {'productExist': `The product with name: ${ctx.request.fields.name} already exists!`};
-    ctx.redirect('/admin/products');
+  if (!created) {
+    if (!product.deletedAt) {
+      ctx.session.messages = { 'productExist': `The product with name ${ctx.request.fields.name} already exists!` };
+      ctx.redirect('/admin/products');
+      return;
+    } else {
+      await product.restore();
+
+      if (ctx.request.files.length && ctx.request.files[0].size != 0) {
+        fs.renameSync(ctx.request.files[0].path + '', __dirname + '/static/media/id' + product.id + '/' + ctx.request.files[0].name, function (err) {
+          if (err)
+            throw err;
+        });
+
+        defaultParams.image = 'id' + product.id + '/' + ctx.request.files[0].name;
+      }
+
+      await product.update(defaultParams);
+    }
   }
-  else 
-  {
-    if(ctx.request.files.length && ctx.request.files[0].size != 0) 
-    {
+  else {
+    if (ctx.request.files.length && ctx.request.files[0].size != 0) {
       fs.renameSync(ctx.request.files[0].path + '', __dirname + '/static/media/id' + product.id + '/' + ctx.request.files[0].name, function (err) {
-      if (err)
-        throw err;
+        if (err)
+          throw err;
       });
 
       await product.update({
         image: 'id' + product.id + '/' + ctx.request.files[0].name
       });
     }
+    else {
+      fs.mkdirSync(__dirname + '/static/media/id' + product.id);
+    }
   }
-  ctx.session.messages = {'productCreated': `Product with id ${product.id} has been created!`};
-  await ctx.redirect('/admin/products');
-  /*
-  image = request.FILES.get('image', '')
-    name = request.POST.get('name', '')
-    category = request.POST.get('category', '')
-    price = request.POST.get('price', '')
-    discount_price = request.POST.get('discount-price', '')
-    quantity = request.POST.get('quantity', '')
-    description = request.POST.get('description', '')
-    hide = request.POST.get('hide', '')
-        
-    # Check the values
-    try:
-        if float(price) > 9999.99 or float(price) < 0 \
-            or float(discount_price) > 9999.99 or float(discount_price) < 0:
-            messages.error(request, 'product_edit_error_price')
-            return redirect('adminProducts')
-    except Exception as e:
-        traceback.print_exc()
-        messages.error(request, 'product_edit_error_unknown')
-        return redirect('adminProducts')
-    
-    if hide == 'on':
-        hide = True
-    else:
-        hide = False
-
-    product = Product.objects.create(name = name, category=Category.objects.get(id=category), price = price, discount_price = discount_price, quantity = quantity, description = description, hide = hide)
-    
-    productid = product.id
-
-    if image != '':
-        # Upload the image
-        try:
-            os.mkdir(os.path.join(MEDIA_ROOT, 'id'+str(productid)))
-        except:
-            pass
-
-        # save the uploaded file inside that folder.
-        full_filename = os.path.join(MEDIA_ROOT, 'id'+str(productid), image.name)
-        fout = open(full_filename, 'wb+')
-        file_content = ContentFile( image.read() )
-        # Iterate through the chunks.
-        for chunk in file_content.chunks():
-            fout.write(chunk)
-        fout.close()
-
-        product.image = 'id'+str(productid) + os.sep + image.name
-        product.save()
-
-    messages.success(request, 'product_created')
-    return redirect('adminProducts')
-  */
+  ctx.session.messages = { 'productCreated': `Product with id ${product.id} has been created!` };
+  ctx.redirect('/admin/products');
 });
 
 router.get('/admin/products/edit/:id', async ctx => {
@@ -596,6 +609,9 @@ router.get('/admin/products/edit/:id', async ctx => {
   });
 });
 
+router.get('/admin/accounts', async ctx => getAdminAccounts(ctx));
+router.get('/admin/accounts/:page', async ctx => getAdminAccounts(ctx));
+
 
 router.post('/admin/products/edit/:id', async ctx => {
 
@@ -604,9 +620,8 @@ router.post('/admin/products/edit/:id', async ctx => {
   let price = parseFloat(parseFloat(ctx.request.fields.price).toFixed(2));
   let discountPrice = parseFloat(parseFloat(ctx.request.fields.discountPrice).toFixed(2));
 
-  if(price > 9999.99 || price < 0 || discountPrice > 9999.99 || discountPrice < 0) 
-  {
-    ctx.session.messages = {'productErrorPrice': 'Product has invalid price (0 - 9999.99)'};
+  if (price > 9999.99 || price < 0 || discountPrice > 9999.99 || discountPrice < 0) {
+    ctx.session.messages = { 'productErrorPrice': 'Product has invalid price (0 - 9999.99)' };
     ctx.redirect('/admin/products/edit/' + ctx.params.id);
     return;
   }
@@ -621,8 +636,7 @@ router.post('/admin/products/edit/:id', async ctx => {
   }
 
   // Upload the image
-  if(ctx.request.files.length && ctx.request.files[0].size != 0) 
-  {
+  if (ctx.request.files.length && ctx.request.files[0].size != 0) {
     console.log(ctx.request.files[0]);
     fs.renameSync(ctx.request.files[0].path + '', __dirname + '/static/media/id' + ctx.params.id + '/' + ctx.request.files[0].name, function (err) {
       if (err)
@@ -632,22 +646,20 @@ router.post('/admin/products/edit/:id', async ctx => {
     updateParams.image = 'id' + ctx.params.id + '/' + ctx.request.files[0].name;
   }
 
-  if(ctx.request.fields.hide == 'on') 
-  {
+  if (ctx.request.fields.hide == 'on') {
     updateParams.hide = true;
-  } else 
-  {
+  } else {
     updateParams.hide = false;
   }
 
   await Product.update(updateParams,
-  {
-    where: {
-      id: ctx.params.id
-    }
-  });
+    {
+      where: {
+        id: ctx.params.id
+      }
+    });
 
-  ctx.session.messages = {'productEdited': `Product with id ${ctx.params.id} was edited!`}
+  ctx.session.messages = { 'productEdited': `Product with id ${ctx.params.id} was edited!` }
   await ctx.redirect('/admin/products/edit/' + ctx.params.id);
 });
 
