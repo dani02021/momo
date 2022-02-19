@@ -32,26 +32,24 @@
       <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1000px;">
         <h2 class="tm-block-title">Accounts</h2>
         <div class="container">
-          <form action="/administration/accounts/" method="get" onsubmit="checkAccountFilter(this);">
-            <div class="row">
+          <form action="/admin/accounts/" method="get" onsubmit="checkAccountFilter(this);">
+            <div class="row" style="margin-bottom: 15px;">
               <div class="col-sm-3">
-                <input class="form-universal" name="user" placeholder="Username" value="{{ pass_user }}">
+                <input class="form-universal" name="user" placeholder="Username" value="<%= filters['user'] %>">
               </div>
+              <div class="col-sm-2"></div>
               <div class="col-sm-3">
-                <input name="email" class="form-universal" placeholder="E-mail" value="{{ pass_email }}">
+                <input name="email" class="form-universal" placeholder="E-mail" value="<%= filters['email'] %>">
               </div>
+              <div class="col-sm-1"></div>
               <div class="col-sm-3">
-                <input name="country" class="form-universal" placeholder="Country" value="{{ pass_country }}">
-              </div>
-              <div class="col-sm-1">
-                <input name="active" class="form-universal" type="checkbox" {% if pass_active == 'on' %} checked {% endif %}>
-                <label style="color: white;">Active</label>
+                <input name="country" class="form-universal" placeholder="Country" value="<%= filters['country'] %>">
               </div>
             </div>
             <div class="row" style="margin-bottom: 12px;">
               <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
-                <a href="/administration/accounts/" class="btn btn-primary text-uppercase">Clear filters</a>
+                <a href="/admin/accounts/" class="btn btn-primary text-uppercase">Clear filters</a>
               </div>
             </div>
           </form>
@@ -74,13 +72,13 @@
               <% for (i = 0; i < users.length; i++) { %>
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b><%= users[i].created_at %></b></td>
-                <td data-id="{{ item.id }}"><b>#<% users[i].id %></b></td>
+                <td><b><%= users[i].createdAt %></b></td>
+                <td data-id="<%= users[i].id %>"><b>#<%= users[i].id %></b></td>
                 <td><b><%= users[i].username %></b></td>
                 <td><b><%= users[i].firstName + ' ' + users[i].lastName %></b></td>
                 <td><b><%= users[i].country %></b></td>
                 <td><b><%= users[i].email %></b></td>
-                <td><a href="/administration/accounts/edit/{{ item.id }}/" class="tm-order-edit-link">
+                <td><a href="/admin/accounts/edit/<%= users[i].id %>" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>
                 </td>
@@ -144,7 +142,7 @@
         <h5 class="modal-title">Add Account</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="add-account-form" action="/administration/accounts/add/" onsubmit="return checkPass();" method="post">
+      <form id="add-account-form" action="/admin/accounts/add" onsubmit="return checkPass();" method="post">
         <div class="modal-body">
           <div class="row">
             <div class="col-md-5 mx-auto">
@@ -223,7 +221,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-        <form id="rem-account-form" action="/administration/accounts/del/" method="post"
+        <form id="rem-account-form" action="/admin/accounts/delete" method="post"
           onsubmit="return deleteAccounts(this);">
           <button type="submit" data-bs-dismiss="modal" class="btn btn-primary">Delete</button>
         </form>

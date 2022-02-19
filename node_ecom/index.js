@@ -45,6 +45,7 @@ async function getIndex(ctx) {
   ).then((productsv) => { products = productsv });
 
   await ctx.render('index', {
+    selected: 'home',
     categories: categories,
     products: products,
     session: ctx.session
@@ -117,6 +118,7 @@ async function getProducts(ctx) {
   }).then((productsv) => { products = productsv.rows; count = productsv.count });
 
   await ctx.render('product-list', {
+    selected: 'products',
     session: ctx.session,
     categories: categories,
     products: products,
@@ -252,26 +254,24 @@ async function getAdminAccounts(ctx) {
   if (ctx.query.user) {
     filters['user'] = ctx.query.user;
     filtersToReturn['user'] = ctx.query.user;
+  } else 
+  {
+    filters['user'] = '';
   }
   if (ctx.query.email) {
     filters['email'] = ctx.query.email;
     filtersToReturn['email'] = ctx.query.email;
+  } else 
+  {
+    filters['email'] = '';
   }
   if (ctx.query.country) {
     filters['country'] = ctx.query.country;
     filtersToReturn['country'] = ctx.query.country;
+  } else 
+  {
+    filters['country'] = '';
   }
-  if (ctx.query.name) {
-    filters['name'] = ctx.query.name;
-    filtersToReturn['name'] = ctx.query.name;
-  }
-  else {
-    filters['name'] = '';
-  }
-
-  let categories = {};
-
-  const result = await User.findAndCountAll();
 
   let page = 1;
 
@@ -283,8 +283,22 @@ async function getAdminAccounts(ctx) {
   let offset = 0;
 
   if (ctx.params.page) {
+    console.log(ctx.params.page);
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
+
+  const result = await User.findAndCountAll({
+    where: {
+      username: { [Op.iLike]: `%${filters.user}%` },
+      email: { [Op.iLike]: `%${filters.email}%` },
+      country: { [Op.iLike]: `%${filters.country}%` },
+    },
+    limit: limit,
+    offset: offset,
+    order: [
+      ['createdAt', 'DESC']
+    ]
+  });
 
   await ctx.render('admin/accounts', {
     layout: 'admin/base',
@@ -296,6 +310,9 @@ async function getAdminAccounts(ctx) {
     lastPage: result.count,
     pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
+
+  // Clear the messages
+  ctx.session.messages = null;
 }
 
 router.get("/", async ctx => getIndex(ctx));
@@ -305,7 +322,13 @@ router.get("/products", async ctx => getProducts(ctx));
 router.get("/products/:page", async ctx => getProducts(ctx));
 
 router.get("/register", async ctx => {
-  await ctx.render('register', { session: ctx.session });
+  await ctx.render('register', {
+    selected: 'register',
+    session: ctx.session
+  });
+
+  // Clear the messages
+  ctx.session.messages = null;
 });
 
 router.post("/register", async ctx => {
@@ -327,7 +350,7 @@ router.post("/register", async ctx => {
   if (!unique) {
     let message = { 'userExists': 'User already exists with this email or username' }
     ctx.session.messages = message;
-    await ctx.render('register')
+    ctx.redirect('/register');
   }
   else {
     // Send email
@@ -347,7 +370,7 @@ router.post("/register", async ctx => {
     });
 
     let messages = { 'registerSuccess': 'Please validate your e-mail!' };
-    ctx.redirect('/')
+    ctx.redirect('/');
   }
 });
 
@@ -468,7 +491,7 @@ router.get('/admin/login', async ctx => {
       });
   }
 
-  await ctx.render('/admin/login', { layout: "/admin/base", session: ctx.session });
+  await ctx.render('/admin/login', { layout: "/admin/base", selected: 'login', session: ctx.session });
 });
 
 router.post('/admin/login', async ctx => {
@@ -612,6 +635,58 @@ router.get('/admin/products/edit/:id', async ctx => {
 router.get('/admin/accounts', async ctx => getAdminAccounts(ctx));
 router.get('/admin/accounts/:page', async ctx => getAdminAccounts(ctx));
 
+router.post('/admin/accounts/delete', async ctx => {
+  ids = ctx.request.fields.id;
+
+  await User.destroy({
+    where: {
+      id: ids
+    }
+  });
+
+  ctx.session.messages = { 'accountDeleted': 'All products are successfuly deleted!' }
+
+  ctx.redirect('/admin/accounts');
+});
+
+
+router.post('/admin/accounts/add', async ctx => {
+  let defaultParams = {
+    username: ctx.request.fields.username,
+    email: ctx.request.fields.email,
+    password: ctx.request.fields.password,
+    firstName: ctx.request.fields.firstname,
+    lastName: ctx.request.fields.lastname,
+    address: ctx.request.fields.address,
+    country: ctx.request.fields.country,
+    emailConfirmed: true
+  };
+
+  const [user, created] = await User.findOrCreate({
+    where: {
+      [Op.or]: [
+        { email: ctx.request.fields.email },
+        { username: ctx.request.fields.username }
+      ]
+    },
+    paranoid: false,
+    defaults: defaultParams
+  });
+
+  if (!created) {
+    if (!user.deletedAt) {
+      ctx.session.messages = { 'userExist': `The user ${ctx.request.fields.username} already exists!` };
+      ctx.redirect('/admin/accounts');
+      return;
+    } else {
+      await user.restore();
+
+      await user.update(defaultParams);
+    }
+  }
+  ctx.session.messages = { 'productCreated': `User with id ${user.id} has been created!` };
+  ctx.redirect('/admin/accounts');
+});
 
 router.post('/admin/products/edit/:id', async ctx => {
 
