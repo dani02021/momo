@@ -25,7 +25,7 @@
 <% } %>
 <style>
   .ui-autocomplete-loading {
-    background: white url("{% static 'img/ui-anim_basic_16x16.gif' %}") right center no-repeat;
+    background: white url("/img/ui-anim_basic_16x16.gif") right center no-repeat;
   }
 </style>
 <div class="container mt-5">
@@ -90,7 +90,7 @@
         <%= pages[i] %></a></li>
       <% } %>
       <% } %>
-      {<% if(page < lastPage) { %>
+      {<% if(page < pages[pages.length - 1]) { %>
       <li class="page-item">
         <a class="page-link" href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
       </li>
@@ -111,7 +111,7 @@
         <h5 class="modal-title">Add Role</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="add-order-form" action="/admin/roles/add/" onsubmit="selectAll();" method="post">
+      <form id="add-order-form" action="/admin/roles/add" onsubmit="selectAll();" method="post">
         <div class="modal-body">
           <label>Permissions:</label>
           <div>
@@ -127,7 +127,6 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          {% csrf_token %}
           <button type="submit" class="btn btn-primary">Add</button>
         </div>
       </form>
@@ -170,7 +169,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-          <form id="rem-role-form" action="/admin/roles/del/" method="post"
+          <form id="rem-role-form" action="/admin/roles/delete" method="post"
             onsubmit="return deleteRoles(this);">
             <button type="submit" data-bs-dismiss="modal" class="btn btn-primary">Delete</button>
           </form>

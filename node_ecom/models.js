@@ -110,7 +110,11 @@ const Permission = db.define('permission', {
     allowNull: false,
     unique: true
   }
-});
+},
+  {
+    paranoid: true,
+    timestamp: true
+  });
 
 const Role = db.define("role", {
   name: {
@@ -118,7 +122,11 @@ const Role = db.define("role", {
     allowNull: false,
     unique: true
   }
-});
+},
+  {
+    paranoid: true,
+    timestamp: true
+  });
 
 Role.belongsToMany(Permission, { through: 'role_permissions' });
 Permission.belongsToMany(Role, { through: 'role_permissions' });

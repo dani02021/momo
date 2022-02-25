@@ -22,6 +22,7 @@ const User = models.user();
 const Staff = models.staff();
 const Session = models.session();
 const Role = models.role();
+const Permission = models.permission();
 
 const app = new Koa();
 const router = new KoaRouter();
@@ -124,12 +125,24 @@ async function getProducts(ctx) {
     products: products,
     filters: filtersToReturn,
     page: page,
-    lastPage: count,
     pages: utilsEcom.givePages(page, Math.ceil(count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 }
 
 async function getAdminProducts(ctx) {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'products.read')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see products' };
+    await ctx.redirect('/admin');
+    return;
+  }
+
   // Get filters
   let filters = {}, filtersToReturn = {}, permFound = false;
 
@@ -170,84 +183,66 @@ async function getAdminProducts(ctx) {
 
   if (filters.category)
     whereParam['categoryId'] = filters.category
+  
+  let categories, products;
+  await Category.findAll().then((categoriesv) => categories = categoriesv);
 
-  if (ctx.session.dataValues.username) {
-    await Staff.findOne({
-      where: {
-        username: ctx.session.dataValues.username
-      },
-      include: Role
-    })
-      .then(async user => {
-        if (user == null)
-          return;
-        
-        await user.getRoles().then(async roles => {
-          for (i = 0; i < roles.length; i++) {
-            await roles[i].getPermissions().then(async perms => {
-              for (y = 0; y < perms.length; y++) {
-                if (perms[y].name == 'products.read') {
-                  let categories, products;
-                  await Category.findAll().then((categoriesv) => categories = categoriesv);
+  // Paginator
+  let page = 1;
+  let count = 0;
 
-                  // Paginator
-                  let page = 1;
-                  let count = 0;
-
-                  let limit = utilsEcom.PRODUCTS_PER_PAGE;
-                  let offset = 0;
-                  if (ctx.params.page) {
-                    page = parseInt(ctx.params.page);
-                    offset = (parseInt(ctx.params.page) - 1) * limit;
-                  }
-
-                  await Product.findAndCountAll({
-                    where: whereParam,
-                    limit: limit,
-                    offset: offset,
-                    order: [
-                      ['createdAt', 'DESC']
-                    ]
-                  }).then((productsv) => { products = productsv.rows; count = productsv.count });
-
-                  let categoriesNames = {};
-
-                  for (let i = 0; i < categories.length; i++) {
-                    categoriesNames[categories[i].id] = categories[i].name;
-                  }
-
-                  await ctx.render('/admin/products', {
-                    layout: '/admin/base',
-                    selected: 'products',
-                    session: ctx.session,
-                    products: products,
-                    categories: categories,
-                    categoriesNames: categoriesNames, // Find better way
-                    filters: filtersToReturn,
-                    page: page,
-                    lastPage: count,
-                    pages: utilsEcom.givePages(page, Math.ceil(count / utilsEcom.PRODUCTS_PER_PAGE))
-                  });
-
-                  permFound = true;
-                }
-              }
-            });
-          }
-        });
-      });
-
-    if (!permFound) {
-      ctx.session.messages = { 'noPermission': 'You don\'t have permission to see products' }
-      await ctx.redirect('/admin');
-    } else {
-      // Clear old messages
-      ctx.session.messages = null;
-    }
+  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let offset = 0;
+  if (ctx.params.page) {
+    page = parseInt(ctx.params.page);
+    offset = (parseInt(ctx.params.page) - 1) * limit;
   }
+
+  await Product.findAndCountAll({
+    where: whereParam,
+    limit: limit,
+    offset: offset,
+    order: [
+      ['createdAt', 'DESC']
+    ]
+  }).then((productsv) => { products = productsv.rows; count = productsv.count });
+
+  let categoriesNames = {};
+
+  for (let i = 0; i < categories.length; i++) {
+    categoriesNames[categories[i].id] = categories[i].name;
+  }
+
+  await ctx.render('/admin/products', {
+    layout: '/admin/base',
+    selected: 'products',
+    session: ctx.session,
+    products: products,
+    categories: categories,
+    categoriesNames: categoriesNames, // Find better way
+    filters: filtersToReturn,
+    page: page,
+    pages: utilsEcom.givePages(page, Math.ceil(count / utilsEcom.PRODUCTS_PER_PAGE))
+  });
+
+  // Clear old messages
+  ctx.session.messages = null;
 }
 
 async function getAdminAccounts(ctx) {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'accounts.read')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see accounts' };
+    await ctx.redirect('/admin');
+    return;
+  }
+
   // Get filters
   let filters = {}, filtersToReturn = {};
 
@@ -307,7 +302,6 @@ async function getAdminAccounts(ctx) {
     users: result.rows,
     filters: filtersToReturn,
     page: page,
-    lastPage: result.count,
     pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 
@@ -316,6 +310,19 @@ async function getAdminAccounts(ctx) {
 }
 
 async function getAdminStaffs(ctx) {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'staff.read')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see staff' };
+    await ctx.redirect('/admin');
+    return;
+  }
+
   // Get filters
   let filters = {}, filtersToReturn = {};
 
@@ -366,7 +373,6 @@ async function getAdminStaffs(ctx) {
     staff: result.rows,
     filters: filtersToReturn,
     page: page,
-    lastPage: result.count,
     pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 
@@ -376,6 +382,19 @@ async function getAdminStaffs(ctx) {
 
 async function getAdminRoles(ctx) 
 {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'roles.read')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see roles' };
+    await ctx.redirect('/admin');
+    return;
+  }
+
   let page = 1;
 
   if (ctx.params.page) {
@@ -403,7 +422,6 @@ async function getAdminRoles(ctx)
     session: ctx.session,
     roles: result.rows,
     page: page,
-    lastPage: result.count,
     pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 
@@ -545,24 +563,18 @@ router.get('/logout', async ctx => {
 });
 
 router.get('/admin', async ctx => {
-  // Clear old messages
-  ctx.session.messages = null;
-
-  if (ctx.session.dataValues.username) {
-    await Staff.findOne({ where: { username: ctx.session.dataValues.username }, include: Role }).then(async user => {
-      if (user == null) {
-        await ctx.redirect("/admin/login");
-      } else {
-        await ctx.render('/admin/index', {
-          selected: 'dashboard',
-          session: ctx.session,
-          user: user,
-          layout: "/admin/base"
-        });
-      }
+  if (utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.render('/admin/index', {
+      selected: 'dashboard',
+      session: ctx.session,
+      user: await Staff.findOne({where: {username: ctx.session.dataValues.username}}),
+      layout: "/admin/base"
     });
-  }
-  else ctx.redirect("/admin/login");
+
+    // Clear old messages
+    ctx.session.messages = null;
+  } else await ctx.redirect("/admin/login");
 });
 
 router.get('/admin/login', async ctx => {
@@ -634,6 +646,19 @@ router.get('/admin/products', async ctx => getAdminProducts(ctx));
 router.get('/admin/products/:page', async ctx => getAdminProducts(ctx));
 
 router.post('/admin/products/add', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'product.create')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to create product' };
+    await ctx.redirect('/admin/products');
+    return;
+  }
+
   let price = parseFloat(parseFloat(ctx.request.fields.price).toFixed(2));
   let discountPrice = parseFloat(parseFloat(ctx.request.fields.discountPrice).toFixed(2));
 
@@ -706,10 +731,6 @@ router.post('/admin/products/add', async ctx => {
 });
 
 router.get('/admin/products/edit/:id', async ctx => {
-
-  // Clear the messages
-  ctx.session.messages = null;
-
   let categories = {};
 
   await Category.findAll().then((categoriesv) => categories = categoriesv);
@@ -726,201 +747,24 @@ router.get('/admin/products/edit/:id', async ctx => {
       categories: categories
     });
   });
-});
 
-router.get('/admin/accounts', async ctx => getAdminAccounts(ctx));
-router.get('/admin/accounts/:page', async ctx => getAdminAccounts(ctx));
-
-router.post('/admin/accounts/delete', async ctx => {
-  ids = ctx.request.fields.id;
-
-  await User.destroy({
-    where: {
-      id: ids
-    }
-  });
-
-  ctx.session.messages = { 'accountDeleted': 'All products are successfuly deleted!' }
-
-  ctx.redirect('/admin/accounts');
-});
-
-router.get('/admin/accounts/edit/:id', async ctx => {
-  const user = await User.findOne({where: {id: ctx.params.id }}); 
-
-  await ctx.render('admin/edit-account', {
-    layout: 'admin/base',
-    session: ctx.session,
-    selected: 'accounts',
-    user: user
-  });
-});
-
-router.post('/admin/accounts/edit/:id', async ctx => {
-
-  let updateParams = {
-    username: ctx.request.fields.name,
-    email: ctx.request.fields.email,
-    address: ctx.request.fields.address,
-    country: ctx.request.fields.country
-  }
-
-  if (ctx.request.fields.emailConfirmed == 'on') {
-    updateParams.emailConfirmed = true;
-  } else {
-    updateParams.emailConfirmed = false;
-  }
-
-  await User.update(updateParams,
-    {
-      where: {
-        id: ctx.params.id
-      }
-    }).catch(function (err) {
-      console.log(err);
-    });
-
-  ctx.session.messages = { 'accountEdited': `User with id ${ctx.params.id} was edited!` }
-  await ctx.redirect('/admin/accounts/edit/' + ctx.params.id);
-});
-
-router.post('/admin/accounts/add', async ctx => {
-  let defaultParams = {
-    username: ctx.request.fields.username,
-    email: ctx.request.fields.email,
-    password: ctx.request.fields.password,
-    firstName: ctx.request.fields.firstname,
-    lastName: ctx.request.fields.lastname,
-    address: ctx.request.fields.address,
-    country: ctx.request.fields.country,
-    emailConfirmed: true
-  };
-
-  const [user, created] = await User.findOrCreate({
-    where: {
-      [Op.or]: [
-        { email: ctx.request.fields.email },
-        { username: ctx.request.fields.username }
-      ]
-    },
-    paranoid: false,
-    defaults: defaultParams
-  });
-
-  if (!created) {
-    if (!user.deletedAt) {
-      ctx.session.messages = { 'accountExist': `The user ${ctx.request.fields.username} already exists!` };
-      ctx.redirect('/admin/accounts');
-      return;
-    } else {
-      await user.restore();
-
-      await user.update(defaultParams);
-    }
-  }
-  ctx.session.messages = { 'accountCreated': `User with id ${user.id} has been created!` };
-  ctx.redirect('/admin/accounts');
-});
-
-router.get('/admin/staff', async ctx => getAdminStaffs(ctx));
-router.get('/admin/staff/:page', async ctx => getAdminStaffs(ctx));
-
-router.post('/admin/staff/add', async ctx => {
-  let defaultParams = {
-    username: ctx.request.fields.username,
-    email: ctx.request.fields.email,
-    password: ctx.request.fields.password,
-    firstName: ctx.request.fields.firstname,
-    lastName: ctx.request.fields.lastname,
-  };
-
-  const [user, created] = await Staff.findOrCreate({
-    where: {
-      [Op.or]: [
-        { email: ctx.request.fields.email },
-        { username: ctx.request.fields.username }
-      ]
-    },
-    paranoid: false,
-    defaults: defaultParams
-  });
-
-  if (!created) {
-    if (!user.deletedAt) {
-      ctx.session.messages = { 'staffExist': `The staff ${ctx.request.fields.username} already exists!` };
-      ctx.redirect('/admin/staff');
-      return;
-    } else {
-      await user.restore();
-
-      await user.update(defaultParams);
-    }
-  }
-  ctx.session.messages = { 'staffCreated': `Staff with id ${user.id} has been created!` };
-  ctx.redirect('/admin/staff');
-});
-
-router.post('/admin/staff/delete', async ctx => {
-  ids = ctx.request.fields.id;
-
-  await Staff.destroy({
-    where: {
-      id: ids
-    }
-  });
-
-  ctx.session.messages = { 'staffDeleted': 'All products are successfuly deleted!' }
-
-  ctx.redirect('/admin/staff');
-});
-
-router.get('/admin/staff/edit/:id', async ctx => {
-  const staff = await Staff.findOne({where: {id: ctx.params.id }});
-  const roles = await Role.findAll();
-  const uroles = await staff.getRoles();
-
-  await ctx.render('admin/edit-staff', {
-    layout: 'admin/base',
-    session: ctx.session,
-    selected: 'staff',
-    staff: staff,
-    roles: roles,
-    uroles: uroles,
-  });
-});
-
-router.post('/admin/staff/edit/:id', async ctx => {
-
-  let updateParams = {
-    username: ctx.request.fields.name,
-    email: ctx.request.fields.email
-  }
-
-  const staff = await Staff.findOne({where: {id: ctx.params.id }});
-
-  staff.update(updateParams).catch(function (err) {
-      console.log(err);
-  });
-  
-  await staff.removeRoles(await staff.getRoles());
-
-  if (ctx.request.fields.role instanceof Array) 
-  {
-    for(roleid in ctx.request.fields.role) 
-    {
-      const role = await Role.findOne({where: { id: roleid } }); 
-      await staff.addRole(role);
-    }
-  } else if (ctx.request.fields.role)
-  {
-    const role = await Role.findOne({where: { id: ctx.request.fields.role } }); 
-    await staff.addRole(role);
-  }
-  ctx.session.messages = { 'staffEdited': `Staff with id ${ctx.params.id} was edited!` }
-  await ctx.redirect('/admin/staff/edit/' + ctx.params.id);
+  // Clear the messages
+  ctx.session.messages = null;
 });
 
 router.post('/admin/products/edit/:id', async ctx => {
+    // Check for admin rights
+    if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+    {
+      await ctx.redirect('/admin/login');
+    }
+  
+    if (!await utilsEcom.hasPermission(ctx, 'products.update')) 
+    {
+      ctx.session.messages = { 'noPermission': 'You don\'t have permission to update a product' };
+      await ctx.redirect('/admin/products');
+      return;
+    }
 
   // Check the values
 
@@ -965,11 +809,24 @@ router.post('/admin/products/edit/:id', async ctx => {
       }
     });
 
-  ctx.session.messages = { 'productEdited': `Product with id ${ctx.params.id} was edited!` }
+  ctx.session.messages = { 'productEdited': `Product with id ${ctx.params.id} was edited!` };
   await ctx.redirect('/admin/products/edit/' + ctx.params.id);
 });
 
 router.post('/admin/products/delete', async ctx => {
+    // Check for admin rights
+    if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+    {
+      await ctx.redirect('/admin/login');
+    }
+  
+    if (!await utilsEcom.hasPermission(ctx, 'products.delete')) 
+    {
+      ctx.session.messages = { 'noPermission': 'You don\'t have permission to delete a product' };
+      await ctx.redirect('/admin/products');
+      return;
+    }
+
   ids = ctx.request.fields.id;
 
   await Product.destroy({
@@ -978,49 +835,501 @@ router.post('/admin/products/delete', async ctx => {
     }
   });
 
-  ctx.session.messages = { 'productDeleted': 'All products are successfuly deleted!' }
+  ctx.session.messages = { 'productDeleted': 'Selected products have been deleted!' }
 
   ctx.redirect('/admin/products');
 });
 
-router.post('/admin/products/delete', async ctx => {
+router.get('/product-detail/:id', async ctx => {
+  const product = await Product.findOne({
+    where: {
+      id: ctx.params.id
+    }
+  });
+
+  const categories = await Category.findAll();
+
+  await ctx.render('product-detail', {
+    session: ctx.session,
+    selected: 'product-detail',
+    product: product,
+    categories: categories,
+  });
+});
+
+router.get('add-to-cart', async ctx => {
+
+});
+
+router.get('/admin/accounts', async ctx => getAdminAccounts(ctx));
+router.get('/admin/accounts/:page', async ctx => getAdminAccounts(ctx));
+
+router.post('/admin/accounts/delete', async ctx => {
+    // Check for admin rights
+    if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+    {
+      await ctx.redirect('/admin/login');
+    }
+  
+    if (!await utilsEcom.hasPermission(ctx, 'accounts.delete')) 
+    {
+      ctx.session.messages = { 'noPermission': 'You don\'t have permission to delete a account' };
+      await ctx.redirect('/admin/accounts');
+      return;
+    }
+
   ids = ctx.request.fields.id;
 
-  await Product.destroy({
+  await User.destroy({
     where: {
       id: ids
     }
   });
 
-  ctx.session.messages = { 'productDeleted': 'All products are successfuly deleted!' }
+  ctx.session.messages = { 'accountDeleted': 'Selected accounts have been deleted!' }
 
-  ctx.redirect('/admin/products');
+  ctx.redirect('/admin/accounts');
+});
+
+router.get('/admin/accounts/edit/:id', async ctx => {
+  const user = await User.findOne({where: {id: ctx.params.id }}); 
+
+  await ctx.render('admin/edit-account', {
+    layout: 'admin/base',
+    session: ctx.session,
+    selected: 'accounts',
+    user: user
+  });
+});
+
+router.post('/admin/accounts/edit/:id', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+  
+  if (!await utilsEcom.hasPermission(ctx, 'accounts.update')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to update an account' };
+    await ctx.redirect('/admin/accounts');
+    return;
+  }
+
+  let updateParams = {
+    username: ctx.request.fields.name,
+    email: ctx.request.fields.email,
+    address: ctx.request.fields.address,
+    country: ctx.request.fields.country
+  }
+
+  if (ctx.request.fields.emailConfirmed == 'on') {
+    updateParams.emailConfirmed = true;
+  } else {
+    updateParams.emailConfirmed = false;
+  }
+
+  await User.update(updateParams,
+    {
+      where: {
+        id: ctx.params.id
+      }
+    }).catch(function (err) {
+      console.log(err);
+    });
+
+  ctx.session.messages = { 'accountEdited': `User with id ${ctx.params.id} was edited!` }
+  await ctx.redirect('/admin/accounts');
+});
+
+router.post('/admin/accounts/add', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+  
+  if (!await utilsEcom.hasPermission(ctx, 'accounts.create')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to create an account' };
+    await ctx.redirect('/admin/accounts');
+    return;
+  }
+
+  let defaultParams = {
+    username: ctx.request.fields.username,
+    email: ctx.request.fields.email,
+    password: ctx.request.fields.password,
+    firstName: ctx.request.fields.firstname,
+    lastName: ctx.request.fields.lastname,
+    address: ctx.request.fields.address,
+    country: ctx.request.fields.country,
+    emailConfirmed: true
+  };
+
+  const [user, created] = await User.findOrCreate({
+    where: {
+      [Op.or]: [
+        { email: ctx.request.fields.email },
+        { username: ctx.request.fields.username }
+      ]
+    },
+    paranoid: false,
+    defaults: defaultParams
+  });
+
+  if (!created) {
+    if (!user.deletedAt) {
+      ctx.session.messages = { 'accountExist': `The user ${ctx.request.fields.username} already exists!` };
+      ctx.redirect('/admin/accounts');
+      return;
+    } else {
+      await user.restore();
+
+      await user.update(defaultParams);
+    }
+  }
+  ctx.session.messages = { 'accountCreated': `User with id ${user.id} has been created!` };
+  ctx.redirect('/admin/accounts');
+});
+
+router.get('/admin/staff', async ctx => getAdminStaffs(ctx));
+router.get('/admin/staff/:page', async ctx => getAdminStaffs(ctx));
+
+router.post('/admin/staff/add', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+  
+  if (!await utilsEcom.hasPermission(ctx, 'staff.update')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to create a staff' };
+    await ctx.redirect('/admin/staff');
+    return;
+  }
+
+  let defaultParams = {
+    username: ctx.request.fields.username,
+    email: ctx.request.fields.email,
+    password: ctx.request.fields.password,
+    firstName: ctx.request.fields.firstname,
+    lastName: ctx.request.fields.lastname,
+  };
+
+  const [user, created] = await Staff.findOrCreate({
+    where: {
+      [Op.or]: [
+        { email: ctx.request.fields.email },
+        { username: ctx.request.fields.username }
+      ]
+    },
+    paranoid: false,
+    defaults: defaultParams
+  });
+
+  if (!created) {
+    if (!user.deletedAt) {
+      ctx.session.messages = { 'staffExist': `The staff ${ctx.request.fields.username} already exists!` };
+      ctx.redirect('/admin/staff');
+      return;
+    } else {
+      await user.restore();
+
+      await user.update(defaultParams);
+    }
+  }
+  ctx.session.messages = { 'staffCreated': `Staff with id ${user.id} has been created!` };
+  ctx.redirect('/admin/staff');
+});
+
+router.post('/admin/staff/delete', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+  
+  if (!await utilsEcom.hasPermission(ctx, 'accounts.delete')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to delete staff' };
+    await ctx.redirect('/admin/staff');
+    return;
+  }
+  ids = ctx.request.fields.id;
+
+  await Staff.destroy({
+    where: {
+      id: ids
+    }
+  });
+
+  ctx.session.messages = { 'staffDeleted': 'Selected staff are deleted!' }
+
+  ctx.redirect('/admin/staff');
+});
+
+router.get('/admin/staff/edit/:id', async ctx => {
+  const staff = await Staff.findOne({where: {id: ctx.params.id }});
+  const roles = await Role.findAll();
+  const uroles = await staff.getRoles();
+
+  await ctx.render('admin/edit-staff', {
+    layout: 'admin/base',
+    session: ctx.session,
+    selected: 'staff',
+    staff: staff,
+    roles: roles,
+    uroles: uroles,
+  });
+});
+
+router.post('/admin/staff/edit/:id', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+  
+  if (!await utilsEcom.hasPermission(ctx, 'staff.update')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to update staff' };
+    await ctx.redirect('/admin/staff');
+    return;
+  }
+
+  let updateParams = {
+    username: ctx.request.fields.name,
+    email: ctx.request.fields.email
+  }
+
+  const staff = await Staff.findOne({where: {id: ctx.params.id }});
+
+  staff.update(updateParams).catch(function (err) {
+      console.log(err);
+  });
+  
+  await staff.removeRoles(await staff.getRoles());
+
+  if (ctx.request.fields.role instanceof Array) 
+  {
+    for(roleid in ctx.request.fields.role) 
+    {
+      const role = await Role.findOne({where: { id: ctx.request.fields.role[roleid] } }); 
+      await staff.addRole(role);
+    }
+  } else if (ctx.request.fields.role)
+  {
+    const role = await Role.findOne({where: { id: ctx.request.fields.role } }); 
+    await staff.addRole(role);
+  }
+  ctx.session.messages = { 'staffEdited': `Staff with id ${ctx.params.id} was edited!` }
+  await ctx.redirect('/admin/staff/edit/' + ctx.params.id);
 });
 
 router.post('/admin/categories/add', async ctx => {
-  await Category.findOrCreate({
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+  
+  if (!await utilsEcom.hasPermission(ctx, 'categories.create')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to create a category' };
+    await ctx.redirect('/admin/products');
+    return;
+  }
+
+  const [category, created] = await Category.findOrCreate({
     where: {
       name: ctx.request.fields.name,
       imageCss: ctx.request.fields.image
     }
   });
 
+  if(created) 
+  {
+    ctx.session.messages = { 'categoryCreated': `Category with id ${ctx.params.id} has been created!` };
+  } 
+  else 
+  {
+    ctx.session.messages = { 'categoryExist': `Category with id ${ctx.params.id} already exists!` };
+  }
+
   await ctx.redirect('/admin/products')
 });
 
-router.post('/admin/categories/remove', async ctx => {
+router.post('/admin/categories/delete', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+  
+  if (!await utilsEcom.hasPermission(ctx, 'categories.delete')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to delete a category' };
+    await ctx.redirect('/admin/products');
+    return;
+  }
+
   await Category.destroy({
     where: {
       id: ctx.request.fields.id
     }
   });
 
+  ctx.session.messages = { 'categoryDeleted': `Selected categories have been deleted!` };
   await ctx.redirect('/admin/products');
+});
+
+router.post('/admin/roles/add', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+  
+  if (!await utilsEcom.hasPermission(ctx, 'roles.create')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to create a role' };
+    await ctx.redirect('/admin/roles');
+    return;
+  }
+
+  const [role, created] = await Role.findOrCreate({
+    where: {
+      name: ctx.request.fields.role,
+    },
+    include: Permission
+  });
+
+  if (ctx.request.fields.permissions instanceof Array) 
+  {
+    for(permid in ctx.request.fields.permissions) 
+    {
+      const permission = await Permission.findOne({where: { id: ctx.request.fields.permissions[permid] } });
+      console.log(permission);
+      await role.addPermission(permission);
+    }
+  } 
+  else if (ctx.request.fields.permissions)
+  {
+    await role.addPermission(await Permission.findOne({where: {id: ctx.request.fields.permissions}}));
+  }
+  
+  if(created) 
+  {
+    ctx.session.messages = { 'roleCreated': `Role with id ${ctx.params.id} has been created!` };
+  } 
+  else 
+  {
+    ctx.session.messages = { 'roleExist': `Role with id ${ctx.params.id} already exists!` };
+  }
+
+  await ctx.redirect('/admin/roles');
+});
+
+router.post('/admin/roles/delete', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+  
+  if (!await utilsEcom.hasPermission(ctx, 'roles.delete')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to delete a role' };
+    await ctx.redirect('/admin/roles');
+    return;
+  }
+
+  await Role.destroy({
+    where: {
+      id: ctx.request.fields.id
+    }
+  });
+  ctx.session.messages = { 'roleDeleted': 'Selected roles are deleted!' }
+
+  await ctx.redirect('/admin/roles');
+});
+
+router.get('/admin/roles/edit/:id', async ctx => {
+  const role = await Role.findOne({where:{id: ctx.params.id}});
+  const permissions = await role.getPermissions();
+
+  await ctx.render('admin/edit-role', {
+    layout: 'admin/base',
+    selected: 'roles',
+    session: ctx.session,
+    role: role,
+    permissions: permissions,
+  });
+
+  // Clear the messages
+  ctx.session.messages = null;
+});
+
+router.post('/admin/roles/edit/:id', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin/login');
+  }
+  
+  if (!await utilsEcom.hasPermission(ctx, 'roles.update')) 
+  {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to update a role' };
+    await ctx.redirect('/admin/roles');
+    return;
+  }
+
+  const role = await Role.findOne({
+    where: {
+      name: ctx.request.fields.role,
+    },
+    include: Permission
+  });
+
+  await role.removePermissions(await role.getPermissions());
+
+  if (ctx.request.fields.permissions instanceof Array) 
+  {
+    for(permid in ctx.request.fields.permissions) 
+    {
+      const permission = await Permission.findOne({where: { id: ctx.request.fields.permissions[permid] } });
+      await role.addPermission(permission);
+    }
+  } 
+  else if (ctx.request.fields.permissions)
+  {
+    await role.addPermission(await Permission.findOne({where: {id: ctx.request.fields.permissions}}));
+  }
+  
+  ctx.session.messages = { 'roleEdited': `Role with id ${ctx.params.id} was edited!` };
+  await ctx.redirect('/admin/roles');
 });
 
 router.get('/admin/roles', async ctx => getAdminRoles(ctx));
 router.get('/admin/roles/:page', async ctx => getAdminRoles(ctx));
 
+// Getters
+router.get('/admin/permissions/get', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    return;
+  }
+
+  ctx.body = JSON.stringify(await Permission.findAll({
+    attributes: ['id', ['name', 'value']],
+    where: {
+      name: { [Op.iLike]: `%${ctx.request.query.term}%` },
+    }
+  }));
+});
 
 render(app, {
   root: path.join(__dirname, "templates"),

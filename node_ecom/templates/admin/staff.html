@@ -81,10 +81,10 @@
         <!-- table container -->
         <div class="d-grid gap-2">
           <a href="#" class="btn btn-primary text-uppercase mb-3" data-bs-target="#add-account" data-bs-toggle="modal"
-            data-bs-dismiss="modal">Add new account</a>
+            data-bs-dismiss="modal">Add new staff</a>
           <button class="btn btn-primary text-uppercase" data-bs-target="#rem-account" data-bs-toggle="modal"
             data-bs-dismiss="modal">
-            Delete selected accounts
+            Delete selected staff
           </button>
         </div>
       </div>
@@ -112,7 +112,7 @@
         <%= pages[i] %></a></li>
       <% } %>
       <% } %>
-      {<% if(page < lastPage) { %>
+      {<% if(page < pages[pages.length - 1]) { %>
       <li class="page-item">
         <a class="page-link" href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
       </li>
@@ -130,7 +130,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Add Account</h5>
+        <h5 class="modal-title">Add Staff</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="add-account-form" action="/admin/staff/add" onsubmit="return checkPass();" method="post">

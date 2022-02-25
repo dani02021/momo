@@ -4,6 +4,8 @@ require('dotenv').config();
 
 const models = require("./models.js");
 const Session = models.session();
+const Staff = models.staff();
+const Role = models.role();
 
 const PRODUCTS_PER_PAGE = 12;
 const SESSION_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000; // 2 weeks
@@ -96,13 +98,62 @@ function configPostgreSessions() {
     }
   }
 
-// Constants
-module.exports.PRODUCTS_PER_PAGE = PRODUCTS_PER_PAGE;
-module.exports.SESSION_MAX_AGE = SESSION_MAX_AGE;
+async function isAuthenticatedStaff(ctx) 
+{
+    if (ctx.session.dataValues.username) {
+        const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.username }, include: Role });
 
-// Methods
-module.exports.givePages = givePages;
-module.exports.generateEmailVerfToken = generateEmailVerfToken;
-module.exports.generateSessionKey = generateSessionKey;
-module.exports.configPostgreSessions = configPostgreSessions;
-module.exports.sendEmail = sendEmail;
+        if (staff == null) 
+        {
+            return false;
+        } 
+        else 
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+async function hasPermission(ctx, permission) 
+{
+    const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.username }, include: Role });
+
+    if (staff == null) {
+        return false;
+    } else {
+        /*
+            This code reads from db only once, looping thru it doesn't
+            send new requests to the db!
+        */
+        const roles = await staff.getRoles();
+
+        for(let role in roles) 
+        {
+            const permissions = await roles[role].getPermissions();
+            
+            for(let perm in permissions) 
+            {
+                if (permissions[perm].name == permission) 
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+}
+
+module.exports = {
+    PRODUCTS_PER_PAGE,
+    SESSION_MAX_AGE,
+    givePages,
+    generateEmailVerfToken,
+    generateSessionKey,
+    configPostgreSessions,
+    sendEmail,
+    isAuthenticatedStaff,
+    hasPermission,
+};

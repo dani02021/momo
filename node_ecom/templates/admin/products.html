@@ -126,7 +126,7 @@
               <tr>
                 <td class="tm-product-name"><%= categories[i].name %></td>
                 <td class="text-center">
-                  <a href="/admin/categories/remove" data-id="<%= categories[i].id %>"
+                  <a href="/admin/categories/delete" data-id="<%= categories[i].id %>"
                     class="tm-product-delete-link" onclick="showRemModal(this);return false;">
                     <i class="far fa-trash-alt tm-product-delete-icon"></i>
                   </a>
@@ -165,7 +165,7 @@
         <%= pages[i] %></a></li>
       <% } %>
       <% } %>
-      {<% if(page < lastPage) { %>
+      {<% if(page < pages[pages.length - 1]) { %>
       <li class="page-item">
         <a class="page-link" href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
       </li>
