@@ -292,13 +292,9 @@ def addToCart(request):
                 product = get_object_or_404(Variation, id=variation, product=product).variation
             order, created = Order.objects.get_or_create(user = ecom_user, status = Order.OrderStatus.NOT_ORDERED)
 
-            orderItem, created = order.items.get_or_create(product = product)
+            orderItem = order.items.create(product = product, quantity = quantity)
 
-            if not created:
-                orderItem.quantity += int(quantity)
-                orderItem.save()
-            else:
-                order.items.add(orderItem)
+            order.items.add(orderItem)
             
             if not isCart:
                 messages.success(request, 'product_added')

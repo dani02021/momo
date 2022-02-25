@@ -68,16 +68,16 @@
                         </li>
 
                         <li class="nav-item">
-                            <a class="nav-link {% if selected|stringformat:'s' == 'staff' %}active{% endif %}"
-                                href="/administration/staff/">
+                            <a class="nav-link <% if(selected == 'staff') { %> active <% } %>"
+                                href="/admin/staff/">
                                 <i class="far fa-user"></i>
                                 Staff
                             </a>
                         </li>
 
                         <li class="nav-item">
-                            <a class="nav-link {% if selected|stringformat:'s' == 'roles' %}active{% endif %}"
-                                href="/administration/roles/">
+                            <a class="nav-link <% if (selected == 'roles') { %> active<% } %>"
+                                href="/admin/roles">
                                 <i class="fas fa-user-lock"></i>
                                 Roles
                             </a>

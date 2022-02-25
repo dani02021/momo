@@ -181,7 +181,7 @@ async function getAdminProducts(ctx) {
       .then(async user => {
         if (user == null)
           return;
-
+        
         await user.getRoles().then(async roles => {
           for (i = 0; i < roles.length; i++) {
             await roles[i].getPermissions().then(async perms => {
@@ -306,6 +306,102 @@ async function getAdminAccounts(ctx) {
     session: ctx.session,
     users: result.rows,
     filters: filtersToReturn,
+    page: page,
+    lastPage: result.count,
+    pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
+  });
+
+  // Clear the messages
+  ctx.session.messages = null;
+}
+
+async function getAdminStaffs(ctx) {
+  // Get filters
+  let filters = {}, filtersToReturn = {};
+
+  if (ctx.query.user) {
+    filters['user'] = ctx.query.user;
+    filtersToReturn['user'] = ctx.query.user;
+  } else 
+  {
+    filters['user'] = '';
+  }
+  if (ctx.query.email) {
+    filters['email'] = ctx.query.email;
+    filtersToReturn['email'] = ctx.query.email;
+  } else 
+  {
+    filters['email'] = '';
+  }
+
+  let page = 1;
+
+  if (ctx.params.page) {
+    page = parseInt(ctx.params.page)
+  }
+
+  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let offset = 0;
+
+  if (ctx.params.page) {
+    offset = (parseInt(ctx.params.page) - 1) * limit;
+  }
+
+  const result = await Staff.findAndCountAll({
+    where: {
+      username: { [Op.iLike]: `%${filters.user}%` },
+      email: { [Op.iLike]: `%${filters.email}%` },
+    },
+    limit: limit,
+    offset: offset,
+    order: [
+      ['createdAt', 'DESC']
+    ]
+  });
+
+  await ctx.render('admin/staff', {
+    layout: 'admin/base',
+    selected: 'staff',
+    session: ctx.session,
+    staff: result.rows,
+    filters: filtersToReturn,
+    page: page,
+    lastPage: result.count,
+    pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
+  });
+
+  // Clear the messages
+  ctx.session.messages = null;
+}
+
+async function getAdminRoles(ctx) 
+{
+  let page = 1;
+
+  if (ctx.params.page) {
+    page = parseInt(ctx.params.page)
+  }
+
+  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let offset = 0;
+
+  if (ctx.params.page) {
+    offset = (parseInt(ctx.params.page) - 1) * limit;
+  }
+
+  const result = await Role.findAndCountAll({
+    limit: limit,
+    offset: offset,
+    order: [
+      ['createdAt', 'DESC']
+    ]
+  });
+
+  await ctx.render('admin/roles', {
+    layout: 'admin/base',
+    selected: 'roles',
+    session: ctx.session,
+    roles: result.rows,
     page: page,
     lastPage: result.count,
     pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
@@ -649,6 +745,44 @@ router.post('/admin/accounts/delete', async ctx => {
   ctx.redirect('/admin/accounts');
 });
 
+router.get('/admin/accounts/edit/:id', async ctx => {
+  const user = await User.findOne({where: {id: ctx.params.id }}); 
+
+  await ctx.render('admin/edit-account', {
+    layout: 'admin/base',
+    session: ctx.session,
+    selected: 'accounts',
+    user: user
+  });
+});
+
+router.post('/admin/accounts/edit/:id', async ctx => {
+
+  let updateParams = {
+    username: ctx.request.fields.name,
+    email: ctx.request.fields.email,
+    address: ctx.request.fields.address,
+    country: ctx.request.fields.country
+  }
+
+  if (ctx.request.fields.emailConfirmed == 'on') {
+    updateParams.emailConfirmed = true;
+  } else {
+    updateParams.emailConfirmed = false;
+  }
+
+  await User.update(updateParams,
+    {
+      where: {
+        id: ctx.params.id
+      }
+    }).catch(function (err) {
+      console.log(err);
+    });
+
+  ctx.session.messages = { 'accountEdited': `User with id ${ctx.params.id} was edited!` }
+  await ctx.redirect('/admin/accounts/edit/' + ctx.params.id);
+});
 
 router.post('/admin/accounts/add', async ctx => {
   let defaultParams = {
@@ -675,7 +809,7 @@ router.post('/admin/accounts/add', async ctx => {
 
   if (!created) {
     if (!user.deletedAt) {
-      ctx.session.messages = { 'userExist': `The user ${ctx.request.fields.username} already exists!` };
+      ctx.session.messages = { 'accountExist': `The user ${ctx.request.fields.username} already exists!` };
       ctx.redirect('/admin/accounts');
       return;
     } else {
@@ -684,8 +818,106 @@ router.post('/admin/accounts/add', async ctx => {
       await user.update(defaultParams);
     }
   }
-  ctx.session.messages = { 'productCreated': `User with id ${user.id} has been created!` };
+  ctx.session.messages = { 'accountCreated': `User with id ${user.id} has been created!` };
   ctx.redirect('/admin/accounts');
+});
+
+router.get('/admin/staff', async ctx => getAdminStaffs(ctx));
+router.get('/admin/staff/:page', async ctx => getAdminStaffs(ctx));
+
+router.post('/admin/staff/add', async ctx => {
+  let defaultParams = {
+    username: ctx.request.fields.username,
+    email: ctx.request.fields.email,
+    password: ctx.request.fields.password,
+    firstName: ctx.request.fields.firstname,
+    lastName: ctx.request.fields.lastname,
+  };
+
+  const [user, created] = await Staff.findOrCreate({
+    where: {
+      [Op.or]: [
+        { email: ctx.request.fields.email },
+        { username: ctx.request.fields.username }
+      ]
+    },
+    paranoid: false,
+    defaults: defaultParams
+  });
+
+  if (!created) {
+    if (!user.deletedAt) {
+      ctx.session.messages = { 'staffExist': `The staff ${ctx.request.fields.username} already exists!` };
+      ctx.redirect('/admin/staff');
+      return;
+    } else {
+      await user.restore();
+
+      await user.update(defaultParams);
+    }
+  }
+  ctx.session.messages = { 'staffCreated': `Staff with id ${user.id} has been created!` };
+  ctx.redirect('/admin/staff');
+});
+
+router.post('/admin/staff/delete', async ctx => {
+  ids = ctx.request.fields.id;
+
+  await Staff.destroy({
+    where: {
+      id: ids
+    }
+  });
+
+  ctx.session.messages = { 'staffDeleted': 'All products are successfuly deleted!' }
+
+  ctx.redirect('/admin/staff');
+});
+
+router.get('/admin/staff/edit/:id', async ctx => {
+  const staff = await Staff.findOne({where: {id: ctx.params.id }});
+  const roles = await Role.findAll();
+  const uroles = await staff.getRoles();
+
+  await ctx.render('admin/edit-staff', {
+    layout: 'admin/base',
+    session: ctx.session,
+    selected: 'staff',
+    staff: staff,
+    roles: roles,
+    uroles: uroles,
+  });
+});
+
+router.post('/admin/staff/edit/:id', async ctx => {
+
+  let updateParams = {
+    username: ctx.request.fields.name,
+    email: ctx.request.fields.email
+  }
+
+  const staff = await Staff.findOne({where: {id: ctx.params.id }});
+
+  staff.update(updateParams).catch(function (err) {
+      console.log(err);
+  });
+  
+  await staff.removeRoles(await staff.getRoles());
+
+  if (ctx.request.fields.role instanceof Array) 
+  {
+    for(roleid in ctx.request.fields.role) 
+    {
+      const role = await Role.findOne({where: { id: roleid } }); 
+      await staff.addRole(role);
+    }
+  } else if (ctx.request.fields.role)
+  {
+    const role = await Role.findOne({where: { id: ctx.request.fields.role } }); 
+    await staff.addRole(role);
+  }
+  ctx.session.messages = { 'staffEdited': `Staff with id ${ctx.params.id} was edited!` }
+  await ctx.redirect('/admin/staff/edit/' + ctx.params.id);
 });
 
 router.post('/admin/products/edit/:id', async ctx => {
@@ -712,7 +944,6 @@ router.post('/admin/products/edit/:id', async ctx => {
 
   // Upload the image
   if (ctx.request.files.length && ctx.request.files[0].size != 0) {
-    console.log(ctx.request.files[0]);
     fs.renameSync(ctx.request.files[0].path + '', __dirname + '/static/media/id' + ctx.params.id + '/' + ctx.request.files[0].name, function (err) {
       if (err)
         throw err;
@@ -752,6 +983,20 @@ router.post('/admin/products/delete', async ctx => {
   ctx.redirect('/admin/products');
 });
 
+router.post('/admin/products/delete', async ctx => {
+  ids = ctx.request.fields.id;
+
+  await Product.destroy({
+    where: {
+      id: ids
+    }
+  });
+
+  ctx.session.messages = { 'productDeleted': 'All products are successfuly deleted!' }
+
+  ctx.redirect('/admin/products');
+});
+
 router.post('/admin/categories/add', async ctx => {
   await Category.findOrCreate({
     where: {
@@ -772,6 +1017,10 @@ router.post('/admin/categories/remove', async ctx => {
 
   await ctx.redirect('/admin/products');
 });
+
+router.get('/admin/roles', async ctx => getAdminRoles(ctx));
+router.get('/admin/roles/:page', async ctx => getAdminRoles(ctx));
+
 
 render(app, {
   root: path.join(__dirname, "templates"),
