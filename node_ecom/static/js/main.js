@@ -366,9 +366,9 @@ function checkRegisterForm() {
 
 function buyProduct(id, qty, variation = '') {
     if(variation == '') {
-        $( "#addCartBtn" ).attr("href", "/add-to-cart/?id=" + id + "&quantity=" + qty);
+        $( "#addCartBtn" ).attr("href", "/addToCart/?id=" + id + "&quantity=" + qty);
     } else {
-        $( "#addCartBtn" ).attr("href", "/add-to-cart/?id=" + id + "&quantity=" + qty + "&var=" + variation);
+        $( "#addCartBtn" ).attr("href", "/addToCart/?id=" + id + "&quantity=" + qty + "&var=" + variation);
     }
 
     return true
@@ -376,7 +376,7 @@ function buyProduct(id, qty, variation = '') {
 
 function addToCart(id, qty, isCart) {
     $.ajax({
-        url: "/add-to-cart/",
+        url: "/addToCart",
         data: { 'id': id, 'quantity': qty, 'cart': isCart },
         success: function (obj) { }
     });

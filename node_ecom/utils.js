@@ -6,6 +6,7 @@ const models = require("./models.js");
 const Session = models.session();
 const Staff = models.staff();
 const Role = models.role();
+const User = models.user();
 
 const PRODUCTS_PER_PAGE = 12;
 const SESSION_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000; // 2 weeks
@@ -89,7 +90,8 @@ function configPostgreSessions() {
       // Set session object for key, with a maxAge (in ms).
       set: async (key, session, maxAge, { rolling, changed }) => 
       {
-        await Session.upsert({key: key, expire: session._expire, maxAge: maxAge, messages: session.messages, username: session.username})
+        await Session.upsert({key: key, expire: session._expire, maxAge: maxAge,
+            messages: session.messages, username: session.username, isStaff: session.isStaff});
       },
   
       // Destroy session for key.
@@ -98,18 +100,38 @@ function configPostgreSessions() {
     }
   }
 
-async function isAuthenticatedStaff(ctx) 
+async function isAuthenticatedUser(ctx) 
 {
     if (ctx.session.dataValues.username) {
-        const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.username }, include: Role });
+        const user = await User.findOne({ where: { username: ctx.session.dataValues.username }});
 
-        if (staff == null) 
+        if (user == null) 
         {
             return false;
         } 
         else 
         {
             return true;
+        }
+    }
+
+    return false;
+}
+async function isAuthenticatedStaff(ctx) 
+{
+    if (ctx.session.dataValues.isStaff) 
+    {
+        if (ctx.session.dataValues.username) {
+            const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.username }});
+    
+            if (staff == null) 
+            {
+                return false;
+            } 
+            else 
+            {
+                return true;
+            }
         }
     }
 
@@ -155,5 +177,6 @@ module.exports = {
     configPostgreSessions,
     sendEmail,
     isAuthenticatedStaff,
+    isAuthenticatedUser,
     hasPermission,
 };

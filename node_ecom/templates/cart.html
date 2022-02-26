@@ -1,0 +1,103 @@
+{% for message in messages %}
+{% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}
+{% if message|stringformat:'s' == 'cart_error' %}
+<div class="alert alert-danger d-flex align-items-center" role="alert">
+    <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
+    <div>
+        There was error while processing your action!
+    </div>
+</div>
+{% endif %}
+{% endif %}
+{% endfor %}
+<!-- Cart Start -->
+<div class="cart-page">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="cart-page-inner">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Total</th>
+                                    <th>Remove</th>
+                                </tr>
+                            </thead>
+                            <tbody class="align-middle">
+                                <% for(i = 0; i < items.length; i++) { %>
+                                <tr>
+                                    <td>
+                                        <div class="img">
+                                            <a href="/product-detail/<%= items[i].productId %>"><img src="/media/<%= (await items[i].getProduct()).image %>" alt="Image"></a>
+                                            <p><%= items[i].getProduct().name %></p>
+                                        </div>
+                                    </td>
+                                    <% if (items[i].getProduct().discountPrice != items[i].getProduct().price) { %>
+                                    <td><%= items[i].getProduct().discountPrice %>$</td>
+                                    <% } else { %>
+                                    <td><%= items[i].getProduct().price %>$</td>
+                                    <% } %>
+                                    <td>
+                                        <div class="qty">
+                                            <form id="removeOCart" action="/removeFromCart/" style="display: inline;" method="post">
+                                                <input type="hidden" value="<%= items[i].id %>" name="orderid" style="display: inline;">
+                                                <input id="removeOCartQty" type="hidden" value="1" name="quantity" style="display: inline;">
+                                                <button class="btn-minus" style="display: inline;" type="submit"><i class="fa fa-minus"></i></button>
+                                            </form>
+                                            <input id="qtyNum" data-max="<%= items[i].getProduct().quantity %>" type="text" value="<%= items[i].getProduct().quantity %>" disabled>
+                                            <button class="btn-plus" onclick="javascript:addToCart(<%= items[i].getProduct().id %>, 1, true)"><i class="fa fa-plus"></i></button>
+                                        </div>
+                                    </td>
+                                    <td><%= items[i].getTotal() %>$</td>
+                                    <td><form id="removeCart" action="/removeFromCart/" style="display: inline;" method="post">
+                                        <input type="hidden" value="<%= items[i].id %>" name="orderid" style="display: inline;">
+                                        <input id="removeCartQty" type="hidden" value="-1" name="quantity" style="display: inline;">
+                                        <button type="submit" style="display: inline;"><i class="fa fa-trash"></i></button>
+                                    </form></td>
+                                </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="cart-page-inner">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="coupon">
+                                <input type="text" placeholder="Coupon Code">
+                                <button>Apply Code</button>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="cart-summary">
+                                <div class="cart-content">
+                                    <h1>Cart Summary</h1>
+                                    {% if items %}
+                                    <p>Sub Total<span>{{ items.0.get_total }}$</span></p>
+                                    <p>Shipping Cost<span>0$</span></p>
+                                    <h2>Grand Total<span>{{ items.0.get_total }}$</span></h2>
+                                    {% else %}
+                                    <p>Sub Total<span>0$</span></p>
+                                    <p>Shipping Cost<span>0$</span></p>
+                                    <h2>Grand Total<span>0$</span></h2>
+                                    {% endif %}
+                                </div>
+                                <div class="cart-btn">
+                                    <button onclick="javascript:window.location.href = '/products/';">Update Cart</button>
+                                    <button onclick="javascript:window.location.href = '/checkout/';">Checkout</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Cart End -->

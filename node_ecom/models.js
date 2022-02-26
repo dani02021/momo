@@ -204,7 +204,10 @@ const Session = db.define("session", {
   },
   username: {
     type: DataTypes.STRING(50)
-  }
+  },
+  isStaff: {
+    type: DataTypes.BOOLEAN
+  },
 },
   {
     paranoid: false,
@@ -275,12 +278,12 @@ OrderItem.prototype.getTotal = function () {
 };
 
 const Order = db.define("order", {
-  ordered_at: {
+  orderedAt: {
     type: DataTypes.DATE,
     allowNull: true
   },
   status: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.SMALLINT,
     defaultValue: 0
   },
   price: {
@@ -293,12 +296,14 @@ const Order = db.define("order", {
   timestamp: false
 });
 
-Order.hasMany(OrderItem, { foreignKey: 'items' });
-Order.hasOne(User, { foreignKey: 'userId' });
-// Order.hasOne(PayPalTransaction, { foreignKey: 'transactionId', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
+Order.belongsToMany(User, { through: 'user_orders' });
+User.belongsToMany(Order, { through: 'user_orders' });
 
-User.belongsTo(Order);
+Order.hasMany(OrderItem, { foreignKey: 'orderId' });
 OrderItem.belongsTo(Order);
+
+// Invalid
+// Order.hasOne(PayPalTransaction, { foreignKey: 'transactionId', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
 // PayPalTransaction.belongsTo(Order);
 
 Order.prototype.getItems = function () {
@@ -356,13 +361,17 @@ function role() {
   return Role;
 }
 
-module.exports.category = category;
-module.exports.product = product;
-module.exports.user = user;
-module.exports.staff = staff;
-module.exports.session = session;
-module.exports.permission = permission;
-module.exports.role = role;
+function order() {
+  return Order;
+}
+
+function orderitem() {
+  return OrderItem;
+}
+
+module.exports = {
+  category, product, user, staff, session, permission, role, order, orderitem,
+};
 
 // Alter the database
 (async () => {

@@ -48,7 +48,7 @@
                                 aria-expanded="false" aria-label="Toggle navigation">
                                 <span class="navbar-toggler-icon"></span>
                             </button>
-                            <% if (!session.dataValues.username) { %>
+                            <% if (!session.dataValues.username || session.dataValues.isStaff) { %>
                             <div class="collapse navbar-collapse" id="navbarNavDarkDropdown">
                                 <ul class="navbar-nav">
                                     <li class="nav-item dropdown">
@@ -65,7 +65,7 @@
                                 </ul>
                             </div>
                             <% } %>
-                            <% if (session.dataValues.username) { %>
+                            <% if (session.dataValues.username && !session.dataValues.isStaff) { %>
                             <div class="collapse navbar-collapse" id="navbarNavDarkDropdown">
                                 <ul class="navbar-nav">
                                     <li class="nav-item dropdown">
@@ -175,7 +175,7 @@
         </div>
     </div>
     <% } %>
-    <% if(i == 'userExists' || i == 'loginErrorUser' || i == 'loginErrorPass') { %>
+    <% if(i == 'userExists' || i == 'loginErrorUser' || i == 'loginErrorPass' || i == 'noPermission') { %>
         <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
             <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
             <div>

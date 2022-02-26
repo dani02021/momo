@@ -23,6 +23,8 @@ const Staff = models.staff();
 const Session = models.session();
 const Role = models.role();
 const Permission = models.permission();
+const Order = models.order();
+const OrderItem = models.orderitem();
 
 const app = new Koa();
 const router = new KoaRouter();
@@ -49,7 +51,7 @@ async function getIndex(ctx) {
     selected: 'home',
     categories: categories,
     products: products,
-    session: ctx.session
+    session: ctx.session,
   });
 
   // Remove the message
@@ -125,7 +127,7 @@ async function getProducts(ctx) {
     products: products,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count / utilsEcom.PRODUCTS_PER_PAGE)),
   });
 }
 
@@ -438,7 +440,7 @@ router.get("/products/:page", async ctx => getProducts(ctx));
 router.get("/register", async ctx => {
   await ctx.render('register', {
     selected: 'register',
-    session: ctx.session
+    session: ctx.session,
   });
 
   // Clear the messages
@@ -533,9 +535,10 @@ router.post("/login", async ctx => {
       let messages = { 'loginSuccess': 'Successful login!' };
       ctx.session.messages = messages;
       ctx.session.username = ctx.request.fields.username;
+      ctx.session.isStaff = false;
 
       userv.update({
-        lastLogin: Sequelize.NOW
+        lastLogin: Sequelize.fn('NOW')
       });
     }
     else {
@@ -563,7 +566,7 @@ router.get('/logout', async ctx => {
 });
 
 router.get('/admin', async ctx => {
-  if (utilsEcom.isAuthenticatedStaff(ctx)) 
+  if (await utilsEcom.isAuthenticatedStaff(ctx)) 
   {
     await ctx.render('/admin/index', {
       selected: 'dashboard',
@@ -617,6 +620,7 @@ router.post('/admin/login', async ctx => {
       let messages = { 'loginSuccess': 'Successful login!' };
       ctx.session.messages = messages;
       ctx.session.username = ctx.request.fields.username;
+      ctx.session.isStaff = true;
     }
     else {
       let messages = { 'loginErrorPass': 'Wrong password!' };
@@ -1329,6 +1333,115 @@ router.get('/admin/permissions/get', async ctx => {
       name: { [Op.iLike]: `%${ctx.request.query.term}%` },
     }
   }));
+});
+
+router.get('/addToCart', async ctx => {
+  // Currently working only for registered users
+  if (!await utilsEcom.isAuthenticatedUser(ctx)) 
+  {
+    ctx.session.messages = { 'noPermission': 'You are not registered!' };
+    await ctx.redirect('/');
+    return;
+  }
+
+  const user = await User.findOne({where: {username: ctx.session.dataValues.username }});
+
+  const [order, created] = await Order.findOrCreate({
+    where: {},
+    include: [{
+      model: User,
+      required: true,
+      where: {
+        'username': ctx.session.dataValues.username
+      }
+    }],
+    paranoid: false,
+    defaults: {}
+  });
+
+  const orderitem = await OrderItem.create({
+    productId: ctx.query.id,
+    quantity: ctx.query.quantity,
+  });
+
+  order.addOrderitem(orderitem);
+  user.addOrder(order);
+
+  if(ctx.query.isCart) 
+  {
+    ctx.session.messages = { 'productAdded': 'Product added to cart!' };
+    await ctx.redirect('/products');
+  }
+  else 
+  {
+    await ctx.redirect('/cart');
+  }
+});
+
+router.get('/removeFromCart', async ctx => {
+  // Currently working only for registered users
+  if (!await utilsEcom.isAuthenticatedUser(ctx)) 
+  {
+    ctx.session.messages = { 'noPermission': 'You are not registered!' };
+    await ctx.redirect('/');
+    return;
+  }
+
+  const quantity = ctx.query.quantity;
+
+  const orderitem = await OrderItem.findOne({where: {
+    id: ctx.query.id
+  }});
+
+  if(quantity) 
+  {
+    await orderitem.update({
+      quantity: orderitem.quantity - quantity
+    });
+  } 
+  else 
+  {
+    await orderitem.destroy();
+  }
+
+  ctx.session.messages = {'cartRemoved': 'Removed selected items from the cart'};
+
+  await ctx.redirect('/cart');
+});
+
+router.get('/cart', async ctx => {
+  // Currently working only for registered users
+  if (!await utilsEcom.isAuthenticatedUser(ctx)) 
+  {
+    ctx.session.messages = { 'noPermission': 'You are not registered!' };
+    await ctx.redirect('/');
+    return;
+  }
+
+  const order = await Order.findOne({
+    where: {
+      status: 0,
+    },
+    include: [{
+      model: User,
+      required: true,
+      where: {
+        'username': ctx.session.dataValues.username
+      }
+    }],
+  });
+
+  console.log(await order.getOrderitems());
+
+  await ctx.render('cart', {
+    async: true,
+    session: ctx.session,
+    selected: 'cart',
+    items: await order.getOrderitems(),
+  });
+
+  // Clear the messages
+  ctx.session.messages = null; 
 });
 
 render(app, {
