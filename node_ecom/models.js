@@ -273,8 +273,10 @@ OrderItem.belongsTo(Product, {
   foreignKey: 'productId'
 });
 
-OrderItem.prototype.getTotal = function () {
-  return this.getProduct().discountPrice * this.quantity;
+OrderItem.prototype.getTotal = async function () {
+  let product = await this.getProduct();
+
+  return product.discountPrice * this.quantity;
 };
 
 const Order = db.define("order", {
@@ -314,12 +316,16 @@ Order.prototype.getItemsCount = function () {
   return this.getOrderItems().length;
 }
 
-Order.prototype.getTotal = function () {
+Order.prototype.getTotal = async function () {
   var total;
-  this.getOrderItems().forEach(function (item, index) {
-    total += item.getTotal();
-  });
+  var orderitems = await this.getOrderitems();
+
+  for(i = 0; i < orderitems.length; i++) 
+  {
+    total += await item.getTotal();
+  }
   
+  return total;
 }
 
 /* Order statuses

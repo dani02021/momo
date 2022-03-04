@@ -1,5 +1,7 @@
 const crypto = require('crypto');
 const nodemailer = require("nodemailer");
+const paypal = require('paypal-rest-sdk');
+
 require('dotenv').config();
 
 const models = require("./models.js");
@@ -19,6 +21,12 @@ const transport = nodemailer.createTransport({
       user: process.env.EMAIL_USER,
       pass: Buffer.from(process.env.EMAIL_PASS, "base64").toString('ascii'),
     },
+});
+
+paypal.configure({
+    'mode': 'sandbox', //sandbox or live
+    'client_id': process.env.PAYPAL_CLIENT_ID,
+    'client_secret': process.env.PAYPAL_CLIENT_SECRET
 });
 
 transport.verify(function (error, success) {
@@ -168,6 +176,29 @@ async function hasPermission(ctx, permission)
     }
 }
 
+// PayPal
+function captureOrder(orderID) 
+{
+    var capture_details = {
+        "amount": {
+            "currency": "USD",
+            "total": "9.99"
+        },
+        "is_final_capture": true
+    };
+
+    console.log(orderID);
+
+    paypal.order.authorize(orderID, capture_details, function (error, capture) {
+        if (error) {
+            console.log(error);
+            console.log(error.details);
+        } else {
+            console.log(capture);
+        }
+    });
+}
+
 module.exports = {
     PRODUCTS_PER_PAGE,
     SESSION_MAX_AGE,
@@ -179,4 +210,5 @@ module.exports = {
     isAuthenticatedStaff,
     isAuthenticatedUser,
     hasPermission,
+    captureOrder,
 };

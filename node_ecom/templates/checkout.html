@@ -1,0 +1,158 @@
+<!-- Checkout Start -->
+<div class="checkout">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="checkout-inner">
+                    <div class="shipping-address">
+                        <h2>Shipping Address:</h2>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label>First Name</label>
+                                <input class="form-control" type="text" placeholder="First Name" value="<%= user.firstName %>">
+                            </div>
+                            <div class="col-md-6">
+                                <label>Last Name</label>
+                                <input class="form-control" type="text" placeholder="Last Name" value="<%= user.lastName %>">
+                            </div>
+                            <div class="col-md-6">
+                                <label>E-mail</label>
+                                <input class="form-control" type="text" placeholder="E-mail" value="<%= user.email %>">
+                            </div>
+                            <div class="col-md-6">
+                                <label>Country</label>
+                                <input class="form-control" type="text" placeholder="Country" value="<%= user.country %>">
+                            </div>
+                            <div class="col-md-12">
+                                <label>Address</label>
+                                <input class="form-control" type="text" placeholder="Address" value="<%= user.address %>">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="checkout-inner">
+                    <div class="checkout-summary">
+                        <h1>Cart Total</h1>
+                        <% for(i = 0; i < items.length; i++) { %>
+                        <p><%= products[i].name %><span><%= products[i].discountPrice %>$</span></p>
+                        <% } %>
+                        <p>Sub Total<span><%= orderTotal %>$</span></p>
+                        <p>Shipping Cost<span>0$</span></p>
+                        <h2>Grand Total<span><%= orderTotal %>$</span></h2>
+                    </div>
+
+                    <div class="checkout-payment">
+                        <div class="payment-methods">
+                            <h1>Payment Methods</h1>
+                            <div class="payment-method">
+                                <div class="custom-control custom-radio">
+                                    <input type="radio" class="custom-control-input" id="payment-1" onclick="javascript:checkRadio(0);" name="payment" checked>
+                                    <label class="custom-control-label" for="payment-1">PayPal</label>
+                                </div>
+                            </div>
+                            <div class="payment-method">
+                                <div class="custom-control custom-radio">
+                                    <input type="radio" class="custom-control-input" id="payment-2" onclick="javascript:checkRadio(1);" name="payment">
+                                    <label class="custom-control-label" for="payment-2">Stripe</label>
+                                </div>
+                            </div>
+                            <div class="payment-method">
+                                <div id="paypal-button-container"></div>
+                            </div>
+                        <div class="checkout-btn" id="check-btn" style="display: none;">
+                            <button>Place Order</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://www.paypal.com/sdk/js?client-id=AcUxHET3nbJ-rUnzZPhIJ7MKIEzb0a_8k6fh9MnDI74xUfWlF5xi9n17ra2aKGtbaMiwq98410rjt03F&currency=USD"></script>
+<script>
+    // Render the PayPal button into #paypal-button-container
+    paypal.Buttons({
+
+        style: {
+            color:  'blue',
+            shape:  'pill',
+            label:  'pay',
+            layout: 'horizontal',
+            tagline: 'false',
+            height: 40
+        },
+
+        // Set up the transaction
+        createOrder: function(data, actions) {
+                return actions.order.create({
+                    purchase_units: [{
+                        amount: {
+                            value: '<%= orderTotal %>'
+                        }
+                    }]
+                });
+            },
+
+            // Finalize the transaction
+            onApprove: function(data, actions) {
+                return fetch('/captureOrder', {
+                    method: 'POST',
+                    headers: {
+                        'content-type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        orderID: data.orderID,
+                        base: data
+                    })
+                }).then(function(res) {
+                    if (!res.ok) {
+                        document.getElementById("hidden-alert").classList.add("alert-danger")
+                        document.getElementById("hidden-alert-icon").classList.add("fa-exclamation-triangle")
+                        document.getElementById("hidden-alert-msg").innerHTML = "Can\'t connect to the server!"
+                    }
+                    return res.json();
+                }).then(function(details) {
+                    // alert('Transaction funds captured from ' + details.payer_given_name);
+
+                    if (details.status == 'ok') {
+                        showPaymentModal()
+                    } else if(details.status == 'error') {
+                        showHiddenAlert('alert-danger', 'fa-exclamation-triangle', details.msg)
+                    } else if(details.status == 'alert') {
+                        showHiddenAlert('alert-warning', 'fa-circle-exclamation', details.msg)
+                    }
+                })
+            }
+    }).render('#paypal-button-container');
+
+    function checkRadio(i) {
+        var x = document.getElementById("paypal-button-container");
+        var x1 = document.getElementById("check-btn");
+
+        if(i === 0) {
+            x.style.display = "block";
+            x1.style.display = "none";
+        } else {
+            x.style.display = "none";
+            x1.style.display = "block";
+        }
+    }
+</script>
+<!-- Checkout End -->
+<!-- Modal -->
+<div class="modal fade" tabindex="-1" id="paymentModal" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Payment successful</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>You will soon be redirected...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+<!-- Modal End-->

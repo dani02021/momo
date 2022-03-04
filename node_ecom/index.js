@@ -861,10 +861,6 @@ router.get('/product-detail/:id', async ctx => {
   });
 });
 
-router.get('add-to-cart', async ctx => {
-
-});
-
 router.get('/admin/accounts', async ctx => getAdminAccounts(ctx));
 router.get('/admin/accounts/:page', async ctx => getAdminAccounts(ctx));
 
@@ -1346,7 +1342,7 @@ router.get('/addToCart', async ctx => {
 
   const user = await User.findOne({where: {username: ctx.session.dataValues.username }});
 
-  const [order, created] = await Order.findOrCreate({
+  const [order, createdorder] = await Order.findOrCreate({
     where: {},
     include: [{
       model: User,
@@ -1359,13 +1355,33 @@ router.get('/addToCart', async ctx => {
     defaults: {}
   });
 
-  const orderitem = await OrderItem.create({
-    productId: ctx.query.id,
-    quantity: ctx.query.quantity,
+  const [orderitem, createdorderitem] = await OrderItem.findOrCreate({
+    where: {
+      productId: ctx.query.id
+    },
+    include: [{
+      model: Order,
+      required: true,
+      where: {
+        id: order.id
+      }
+    }],
+    defaults: {
+      productId: ctx.query.id,
+      quantity: ctx.query.quantity,
+    }
   });
 
-  order.addOrderitem(orderitem);
-  user.addOrder(order);
+  if (createdorderitem)
+    await order.addOrderitem(orderitem);
+  else 
+  {
+    orderitem.update({
+      quantity: parseInt(orderitem.quantity) + parseInt(ctx.query.quantity)
+    });
+  }
+  if(createdorder)
+    await user.addOrder(order);
 
   if(ctx.query.isCart) 
   {
@@ -1390,13 +1406,13 @@ router.get('/removeFromCart', async ctx => {
   const quantity = ctx.query.quantity;
 
   const orderitem = await OrderItem.findOne({where: {
-    id: ctx.query.id
+    id: ctx.query.orderid
   }});
 
-  if(quantity) 
+  if(quantity > 0) 
   {
     await orderitem.update({
-      quantity: orderitem.quantity - quantity
+      quantity: parseInt(orderitem.quantity) - parseInt(quantity)
     });
   } 
   else 
@@ -1431,17 +1447,157 @@ router.get('/cart', async ctx => {
     }],
   });
 
-  console.log(await order.getOrderitems());
+  if (order == null)
+    orderitems = [];
+  else orderitems = await order.getOrderitems();
+
+  let products = [];
+
+  for(i = 0; i < orderitems.length; i++) 
+  {
+    await products.push(await (orderitems[i].getProduct()));
+  }
+
+  let totals = [];
+
+  for(i = 0; i < orderitems.length; i++) 
+  {
+    await totals.push(await (orderitems[i].getTotal()));
+  }
+
+  let orderTotal = totals.reduce((partialSum, a) => partialSum + a, 0);
 
   await ctx.render('cart', {
-    async: true,
     session: ctx.session,
     selected: 'cart',
-    items: await order.getOrderitems(),
+    items: orderitems,
+    products: products,
+    totals: totals,
+    orderTotal: orderTotal,
   });
 
   // Clear the messages
   ctx.session.messages = null; 
+});
+
+router.get('/checkout', async ctx => {
+  // Currently working only for registered users
+  if (!await utilsEcom.isAuthenticatedUser(ctx)) 
+  {
+    ctx.session.messages = { 'noPermission': 'You are not registered!' };
+    await ctx.redirect('/');
+    return;
+  }
+
+  const user = await User.findOne({
+    where: {
+      username: ctx.session.dataValues.username
+    }
+  });
+
+  const order = await Order.findOne({
+    where: {
+      status: 0,
+    },
+    include: [{
+      model: User,
+      required: true,
+      where: {
+        'username': ctx.session.dataValues.username
+      }
+    }],
+  });
+
+  if (order == null)
+    orderitems = [];
+  else orderitems = await order.getOrderitems();
+
+  let products = [];
+
+  for(i = 0; i < orderitems.length; i++) 
+  {
+    await products.push(await (orderitems[i].getProduct()));
+  }
+
+  let totals = [];
+
+  for(i = 0; i < orderitems.length; i++) 
+  {
+    await totals.push(await (orderitems[i].getTotal()));
+  }
+
+  let orderTotal = totals.reduce((partialSum, a) => partialSum + a, 0);
+
+  await ctx.render('checkout', {
+    session: ctx.session,
+    selected: 'checkout',
+    user: user,
+    items: orderitems,
+    products: products,
+    totals: totals,
+    orderTotal: orderTotal
+  });
+
+  // Clear the messages
+  ctx.session.messages = null; 
+});
+
+router.post('/captureOrder', async ctx => {
+  const order = await Order.findOne({
+    where: {
+      status: 0,
+    },
+    include: [{
+      model: User,
+      required: true,
+      where: {
+        'username': ctx.session.dataValues.username
+      }
+    }],
+  });
+
+  // Check if products have enough quantity
+  const orderitems = await order.getOrderitems();
+  for(i = 0; i < orderitems.length; i++) 
+  {
+    let product = await orderitems[i].getProduct();
+    if(product.quantity < orderitems[i].quantity) 
+    {
+      ctx.body = {'msg': 'There is no enough quantity of ' + product.name, 'status': 'error'};
+      return;
+    }
+  }
+
+  utilsEcom.captureOrder(ctx.request.fields.orderID);
+  /*
+  def captureOrder(request):
+    try:
+        if request.method == "POST":
+            order_id = json.loads(request.body)['orderID']
+            ordert = Order.objects.get(deleted = False, user = EcomUser.objects.get(deleted = False, user=request.user), status = Order.OrderStatus.NOT_ORDERED)
+            # Check if products have enough quantity
+            for item in ordert.items.all():
+                if item.product.quantity < item.quantity:
+                    return JsonResponse({'msg': 'There is no enough quantity of ' + str(item.product.name), 'status': 'error'})
+            
+            uid, order = capture_order(order_id)
+
+            PayPalTransaction.objects.get_or_create (
+                order = ordert,
+                transaction_id = order_id,
+                paypal_request_id = uid,
+                status_code = order.status_code,
+                status = order.result.status,
+                email_address = order.result.payer.email_address,
+                first_name = order.result.payer.name.given_name,
+                last_name = order.result.payer.name.surname
+            )
+
+            return validate_status(request, uid, order_id, order)
+        return JsonResponse({'msg': 'redirect', 'status': 'redirect'})
+    except Exception as e:
+        traceback.print_exc()
+        pass*/
 });
 
 render(app, {
