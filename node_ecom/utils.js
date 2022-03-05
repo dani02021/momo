@@ -224,6 +224,17 @@ async function captureOrder(orderId, debug=false) {
     }
 }
 
+async function addProductQtyFromOrder(cart) 
+{
+    let cartOrderItems = await cart.getOrderitems();
+    for(i = 0; i < cartOrderItems.length; i++ ) 
+    {
+        let cartProduct = await cartOrderItems[i].getProduct();
+
+        cartProduct.update({quantity: cartProduct.quantity + cartOrderItems[i].quantity});
+    }
+}
+
 async function removeProductQtyFromOrder(cart) 
 {
     let cartOrderItems = await cart.getOrderitems();
@@ -348,5 +359,6 @@ module.exports = {
     hasPermission,
     captureOrder,
     validateStatus,
+    addProductQtyFromOrder,
     removeProductQtyFromOrder,
 };

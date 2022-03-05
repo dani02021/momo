@@ -31,11 +31,7 @@
                                     <% } %>
                                     <td>
                                         <div class="qty">
-                                            <form id="removeOCart" action="/removeFromCart" style="display: inline;" method="get">
-                                                <input type="hidden" value="<%= items[i].id %>" name="orderid" style="display: inline;">
-                                                <input id="removeOCartQty" type="hidden" value="1" name="quantity" style="display: inline;">
-                                                <button class="btn-minus" style="display: inline;" type="submit"><i class="fa fa-minus"></i></button>
-                                            </form>
+                                            <button class="btn-minus" onclick="javascript:removeFromCart(<%= products[i].id %>, 1)"><i class="fa fa-minus"></i></button>
                                             <input id="qtyNum" data-max="<%= items[i].quantity %>" type="text" value="<%= items[i].quantity %>" disabled>
                                             <button class="btn-plus" onclick="javascript:addToCart(<%= products[i].id %>, 1, true)"><i class="fa fa-plus"></i></button>
                                         </div>

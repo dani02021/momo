@@ -38,8 +38,8 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link  {% if selected|stringformat:'s' == 'report' %}active{% endif %}"
-                                href="/administration/report/">
+                            <a class="nav-link  <% if (selected == 'report') { %> active<% } %>"
+                                href="/admin/report">
                                 <i class="far fa-file-alt"></i>
                                 Report
                             </a>
@@ -52,8 +52,8 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if selected|stringformat:'s' == 'orders' %}active{% endif %}"
-                                href="/administration/orders/">
+                            <a class="nav-link <% if(selected == 'orders') { %> active <% } %>"
+                                href="/admin/orders">
                                 <i class="fas fa-credit-card"></i>
                                 Orders
                             </a>
@@ -61,7 +61,7 @@
 
                         <li class="nav-item">
                             <a class="nav-link <% if (selected == 'accounts') { %> active <% } %>"
-                                href="/admin/accounts/">
+                                href="/admin/accounts">
                                 <i class="far fa-user"></i>
                                 Accounts
                             </a>
@@ -69,7 +69,7 @@
 
                         <li class="nav-item">
                             <a class="nav-link <% if(selected == 'staff') { %> active <% } %>"
-                                href="/admin/staff/">
+                                href="/admin/staff">
                                 <i class="far fa-user"></i>
                                 Staff
                             </a>

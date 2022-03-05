@@ -344,6 +344,11 @@ Order.prototype.getTotal = async function () {
   return total;
 }
 
+Order.prototype.orderedAtHTML = function() {
+  console.log(this.orderedAt.toISOString());
+  return this.orderedAt.toISOString().substring(0, 19);
+}
+
 Order.hasOne(Transaction, {foreignKey: {name: 'orderid'}});
 Transaction.belongsTo(Order, {foreignKey: {name: 'orderid'}});
 

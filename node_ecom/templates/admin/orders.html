@@ -1,41 +1,36 @@
-{% extends 'admin1/base.html' %}
-{% load static %}
-{% block content %}
-{% for message in messages %}
-{% if message|stringformat:'s' == 'order_exists' %}
+<% for(i in session.dataValues.messages) { %>
+<% if(session.dataValues.messages.hasOwnProperty(i)) { %>
+<% if(i == 'orderExists') { %>
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
   <strong>Order already exists!</strong>
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-{% endif %}
-{% if message|stringformat:'s' == 'order_created' %}
+<% } if(i == 'orderCreated') { %>
 <div class="alert alert-success alert-dismissible fade show" role="alert">
   <strong>Order is created!</strong>
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-{% endif %}
-{% if message|stringformat:'s' == 'order_deleted' %}
+<% } if(i == 'orderDeleted') { %>
 <div class="alert alert-warning alert-dismissible fade show" role="alert">
   <strong>Selected orders are deleted!</strong>
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-{% endif %}
-{% if message|stringformat:'s' == 'order_edited' %}
+<% } if(i == 'orderEdited') { %>
 <div class="alert alert-success alert-dismissible fade show" role="alert">
   <strong>Order is edited!</strong>
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-{% endif %}
-{% if message|stringformat:'s' == 'order_not_enough_qty' %}
+<% } if(i == 'orderNotEnoughQty') { %>
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
   <strong>Some of the product/s does not have enough quantity/ies!</strong>
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-{% endif %}
-{% endfor %}
+<% } %>
+<% } %>
+<% } %>
 <style>
   .ui-autocomplete-loading {
-    background: white url("{% static 'img/ui-anim_basic_16x16.gif' %}") right center no-repeat;
+    background: white url("/img/ui-anim_basic_16x16.gif") right center no-repeat;
   }
 </style>
 <div class="container mt-5">
@@ -44,33 +39,33 @@
       <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1000px;">
         <h2 class="tm-block-title">Orders</h2>
         <div class="container">
-          <form action="/administration/orders/" method="get" onsubmit="checkOrderFilter(this);">
+          <form action="/admin/orders" method="get" onsubmit="checkOrderFilter(this);">
             <div class="row">
               <div class="col">
-                <select name="stat" class="form-select">
+                <select name="status" class="form-select">
                   <option value="-1" selected disabled>Select status:</option>
-                  {{ pass_stat }}
-                  {% for key, stat in statuses.items %}
-                  <option value="{{ key }}" {% if stat|stringformat:'s' == pass_stat|stringformat:'s' %} selected {% endif %}>{{ stat }}</option>
-                  {% endfor %}
+                  <%= filters['status'] %>
+                  <% for(i = 0; i < statuses.length; i++) { %>
+                  <option value="<%= i %>" <% if (statuses[i] == filters['status']) { %> selected <% } %>> <%= statuses[i] %></option>
+                  <% } %>
                 </select>
               </div>
               <div class="col-sm-3">
-                <input name="user" class="form-select" style="background-image: none" placeholder="User" value="{{ pass_user }}">
+                <input name="user" class="form-select" style="background-image: none" placeholder="User" value="<%= filters['user'] %>">
               </div>
               <div class="col-sm-3">
-                <input name="ord-before" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="Ordered before" type="datetime-local" value="{{ pass_ord_before }}">
+                <input name="ordBefore" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
+                  title="Ordered before" type="datetime-local" value="<%= filters['ordBefore'] %>">
               </div>
               <div class="col-sm-3">
-                <input name="ord-after" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="Ordered after" type="datetime-local" value="{{ pass_ord_after }}"><br>
+                <input name="ordAfter" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
+                  title="Ordered after" type="datetime-local" value="<%= filters['ordAfter'] %>"><br>
               </div>
             </div>
             <div class="row" style="margin-bottom: 12px;">
               <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
-                <a href="/administration/orders/" class="btn btn-primary text-uppercase">Clear filters</a>
+                <a href="/admin/orders" class="btn btn-primary text-uppercase">Clear filters</a>
               </div>
             </div>
           </form>
@@ -91,35 +86,35 @@
               </tr>
             </thead>
             <tbody>
-              {% for item in items %}
+              <% for(i = 0; i < orders.length; i++) { %>
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b>{{ item.ordered_at }}</b></td>
-                <td data-id="{{ item.id }}"><b>#{{ item.id }}</b></td>
+                <td><b><%= orders[i].orderedAt %></b></td>
+                <td data-id="<%= orders[i].id %>"><b>#<%= orders[i].id %></b></td>
                 <td>
-                  {% if item.status|stringformat:'s' == '1' %}
+                  <% if (orders[i].status == 1) { %>
                   <div class="tm-status-circle pending"></div>
-                  {% elif item.status|stringformat:'s' == '2' %}
+                  <% } else if (orders[i].status == 2) { %>
                   <div class="tm-status-circle moving"></div>
-                  {% elif item.status|stringformat:'s' == '3' %}
+                  <% } else if (orders[i].status == 3) { %>
                   <div class="tm-status-circle cancelled"></div>
-                  {% elif item.status|stringformat:'s' == '4' %}
+                  <% } else if (orders[i].status == 4) { %>
                   <div class="tm-status-circle cancelled"></div>
-                  {% elif item.status|stringformat:'s' == '5' %}
+                  <% } else if (orders[i].status == 5) { %>
                   <div class="tm-status-circle moving"></div>
-                  {% endif %}
-                  {{ item.get_status_display }}
+                  <% } %>
+                  <%= statuses[orders[i].status] %>
                 </td>
-                <td><b>{{ item.user.user.first_name|add:' '|add:item.user.user.last_name }}</b></td>
-                <td><b>{{ item.user.country }}</b></td>
-                <td><b>{{ item.user.address }}</b></td>
-                <td style="text-align: right;"><b>{{ item.price }} $</b></td>
-                <td><a href="/administration/orders/edit/{{ item.id }}/" class="tm-order-edit-link">
+                <td><b><%= users[i].firstName + " " + users[i].lastName %></b></td>
+                <td><b><%= users[i].country %></b></td>
+                <td><b><%= users[i].address %></b></td>
+                <td style="text-align: right;"><b><%= orders[i].price %> $</b></td>
+                <td><a href="/admin/orders/edit/<%= orders[i].id %>" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>
                 </td>
               </tr>
-              {% endfor %}
+              <% } %>
             </tbody>
           </table>
         </div>
@@ -137,40 +132,38 @@
   </div>
 </div>
 <!-- Pagination Start -->
-{% if paginator %}
 <div class="col-md-12">
   <nav>
     <ul class="pagination justify-content-center">
-      {% if page.has_previous %}
+      <% if(page > 1) { %>
       <li class="page-item">
-        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'-1'}});">Previous</a>
+        <a class="page-link" href="javascript:moveToPage(<%= page - 1 %>);">Previous</a>
       </li>
-      {% else %}
+      <% } else { %>
       <li class="page-item disabled">
         <a class="page-link" href="" tabindex="-1">Previous</a>
       </li>
-      {% endif %}
-      {% for pag in pages %}
-      {% if page.number|stringformat:'s' == pag|stringformat:'s' %}
-      <li class="page-item active"><a class="page-link" href="">{{ pag }}</a></li>
-      {% else %}
-      <li class="page-item {% if '...' == pag|stringformat:'s' %}disabled{% endif %}"><a class="page-link" href="javascript:moveToPage({{ pag }});">
-          {{ pag }}</a></li>
-      {% endif %}
-      {% endfor %}
-      {% if page.has_next %}
+      <% } %>
+      <% for(var i = 0; i < pages.length; i++) { %>
+      <% if(pages[i] == page) { %>
+      <li class="page-item active"><a class="page-link" href=""><%= page %></a></li>
+      <% } else { %>
+      <li class="page-item <% if (pages[i] == '...') { %> disabled <% } %>"><a class="page-link" href="javascript:moveToPage(<%= pages[i] %>);">
+        <%= pages[i] %></a></li>
+      <% } %>
+      <% } %>
+      {<% if(page < pages[pages.length - 1]) { %>
       <li class="page-item">
-        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'1'}});">Next</a>
+        <a class="page-link" href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
       </li>
-      {% else %}
+      <% } else { %>
       <li class="page-item disabled">
         <a class="page-link" href="">Next</a>
       </li>
-      {% endif %}
+      <% } %>
     </ul>
   </nav>
 </div>
-{% endif %}
 <!-- Modal -->
 <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-order" tabindex="-1"
   aria-labelledby="add-order" aria-hidden="true">
@@ -180,11 +173,11 @@
         <h5 class="modal-title">Add Order</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="add-order-form" action="/administration/orders/add/" onsubmit="selectAll();" method="post">
+      <form id="add-order-form" action="/admin/orders/add" onsubmit="selectAll();" method="post">
         <div class="modal-body">
           <label>Items:</label>
           <div>
-            <select id="add-order-items" name="items[]" multiple>
+            <select id="add-order-items" style="width:100%;max-width:90%;" name="items" multiple>
             </select>
           </div>
           <label>User:</label>
@@ -194,9 +187,9 @@
           <label>Status:</label>
           <div>
             <select id="add-order-statuses" name="status">
-              {% for id, name in statuses.items %}
-              <option value="{{ id }}">{{ name }}</option>
-              {% endfor %}
+              <% for (i = 0; i < statuses.length; i++) { %>
+              <option value="<%= i %>"><%= statuses[i] %></option>
+              <% } %>
             </select>
           </div><br>
           <button type="button" class="btn btn-primary" data-bs-target="#add-order-orderitem" data-bs-toggle="modal"
@@ -204,7 +197,6 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          {% csrf_token %}
           <button type="submit" class="btn btn-primary">Add</button>
         </div>
       </form>
@@ -251,9 +243,8 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-          <form id="rem-order-form" action="/administration/orders/del/" method="post"
+          <form id="rem-order-form" action="/admin/orders/delete" method="post"
             onsubmit="return deleteOrders(this);">
-            {% csrf_token %}
             <button type="submit" data-bs-dismiss="modal" class="btn btn-primary">Delete</button>
           </form>
         </div>
@@ -334,7 +325,7 @@
     $( function() {
     var cache = {};
     $( "input[name='user']" ).autocomplete({
-      source: "/administration/accounts/get/",
+      source: "/api/accounts/get",
       minLength: 3,
       source: function( request, response ) {
         var term = request.term;
@@ -343,7 +334,7 @@
           return;
         }
  
-        $.getJSON( "/administration/accounts/get/", request, function( data, status, xhr ) {
+        $.getJSON( "/api/accounts/get", request, function( data, status, xhr ) {
           cache[ term ] = data;
           response( data );
         });
@@ -352,7 +343,7 @@
 
     var cache1 = {};
     $( "#orderitem-select" ).autocomplete({
-      source: "/administration/products/get/",
+      source: "/api/products/get",
       minLength: 2,
       source: function( request, response ) {
         var term = request.term;
@@ -361,7 +352,7 @@
           return;
         }
  
-        $.getJSON( "/administration/products/get/", request, function( data, status, xhr ) {
+        $.getJSON( "/api/products/get", request, function( data, status, xhr ) {
           cache1[ term ] = data;
           response( data );
         });
@@ -372,5 +363,3 @@
     });
   } );
   </script>
-
-  {% endblock %}

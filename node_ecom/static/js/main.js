@@ -375,9 +375,19 @@ function buyProduct(id, qty, variation = '') {
 }
 
 function addToCart(id, qty, isCart) {
+    /* Not working */
     $.ajax({
         url: "/addToCart",
         data: { 'id': id, 'quantity': qty, 'cart': isCart },
+        success: function (obj) { }
+    });
+}
+
+function removeFromCart(id, qty) {
+    /* Not working */
+    $.ajax({
+        url: "/removeFromCart",
+        data: { 'id': id, 'quantity': qty },
         success: function (obj) { }
     });
 }
