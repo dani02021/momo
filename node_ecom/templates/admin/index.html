@@ -130,13 +130,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in items %}
-                        {% if item.status|stringformat:'s' != '0' %}
+                        <% for(i = 0; i < orders.length; i++) { %>
+                        <% if (orders[i].status != 0) { %>
                         <tr>
-                            <td>{{ item.ordered_at }}</td>
-                            <th scope="row"><b>#{{ item.id }}</b></th>
-                            <td class="tm-product-name">{{ item.user.user.username }}</td>
-                            <td>{{ item.get_items_count }}</td>
+                            <td><%= orders[i].orderedAt %></td>
+                            <th scope="row"><b>#<%= orders[i].id %></b></th>
+                            <td class="tm-product-name"><%= users[i].username %></td>
+                            <td><%= orderitems[i].length %></td>
                             <td>
                                 {% if item.status|stringformat:'s' == '1' %}
                                 <div class="tm-status-circle pending"></div>
@@ -149,15 +149,15 @@
                                 {% elif item.status|stringformat:'s' == '5' %}
                                 <div class="tm-status-circle moving"></div>
                                 {% endif %}
-                                {{ item.get_status_display }}
+                                <%= statusDisplay[i] %>
                             </td>
-                            <td><a href="/administration/orders/edit/{{ item.id }}" class="tm-order-edit-link">
+                            <td><a href="/administration/orders/edit/<%= orders[i].id %>" class="tm-order-edit-link">
                                     <i class="far fa-edit tm-order-edit-icon"></i>
                                 </a>
                             </td>
                         </tr>
-                        {% endif %}
-                        {% endfor %}
+                        <% } %>
+                        <% } %>
                     </tbody>
                 </table>
             </div>

@@ -55,14 +55,17 @@
                             <div class="payment-method">
                                 <div class="custom-control custom-radio">
                                     <input type="radio" class="custom-control-input" id="payment-2" onclick="javascript:checkRadio(1);" name="payment">
-                                    <label class="custom-control-label" for="payment-2">Stripe</label>
+                                    <label class="custom-control-label" for="payment-2">Наложен</label>
                                 </div>
                             </div>
                             <div class="payment-method">
                                 <div id="paypal-button-container"></div>
                             </div>
                         <div class="checkout-btn" id="check-btn" style="display: none;">
-                            <button>Place Order</button>
+                            <form action="/captureOrder" method="post">
+                                <input type="hidden" name="type" value="cod">
+                                <button type="submit">Place Order</button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -104,6 +107,7 @@
                     },
                     body: JSON.stringify({
                         orderID: data.orderID,
+                        type: "paypal",
                         base: data
                     })
                 }).then(function(res) {

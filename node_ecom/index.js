@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const Koa = require('koa');
 const KoaRouter = require('koa-router');
 const KoaBodyParser = require('koa-better-body');
@@ -9,8 +11,6 @@ const session = require('koa-session');
 
 const fs = require('fs');
 const mv = require('mv');
-
-require('dotenv').config();
 
 const { Sequelize } = require("sequelize");
 const Op = Sequelize.Op;
@@ -25,6 +25,9 @@ const Role = models.role();
 const Permission = models.permission();
 const Order = models.order();
 const OrderItem = models.orderitem();
+const Transaction = models.transaction();
+const PayPalTransaction = models.paypaltransacion();
+const CODTransaction = models.codtransaction();
 
 const app = new Koa();
 const router = new KoaRouter();
@@ -280,7 +283,6 @@ async function getAdminAccounts(ctx) {
   let offset = 0;
 
   if (ctx.params.page) {
-    console.log(ctx.params.page);
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
@@ -568,11 +570,37 @@ router.get('/logout', async ctx => {
 router.get('/admin', async ctx => {
   if (await utilsEcom.isAuthenticatedStaff(ctx)) 
   {
+    const orders = await Order.findAll({
+      order: [
+        ['createdAt', 'DESC']
+      ],
+      limit: 10
+    });
+
+    let orderitems = []
+
+    for(i = 0; i < orders.length; i++) 
+    {
+      console.log(await orders[i].getOrderitems())
+      orderitems.push(await orders[i].getOrderitems());
+    }
+
+    let users = []
+
+    for(i = 0; i < orders.length; i++) 
+    {
+      users.push((await orders[i].getUsers())[0]);
+    }
+
     await ctx.render('/admin/index', {
+      layout: "/admin/base",
       selected: 'dashboard',
       session: ctx.session,
       user: await Staff.findOne({where: {username: ctx.session.dataValues.username}}),
-      layout: "/admin/base"
+      orders: orders,
+      orderitems: orderitems,
+      users: users,
+      statusDisplay: utilsEcom.STATUS_DISPLAY
     });
 
     // Clear old messages
@@ -584,25 +612,14 @@ router.get('/admin/login', async ctx => {
   // Clear old messages
   ctx.session.messages = null;
 
-  if (ctx.session.dataValues.username) {
-    await Staff.findOne({
-      where: {
-        username: ctx.session.dataValues.username
-      },
-      include: Role
-    })
-      .then(async user => {
-        if (user) {
-          await user.update({
-            lastLogin: Sequelize.NOW
-          });
-
-          await ctx.redirect('/admin');
-        }
-      });
+  if (await utilsEcom.isAuthenticatedStaff(ctx)) 
+  {
+    await ctx.redirect('/admin');
   }
-
-  await ctx.render('/admin/login', { layout: "/admin/base", selected: 'login', session: ctx.session });
+  else 
+  {
+    await ctx.render('/admin/login', { layout: "/admin/base", selected: 'login', session: ctx.session });
+  }
 });
 
 router.post('/admin/login', async ctx => {
@@ -612,7 +629,7 @@ router.post('/admin/login', async ctx => {
     where: {
       username: ctx.request.fields.username
     }, include: Role
-  }).then(userv => {
+  }).then(async userv => {
     if (!userv)
       return;
 
@@ -621,6 +638,10 @@ router.post('/admin/login', async ctx => {
       ctx.session.messages = messages;
       ctx.session.username = ctx.request.fields.username;
       ctx.session.isStaff = true;
+
+      await userv.update({
+        lastLogin: Sequelize.fn('NOW')
+      });
     }
     else {
       let messages = { 'loginErrorPass': 'Wrong password!' };
@@ -1211,7 +1232,6 @@ router.post('/admin/roles/add', async ctx => {
     for(permid in ctx.request.fields.permissions) 
     {
       const permission = await Permission.findOne({where: { id: ctx.request.fields.permissions[permid] } });
-      console.log(permission);
       await role.addPermission(permission);
     }
   } 
@@ -1343,7 +1363,9 @@ router.get('/addToCart', async ctx => {
   const user = await User.findOne({where: {username: ctx.session.dataValues.username }});
 
   const [order, createdorder] = await Order.findOrCreate({
-    where: {},
+    where: {
+      status: 0
+    },
     include: [{
       model: User,
       required: true,
@@ -1508,9 +1530,12 @@ router.get('/checkout', async ctx => {
     }],
   });
 
-  if (order == null)
-    orderitems = [];
-  else orderitems = await order.getOrderitems();
+  if (order == null) {
+    ctx.redirect('/');
+    return;
+  }
+
+  orderitems = await order.getOrderitems();
 
   let products = [];
 
@@ -1521,7 +1546,7 @@ router.get('/checkout', async ctx => {
 
   let totals = [];
 
-  for(i = 0; i < orderitems.length; i++) 
+  for(i = 0; i < orderitems.length; i++)  
   {
     await totals.push(await (orderitems[i].getTotal()));
   }
@@ -1556,6 +1581,11 @@ router.post('/captureOrder', async ctx => {
     }],
   });
 
+  if(!order) {
+    ctx.redirect('/');
+    return;
+  }
+
   // Check if products have enough quantity
   const orderitems = await order.getOrderitems();
   for(i = 0; i < orderitems.length; i++) 
@@ -1568,36 +1598,61 @@ router.post('/captureOrder', async ctx => {
     }
   }
 
-  utilsEcom.captureOrder(ctx.request.fields.orderID);
-  /*
-  def captureOrder(request):
-    try:
-        if request.method == "POST":
-            order_id = json.loads(request.body)['orderID']
-            ordert = Order.objects.get(deleted = False, user = EcomUser.objects.get(deleted = False, user=request.user), status = Order.OrderStatus.NOT_ORDERED)
-            # Check if products have enough quantity
-            for item in ordert.items.all():
-                if item.product.quantity < item.quantity:
-                    return JsonResponse({'msg': 'There is no enough quantity of ' + str(item.product.name), 'status': 'error'})
-            
-            uid, order = capture_order(order_id)
+  const transaction = await Transaction.create({ type: ctx.request.fields.type});
 
-            PayPalTransaction.objects.get_or_create (
-                order = ordert,
-                transaction_id = order_id,
-                paypal_request_id = uid,
-                status_code = order.status_code,
-                status = order.result.status,
-                email_address = order.result.payer.email_address,
-                first_name = order.result.payer.name.given_name,
-                last_name = order.result.payer.name.surname
-            )
+  if (ctx.request.fields.type == "paypal") 
+  {
+    let responce = await utilsEcom.captureOrder(ctx.request.fields.orderID);
 
-            return validate_status(request, uid, order_id, order)
-        return JsonResponse({'msg': 'redirect', 'status': 'redirect'})
-    except Exception as e:
-        traceback.print_exc()
-        pass*/
+    await transaction.createPaypaltransacion({
+      transactionId: responce.result.id,
+      orderId: responce.result.purchase_units[0].payments.captures[0].id,
+      status: responce.result.status,
+      emailAddress: responce.result.payer.email_address,
+      firstName: responce.result.payer.name.given_name,
+      lastName: responce.result.payer.name.surname,
+      grossAmount: responce.result.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value,
+      paypalFee: responce.result.purchase_units[0].payments.captures[0].seller_receivable_breakdown.paypal_fee.value,
+    });
+
+    await utilsEcom.validateStatus(ctx, null, responce);
+  } else 
+  {
+    await transaction.createCodtransaction({
+
+    });
+
+    const user = await User.findOne({where: {
+      username: ctx.session.dataValues.username
+    }});
+
+    const cart = await Order.findOne({
+      where: {
+        status: 0,
+      },
+      include: [{
+        model: User,
+        required: true,
+        where: {
+          'username': ctx.session.dataValues.username
+        }
+      }],
+    });
+
+    if(!cart) {
+      ctx.redirect('/');
+      return;
+    }
+  
+    await cart.update({status: 1, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal()});
+
+    await utilsEcom.removeProductQtyFromOrder(cart);
+
+    // ctx.body = {'msg': 'Your order is completed!', 'status': 'ok'};
+    ctx.redirect('/');
+  }
+
+  await order.setTransacion(transaction);
 });
 
 render(app, {

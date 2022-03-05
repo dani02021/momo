@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/dani02021/training-projects#readme",
   "dependencies": {
+    "@paypal/checkout-server-sdk": "^1.0.3",
     "babel-cli": "^6.26.0",
     "babel-preset-env": "^1.7.0",
     "bcrypt": "^5.0.1",

@@ -218,17 +218,24 @@ Product.belongsTo(Category, {
   foreignKey: 'categoryId'
 });
 
+const Transaction = db.define("transacion", {
+  type: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'paypal'
+  }
+},
+{
+  paranoid: false,
+  timestamp: false
+});
 
 const PayPalTransaction = db.define("paypaltransacion", {
   transactionId: {
     type: DataTypes.STRING,
-    defaultValue: ''
-  },
-  requestId: {
-    type: DataTypes.UUID,
     allowNull: false
   },
-  statusCode: {
+  orderId: {
     type: DataTypes.STRING,
     allowNull: false
   },
@@ -236,7 +243,7 @@ const PayPalTransaction = db.define("paypaltransacion", {
     type: DataTypes.STRING,
     allowNull: false
   },
-  emailAdress: {
+  emailAddress: {
     type: DataTypes.STRING,
     allowNull: false
   },
@@ -248,10 +255,23 @@ const PayPalTransaction = db.define("paypaltransacion", {
     type: DataTypes.STRING,
     allowNull: false
   },
-  phoneNumber: {
-    type: DataTypes.STRING,
+  grossAmount: {
+    type: DataTypes.DECIMAL(15, 2),
     allowNull: false
-  }
+  },
+  paypalFee: {
+    type: DataTypes.DECIMAL(3, 2),
+    allowNull: false
+  },
+},
+{
+  paranoid: false,
+  timestamp: false
+});
+
+// Cash On Delivery
+const CODTransaction = db.define("codtransaction", {
+
 },
 {
   paranoid: false,
@@ -276,7 +296,7 @@ OrderItem.belongsTo(Product, {
 OrderItem.prototype.getTotal = async function () {
   let product = await this.getProduct();
 
-  return product.discountPrice * this.quantity;
+  return parseFloat(product.discountPrice) * parseFloat(this.quantity);
 };
 
 const Order = db.define("order", {
@@ -304,10 +324,6 @@ User.belongsToMany(Order, { through: 'user_orders' });
 Order.hasMany(OrderItem, { foreignKey: 'orderId' });
 OrderItem.belongsTo(Order);
 
-// Invalid
-// Order.hasOne(PayPalTransaction, { foreignKey: 'transactionId', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
-// PayPalTransaction.belongsTo(Order);
-
 Order.prototype.getItems = function () {
   return this.getOrderItems();
 }
@@ -317,26 +333,34 @@ Order.prototype.getItemsCount = function () {
 }
 
 Order.prototype.getTotal = async function () {
-  var total;
+  var total = 0.0;
   var orderitems = await this.getOrderitems();
 
   for(i = 0; i < orderitems.length; i++) 
   {
-    total += await item.getTotal();
+    total += parseFloat(await orderitems[i].getTotal());
   }
   
   return total;
 }
 
+Order.hasOne(Transaction, {foreignKey: {name: 'orderid'}});
+Transaction.belongsTo(Order, {foreignKey: {name: 'orderid'}});
+
+Transaction.hasOne(PayPalTransaction, {foreignKey: {name: 'transactionid'}});
+PayPalTransaction.belongsTo(Transaction, {foreignKey: {name: 'transactionid'}});
+
+Transaction.hasOne(CODTransaction, {foreignKey: {name: 'transactionid'}});
+CODTransaction.belongsTo(Transaction, {foreignKey: {name: 'transactionid'}});
+
 /* Order statuses
 NOT_ORDERED = 0, _('Not Ordered')
 PENDING = 1, _('Pending')
 SHIPPED = 2, _('Shipped')
-REFUSED = 3, _('Refused')
-DECLINED = 4, _('Declined')
-COMPLETED = 5, _('Completed')
-NOT_PAYED = 6, _('Not Payed')
-PAYER_ACTION_REQUIRED = 7, _('Payer Action Required')
+DECLINED = 3, _('Declined')
+COMPLETED = 4, _('Completed')
+NOT_PAYED = 5, _('Not Payed')
+PAYER_ACTION_REQUIRED = 6, _('Payer Action Required')
 */
 
 function category() {
@@ -375,8 +399,21 @@ function orderitem() {
   return OrderItem;
 }
 
+function transaction() {
+  return Transaction;
+}
+
+function paypaltransacion() {
+  return PayPalTransaction;
+}
+
+function codtransaction() {
+  return CODTransaction;
+}
+
 module.exports = {
-  category, product, user, staff, session, permission, role, order, orderitem,
+  category, product, user, staff, session, permission, role, order, orderitem, transaction,
+  paypaltransacion, codtransaction
 };
 
 // Alter the database
