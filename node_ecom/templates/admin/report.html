@@ -1,34 +1,26 @@
-{% for message in messages %}
-{% if message|stringformat:'s' == 'order_exists' %}
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-  <strong>Order already exists!</strong>
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-{% endif %}
-{% endfor %}
 <div class="container mt-5">
   <div class="row tm-content-row">
     <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
       <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 850px;">
         <h2 class="tm-block-title">Report</h2>
         <div class="container">
-          <form action="/administration/report/" method="get" onsubmit="checkOrderFilter(this);">
+          <form action="/admin/report" method="get" onsubmit="checkOrderFilter(this);">
             <div class="row">
               <div class="col-sm-4">
-                <input name="ord-after" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
+                <input name="ordAfter" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
                   title="Ordered after" type="datetime-local" value="{{ pass_order_after }}"><br>
               </div>
               <div class="col-sm-4">
-                <input name="ord-before" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
+                <input name="ordBefore" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
                   title="Ordered before" type="datetime-local" value="{{ pass_order_before }}">
               </div>
               <div class="col-sm-4">
                 <select name="timegroup" class="form-select">
                   <option value="-1" selected disabled>Group By:</option>
-                  <option value="0" {% if pass_timegroup == 'day' %} selected {% endif %}>Day</option>
-                  <option value="1" {% if pass_timegroup == 'week' %} selected {% endif %}>Week</option>
-                  <option value="2" {% if pass_timegroup == 'month' %} selected {% endif %}>Month</option>
-                  <option value="3" {% if pass_timegroup == 'year' %} selected {% endif %}>Year</option>
+                  <option value="0" <% if (filters.timegroup == '0') { %> selected <% } %>>Day</option>
+                  <option value="1" <% if (filters.timegroup == '1') { %> selected <% } %>>Week</option>
+                  <option value="2" <% if (filters.timegroup == '2') { %> selected <% } %>>Month</option>
+                  <option value="3" <% if (filters.timegroup == '3') { %> selected <% } %>>Year</option>
                 </select>
               </div>
             </div>
@@ -51,27 +43,16 @@
               </tr>
             </thead>
             <tbody>
-              {% for item in items %}
+              <% for(i = 0; i < report.length; i++) { %>
               <tr>
-                <td><b>{{ item.start_day }}</b></td>
-                <td id="id"><b>{{ item.orders }}</b></td>
+                <td><b><%= report[i].dataValues.startDate %></b></td>
+                <td id="id"><b><%= report[i].dataValues.orders %></b></td>
                 <td>
-                  {% if item.status|stringformat:'s' == '1' %}
-                  <div class="tm-status-circle pending"></div>
-                  {% elif item.status|stringformat:'s' == '2' %}
-                  <div class="tm-status-circle moving"></div>
-                  {% elif item.status|stringformat:'s' == '3' %}
-                  <div class="tm-status-circle cancelled"></div>
-                  {% elif item.status|stringformat:'s' == '4' %}
-                  <div class="tm-status-circle cancelled"></div>
-                  {% elif item.status|stringformat:'s' == '5' %}
-                  <div class="tm-status-circle moving"></div>
-                  {% endif %}
-                  {{ item.products }}
+                  <%= report[i].dataValues.products %>
                 </td>
-                <td style="text-align: right;"><b>{{ item.total_price }} $</b></td>
+                <td style="text-align: right;"><b><%= report[i].dataValues.total %> $</b></td>
               </tr>
-              {% endfor %}
+              <% } %>
             </tbody>
           </table>
         </div>
@@ -84,40 +65,38 @@
   </div>
 </div>
 <!-- Pagination Start -->
-{% if paginator %}
 <div class="col-md-12">
   <nav>
     <ul class="pagination justify-content-center">
-      {% if page.has_previous %}
+      <% if(page > 1) { %>
       <li class="page-item">
-        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'-1'}});">Previous</a>
+        <a class="page-link" href="javascript:moveToPage(<%= page - 1 %>);">Previous</a>
       </li>
-      {% else %}
+      <% } else { %>
       <li class="page-item disabled">
         <a class="page-link" href="" tabindex="-1">Previous</a>
       </li>
-      {% endif %}
-      {% for pag in pages %}
-      {% if page.number|stringformat:'s' == pag|stringformat:'s' %}
-      <li class="page-item active"><a class="page-link" href="">{{ pag }}</a></li>
-      {% else %}
-      <li class="page-item {% if '...' == pag|stringformat:'s' %}disabled{% endif %}"><a class="page-link" href="javascript:moveToPage({{ pag }});">
-          {{ pag }}</a></li>
-      {% endif %}
-      {% endfor %}
-      {% if page.has_next %}
+      <% } %>
+      <% for(var i = 0; i < pages.length; i++) { %>
+      <% if(pages[i] == page) { %>
+      <li class="page-item active"><a class="page-link" href=""><%= page %></a></li>
+      <% } else { %>
+      <li class="page-item <% if (pages[i] == '...') {%> disabled <% } %>"><a class="page-link" href="javascript:moveToPage(<%= pages[i] %>);">
+        <%= pages[i] %></a></li>
+      <% } %>
+      <% } %>
+      {<% if(page < pages[pages.length - 1]) { %>
       <li class="page-item">
-        <a class="page-link" href="javascript:moveToPage({{ page.number|add:'1'}});">Next</a>
+        <a class="page-link" href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
       </li>
-      {% else %}
+      <% } else { %>
       <li class="page-item disabled">
         <a class="page-link" href="">Next</a>
       </li>
-      {% endif %}
+      <% } %>
     </ul>
   </nav>
 </div>
-{% endif %}
 <!-- Modal -->
 <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-product-item" tabindex="-1"
   aria-labelledby="add-product-item" aria-hidden="true">

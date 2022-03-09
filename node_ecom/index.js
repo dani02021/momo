@@ -32,6 +32,8 @@ const CODTransaction = models.codtransaction();
 const app = new Koa();
 const router = new KoaRouter();
 
+const db = require("./db.js");
+
 app.keys = [process.env.COOKIE_SECRET];
 
 // Router functions
@@ -1895,11 +1897,116 @@ router.post('/captureOrder', async ctx => {
 });
 
 router.get('/admin/report', async ctx => {
+  // Get filters
+  let filters = {}, filtersToReturn = {};
+
+  if (ctx.query.timegroup) {
+    filters['timegroup'] = ctx.query.timegroup
+    filtersToReturn['timegroup'] = ctx.query.timegroup
+  } else {
+    filtersToReturn['timegroup'] = '2';
+  }
+  if (ctx.query.ordBefore) {
+    filters['ordBefore'] = ctx.query.ordBefore;
+    filtersToReturn['ordBefore'] = ctx.query.ordBefore;
+  } else {
+    filters['ordBefore'] = new Date();
+  }
+  if (ctx.query.ordAfter) {
+    filters['ordAfter'] = ctx.query.ordAfter;
+    filtersToReturn['ordAfter'] = ctx.query.ordAfter;
+  } else {
+    filters['ordAfter'] = new Date(0);
+  }
+
+  let page = 1;
+
+  if (ctx.params.page) {
+    page = parseInt(ctx.params.page)
+  }
+
+  let count = 0;
+
+  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let offset = 0;
+
+  if (ctx.params.page) {
+    offset = (parseInt(ctx.params.page) - 1) * limit;
+  }
+
+  const time = 'month';
+
+  switch(filters.timegroup) {
+    case 0:
+      time = 'day';
+      break;
+    case 1:
+      time = 'week';
+      break;
+    case 2:
+      time = 'month';
+      break;
+    case 3:
+      time = 'year';
+      break;
+  }
+
+  const reportRes = await utilsEcom.getReportResponce(filters, limit, offset);
+
   await ctx.render('/admin/report', {
     layout: '/admin/base',
     selected: 'report',
-    session: ctx.session
+    session: ctx.session,
+    report: reportRes,
+    filters: filtersToReturn,
+    page: page,
+    pages: utilsEcom.givePages(page, Math.ceil(reportRes.length / utilsEcom.PRODUCTS_PER_PAGE)),
   });
+});
+
+router.get('/admin/report/excel', async ctx => {
+  // Get filters
+  let filters = {}, filtersToReturn = {};
+
+  if (ctx.query.timegroup) {
+    filters['timegroup'] = ctx.query.timegroup
+    filtersToReturn['timegroup'] = ctx.query.timegroup
+  } else {
+    filtersToReturn['timegroup'] = '2';
+  }
+  if (ctx.query.ordBefore) {
+    filters['ordBefore'] = ctx.query.ordBefore;
+    filtersToReturn['ordBefore'] = ctx.query.ordBefore;
+  } else {
+    filters['ordBefore'] = new Date();
+  }
+  if (ctx.query.ordAfter) {
+    filters['ordAfter'] = ctx.query.ordAfter;
+    filtersToReturn['ordAfter'] = ctx.query.ordAfter;
+  } else {
+    filters['ordAfter'] = new Date(0);
+  }
+
+  const time = 'month';
+
+  switch(filters.timegroup) {
+    case 0:
+      time = 'day';
+      break;
+    case 1:
+      time = 'week';
+      break;
+    case 2:
+      time = 'month';
+      break;
+    case 3:
+      time = 'year';
+      break;
+  }
+
+  const reportRes = await utilsEcom.getReportResponce(filters, limit, offset);
+
+  utilsEcom.saveReport(reportRes);
 });
 
 render(app, {

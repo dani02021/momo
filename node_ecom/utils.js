@@ -14,6 +14,8 @@ const Role = models.role();
 const User = models.user();
 const Order = models.order();
 
+const fs = require('fs');
+
 const PRODUCTS_PER_PAGE = 12;
 const SESSION_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000; // 2 weeks
 const STATUS_DISPLAY = [
@@ -310,6 +312,49 @@ async function validateStatus(ctx, orderId, responce)
     }
 }
 
+async function getReportResponce(filters, limit, offset) {
+    return db.query(`select date_trunc('${time}', orderitems."createdAt") as "startDate", 
+  sum(orderitems.quantity) as products, 
+  count(distinct orders.id) as orders, 
+  sum(distinct price) as total 
+  from orderitems 
+  inner join 
+  orders on 
+  orderitems."orderId" = orders.id 
+  where status > 0 and 
+  "orderedAt" between '${filters.ordAfter.toISOString()}' 
+  and '${filters.ordBefore.toISOString()}' 
+  group by "startDate" 
+  limit ${limit} 
+  offset ${offset};`, { 
+    type: 'SELECT',
+    plain: false,
+    model: OrderItem,
+    mapToModel: true,
+   });
+}
+
+function saveReport(reportRes) {
+    var dataToWrite;
+
+    dataToWrite += "startDate, products, orders, total\n";
+
+    for(i = 0; i < reportRes.length; i++) 
+    {
+        dataToWrite += reportRes[i].dataValues.startDate + ", " + 
+            reportRes[i].dataValues.orders + ", " +  reportRes[i].dataValues.products + ", " +
+            reportRes[i].dataValues.total;
+    }
+
+    fs.writeFile('form-tracking/formList.csv', dataToWrite, 'utf8', function (err) {
+        if (err) {
+            console.log('Some error occured - file either not saved or corrupted file saved.');
+        } else {
+            console.log('It\'s saved!');
+        }
+    });
+}
+
 /*
 def validate_status(request, uid, order_id, order):
     elif order.result.status == 'PAYER_ACTION_REQUIRED':
@@ -361,4 +406,6 @@ module.exports = {
     validateStatus,
     addProductQtyFromOrder,
     removeProductQtyFromOrder,
+    getReportResponce,
+    saveReport,
 };

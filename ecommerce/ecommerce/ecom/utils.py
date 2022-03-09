@@ -114,7 +114,7 @@ Substranct from the product quantity the amount in the order
 def orderQtyRem(cart):
     for item in cart.items.all():
         if item.product.quantity < item.quantity:
-            raise NotEnoughQuantityException(item.product + " has only " + item.product.quantity + " qty, but order #" + cart.id + " is trying to order " + item.quantity + "!")
+            raise NotEnoughQuantityException(item.proqduct + " has only " + item.product.quantity + " qty, but order #" + cart.id + " is trying to order " + item.quantity + "!")
         item.product.quantity -= item.quantity
         item.product.save()
         item.save()
