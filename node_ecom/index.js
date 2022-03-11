@@ -68,22 +68,28 @@ async function getProducts(ctx) {
   if (ctx.query.cat) {
     filters['cat'] = ctx.query.cat
     filtersToReturn['Category'] = ctx.query.cat
+  } else 
+  {
+    filters['cat'] = '';
   }
   if (ctx.query.minval) {
     filters['minval'] = ctx.query.minval
     filtersToReturn['Min price'] = ctx.query.minval
   }
-  else {
+  else 
+  {
     filters['minval'] = 0
   }
   if (ctx.query.maxval) {
     filters['maxval'] = ctx.query.maxval
     filtersToReturn['Max price'] = ctx.query.maxval
   }
-  else {
+  else 
+  {
     filters['maxval'] = 99999
   }
-  if (ctx.query.search) {
+  if (ctx.query.search) 
+  {
     filters['search'] = ctx.query.search
     filtersToReturn['Search'] = ctx.query.search
   }
@@ -94,11 +100,10 @@ async function getProducts(ctx) {
   let categories, products, page = 1;
   await Category.findAll().then((categoriesv) => categories = categoriesv);
 
-  if (ctx.params.page) {
+  if (ctx.params.page) 
+  {
     page = parseInt(ctx.params.page)
   }
-
-  let count = 0;
 
   let limit = utilsEcom.PRODUCTS_PER_PAGE;
   let offset = 0;
@@ -115,17 +120,9 @@ async function getProducts(ctx) {
   }
 
   if (filters.cat)
-    whereParam['categoryId'] = filters.cat
+    whereParam['categoryId'] = filters.cat;
 
-  await Product.findAndCountAll({
-    where: whereParam,
-    limit: limit,
-    offset: offset
-  }).then((productsv) => { products = productsv.rows; count = productsv.count });
-
-  const products1 = await utilsEcom.getProductsAndCountRaw();
-
-  console.log(products1);
+  products = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval);
 
   await ctx.render('product-list', {
     selected: 'products',
@@ -134,7 +131,7 @@ async function getProducts(ctx) {
     products: products,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count / utilsEcom.PRODUCTS_PER_PAGE)),
+    pages: utilsEcom.givePages(page, Math.ceil(products[0].dataValues.c / utilsEcom.PRODUCTS_PER_PAGE)),
   });
 }
 
@@ -454,8 +451,6 @@ async function getAdminOrders(ctx) {
       stat.push(i);
 
     filters['status'] = stat;
-
-    console.log(stat);
   }
   if (ctx.query.ordBefore) {
     filters['ordBefore'] = ctx.query.ordBefore;
@@ -673,7 +668,6 @@ router.get('/admin', async ctx => {
     let orderitems = []
 
     for (i = 0; i < orders.length; i++) {
-      console.log(await orders[i].getOrderitems())
       orderitems.push(await orders[i].getOrderitems());
     }
 
@@ -2040,6 +2034,7 @@ render(app, {
   layout: "base",
   viewExt: "html",
   debug: false,
+  cache: true,
 });
 
 app.use(router.routes()).use(router.allowedMethods());

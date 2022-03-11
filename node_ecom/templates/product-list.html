@@ -118,9 +118,9 @@
                     <div class="col-md-4">
                         <div class="product-item">
                             <div class="product-title">
-                                <a href="/product-detail/<%= products[i].id %>"
+                                <a href="/product-detail/<%= products[i].dataValues.id %>"
                                     style="height: 30px;display: block;text-overflow: ellipsis;overflow: hidden; white-space: nowrap;"
-                                    data-bs-toggle="tooltip" title="<%= products[i].name %>"><%= products[i].name %></a>
+                                    data-bs-toggle="tooltip" title="<%= products[i].dataValues.name %>"><%= products[i].dataValues.name %></a>
                                 <div class="ratting">
                                     <i class="fa fa-star"></i>
                                     <i class="fa fa-star"></i>
@@ -131,29 +131,29 @@
                             </div>
                             <div class="product-image">
                                 <a href="product-detail.html" style="height: 254.66px;overflow: hidden;">
-                                    <% if(products[i].image) { %>
-                                    <img src="/media/<%= products[i].image %>" style="object-fit: cover;" alt="Product Image">
+                                    <% if(products[i].dataValues.image) { %>
+                                    <img src="/media/<%= products[i].dataValues.image %>" style="object-fit: cover;" alt="Product Image">
                                     <% } else { %>
                                     <img src="" alt="No Image">
                                     <% } %>
                                 </a>
                                 <div class="product-action">
                                     <a href="#"><i class="fa fa-heart"></i></a>
-                                    <a href="/product-detail/<%= products[i].id %>"><i class="fa fa-search"></i></a>
+                                    <a href="/product-detail/<%= products[i].dataValues.id %>"><i class="fa fa-search"></i></a>
                                 </div>
                             </div>
                             <div class="product-price">
                                 <div class="col">
-                                    <% if(products[i].discountPrice != products[i].price) { %>
-                                    <h5 style="color: white; display: inline-block; margin: 0;"><s><%= products[i].price %>$</s>
+                                    <% if(products[i].dataValues.discountPrice != products[i].dataValues.price) { %>
+                                    <h5 style="color: white; display: inline-block; margin: 0;"><s><%= products[i].dataValues.price %>$</s>
                                     </h5>
-                                    <h3 class="discount-price"><%= products[i].discountPrice %>$</h3>
+                                    <h3 class="discount-price"><%= products[i].dataValues.discountPrice %>$</h3>
                                     <% } else { %>
-                                    <h3><%= products[i].price %>$</h3>
+                                    <h3><%= products[i].dataValues.price %>$</h3>
                                     <% } %>
                                 </div>
                                 <div class="col">
-                                    <a class="btn" href="/product-detail/<%= products[i].id %>">
+                                    <a class="btn" href="/product-detail/<%= products[i].dataValues.id %>">
                                         <i class="fa fa-shopping-cart"></i>Buy Now</a>
                                 </div>
                             </div>

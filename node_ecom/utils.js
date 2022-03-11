@@ -363,11 +363,25 @@ function createTempFile (name = 'temp_file', data = '', encoding = 'utf8') {
     })
 }
 
-async function getProductsAndCountRaw() {
-    return Sequelize.query(`SELECT *, count(*) FROM products 
-            WHERE ("deletedAt" IS NULL) 
-            AND (hide = false) 
-            LIMIT 12;`, { 
+async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval) {
+    let text = `SELECT * FROM products, products_count 
+    WHERE ("deletedAt" IS NULL) 
+    AND (hide = false)`;
+    
+    if (name != '' || cat != '' || minval != 0 || maxval != 99999) 
+    {
+        text += ' WHERE'
+    }
+
+    // todo
+
+    if (offset > 0) 
+    {
+        text += ` OFFSET ${offset}\n`;
+    }
+    text += `LIMIT ${limit};`;
+
+    return db.query(, { 
     type: 'SELECT',
     plain: false,
     model: OrderItem,
