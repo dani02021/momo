@@ -363,18 +363,6 @@ function createTempFile (name = 'temp_file', data = '', encoding = 'utf8') {
     })
 }
 
-async function saveReport(reportRes) {
-    var dataToWrite = "startDate, products, orders, total\n";
-
-    for(i = 0; i < reportRes.length; i++) 
-    {
-        dataToWrite += reportRes[i].dataValues.startDate + ", " + 
-            reportRes[i].dataValues.orders + ", " +  reportRes[i].dataValues.products + ", " +
-            reportRes[i].dataValues.total + "\n";
-    }
-
-    return createTempFile('excel_report.csv', dataToWrite);
-
 async function getProductsAndCountRaw() {
     return Sequelize.query(`SELECT *, count(*) FROM products 
             WHERE ("deletedAt" IS NULL) 
@@ -384,21 +372,6 @@ async function getProductsAndCountRaw() {
     plain: false,
     model: OrderItem,
    });
-}
-
-function saveReport(reportRes) {
-    var dataToWrite;
-
-            const file_name = path.join(folder, name);
-
-            fs.writeFile(file_name, data, encoding, error_file => {
-                if (error_file) 
-                    return reject(error_file);
-
-                resolve(file_name)
-            })
-        })
-    })
 }
 
 async function saveReport(reportRes) {

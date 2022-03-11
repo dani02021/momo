@@ -2018,14 +2018,6 @@ router.get('/admin/report/excel', async ctx => {
   });
 });
 
-  ctx.body = fs.createReadStream(path);
-
-  ctx.res.writeHead(200, {
-    'Content-Type': 'text/csv',
-    "Content-Disposition": "attachment; filename=reportExcel.csv",
-  });
-});
-
 /* WARNING: 
    The session can be null at any request
    I don't fking know why, but check for empty session
