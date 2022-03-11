@@ -98,7 +98,7 @@
                             </div>
                         </li>
                     </ul>
-                    <% if(session.dataValues.username) { %>
+                    <% if(session.dataValues && session.dataValues.username) { %>
                     <ul class="navbar-nav">
                         <li class="nav-item">
                             <a class="nav-link d-block" href="/admin/logout">
@@ -113,6 +113,7 @@
         <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
         <script src="https://code.jquery.com/ui/1.12.0/jquery-ui.js"></script>
 
+        <% if (session.dataValues) { %>
         <% for(i in session.dataValues.messages) { %>
         <% if(session.dataValues.messages.hasOwnProperty(i)) { %>
         <% if(i == 'loginErrorPass') { %>
@@ -155,6 +156,7 @@
                 </div>
             </div>
         </div>
+        <% } %>
         <% } %>
         <% } %>
         <% } %>

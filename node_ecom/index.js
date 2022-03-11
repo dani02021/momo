@@ -125,6 +125,10 @@ async function getProducts(ctx) {
     offset: offset
   }).then((productsv) => { products = productsv.rows; count = productsv.count });
 
+  const products1 = await utilsEcom.getProductsAndCountRaw();
+
+  console.log(products1);
+
   await ctx.render('product-list', {
     selected: 'products',
     session: ctx.session,
@@ -2004,18 +2008,23 @@ router.get('/admin/report/excel', async ctx => {
       break;
   }
 
-  const reportRes = await utilsEcom.getReportResponce(filters, limit, offset);
+  const reportRes = await utilsEcom.getReportResponce(filters, -1, 0, time);
 
-  utilsEcom.saveReport(reportRes);
+  const path = await utilsEcom.saveReport(reportRes);
+
+  ctx.body = fs.createReadStream(path);
+
+  ctx.res.writeHead(200, {
+    'Content-Type': 'text/csv',
+    "Content-Disposition": "attachment; filename=reportExcel.csv",
+  });
 });
 
-render(app, {
-  root: path.join(__dirname, "templates"),
-  layout: "base",
-  viewExt: "html",
-  cache: false,
-  debug: false,
-});
+/* WARNING: 
+   The session can be null at any request
+   I don't fking know why, but check for empty session
+   on each request
+  */
 
 app.use(session({
   store: utilsEcom.configPostgreSessions(),
@@ -2026,8 +2035,15 @@ app.use(session({
 
 app.use(serve('./static'));
 
-app.use(KoaBodyParser())
+app.use(KoaBodyParser());
+
+render(app, {
+  root: path.join(__dirname, "templates"),
+  layout: "base",
+  viewExt: "html",
+  debug: false,
+});
 
 app.use(router.routes()).use(router.allowedMethods());
 
-app.listen(3000);
+app.listen(3210);

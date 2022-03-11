@@ -15,6 +15,10 @@ const User = models.user();
 const Order = models.order();
 
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const db = require("./db.js");
 
 const PRODUCTS_PER_PAGE = 12;
 const SESSION_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000; // 2 weeks
@@ -142,7 +146,7 @@ async function isAuthenticatedUser(ctx)
 }
 async function isAuthenticatedStaff(ctx) 
 {
-    if (ctx.session.dataValues.isStaff) 
+    if (ctx.session.dataValues && ctx.session.dataValues.isStaff) 
     {
         if (ctx.session.dataValues.username) {
             const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.username }});
@@ -312,25 +316,73 @@ async function validateStatus(ctx, orderId, responce)
     }
 }
 
-async function getReportResponce(filters, limit, offset) {
-    return db.query(`select date_trunc('${time}', orderitems."createdAt") as "startDate", 
-  sum(orderitems.quantity) as products, 
-  count(distinct orders.id) as orders, 
-  sum(distinct price) as total 
-  from orderitems 
-  inner join 
-  orders on 
-  orderitems."orderId" = orders.id 
-  where status > 0 and 
-  "orderedAt" between '${filters.ordAfter.toISOString()}' 
-  and '${filters.ordBefore.toISOString()}' 
-  group by "startDate" 
-  limit ${limit} 
-  offset ${offset};`, { 
+async function getReportResponce(filters, limit, offset, time) {
+    let text = `select date_trunc('${time}', orderitems."createdAt") as "startDate", 
+    sum(orderitems.quantity) as products, 
+    count(distinct orders.id) as orders, 
+    sum(distinct price) as total 
+    from orderitems 
+    inner join 
+    orders on 
+    orderitems."orderId" = orders.id 
+    where status > 0 and 
+    "orderedAt" between '${filters.ordAfter.toISOString()}' 
+    and '${filters.ordBefore.toISOString()}' 
+    group by "startDate" 
+    offset ${offset};`;
+
+    if (limit >= 0) 
+    {
+        text += `limit ${limit}`;
+    }
+
+    return db.query(text, { 
     type: 'SELECT',
     plain: false,
     model: OrderItem,
     mapToModel: true,
+   });
+}
+
+function createTempFile (name = 'temp_file', data = '', encoding = 'utf8') {
+    return new Promise((resolve, reject) => {
+        const tempPath = path.join(os.tmpdir(), 'foobar-');
+        fs.mkdtemp(tempPath, (err, folder) => {
+            if (err) 
+                return reject(err)
+
+            const file_name = path.join(folder, name);
+
+            fs.writeFile(file_name, data, encoding, error_file => {
+                if (error_file) 
+                    return reject(error_file);
+
+                resolve(file_name)
+            })
+        })
+    })
+}
+
+async function saveReport(reportRes) {
+    var dataToWrite = "startDate, products, orders, total\n";
+
+    for(i = 0; i < reportRes.length; i++) 
+    {
+        dataToWrite += reportRes[i].dataValues.startDate + ", " + 
+            reportRes[i].dataValues.orders + ", " +  reportRes[i].dataValues.products + ", " +
+            reportRes[i].dataValues.total + "\n";
+    }
+
+    return createTempFile('excel_report.csv', dataToWrite);
+
+async function getProductsAndCountRaw() {
+    return Sequelize.query(`SELECT *, count(*) FROM products 
+            WHERE ("deletedAt" IS NULL) 
+            AND (hide = false) 
+            LIMIT 12;`, { 
+    type: 'SELECT',
+    plain: false,
+    model: OrderItem,
    });
 }
 
@@ -407,5 +459,6 @@ module.exports = {
     addProductQtyFromOrder,
     removeProductQtyFromOrder,
     getReportResponce,
+    getProductsAndCountRaw,
     saveReport,
 };
