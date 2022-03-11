@@ -13,6 +13,7 @@ const Staff = models.staff();
 const Role = models.role();
 const User = models.user();
 const Order = models.order();
+const OrderItem = models.orderitem();
 
 const fs = require('fs');
 const os = require('os');
@@ -330,7 +331,6 @@ async function getReportResponce(filters, limit, offset, time) {
     and '${filters.ordBefore.toISOString()}' 
     group by "startDate" 
     offset ${offset};`;
-
     if (limit >= 0) 
     {
         text += `limit ${limit}`;
@@ -389,22 +389,29 @@ async function getProductsAndCountRaw() {
 function saveReport(reportRes) {
     var dataToWrite;
 
-    dataToWrite += "startDate, products, orders, total\n";
+            const file_name = path.join(folder, name);
+
+            fs.writeFile(file_name, data, encoding, error_file => {
+                if (error_file) 
+                    return reject(error_file);
+
+                resolve(file_name)
+            })
+        })
+    })
+}
+
+async function saveReport(reportRes) {
+    var dataToWrite = "startDate, products, orders, total\n";
 
     for(i = 0; i < reportRes.length; i++) 
     {
         dataToWrite += reportRes[i].dataValues.startDate + ", " + 
             reportRes[i].dataValues.orders + ", " +  reportRes[i].dataValues.products + ", " +
-            reportRes[i].dataValues.total;
+            reportRes[i].dataValues.total + "\n";
     }
 
-    fs.writeFile('form-tracking/formList.csv', dataToWrite, 'utf8', function (err) {
-        if (err) {
-            console.log('Some error occured - file either not saved or corrupted file saved.');
-        } else {
-            console.log('It\'s saved!');
-        }
-    });
+    return createTempFile('excel_report.csv', dataToWrite);
 }
 
 /*
@@ -461,4 +468,5 @@ module.exports = {
     getReportResponce,
     getProductsAndCountRaw,
     saveReport,
+    createTempFile,
 };

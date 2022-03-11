@@ -32,8 +32,6 @@ const CODTransaction = models.codtransaction();
 const app = new Koa();
 const router = new KoaRouter();
 
-const db = require("./db.js");
-
 app.keys = [process.env.COOKIE_SECRET];
 
 // Router functions
@@ -1955,7 +1953,7 @@ router.get('/admin/report', async ctx => {
       break;
   }
 
-  const reportRes = await utilsEcom.getReportResponce(filters, limit, offset);
+  const reportRes = await utilsEcom.getReportResponce(filters, limit, offset, time);
 
   await ctx.render('/admin/report', {
     layout: '/admin/base',
@@ -2011,6 +2009,14 @@ router.get('/admin/report/excel', async ctx => {
   const reportRes = await utilsEcom.getReportResponce(filters, -1, 0, time);
 
   const path = await utilsEcom.saveReport(reportRes);
+
+  ctx.body = fs.createReadStream(path);
+
+  ctx.res.writeHead(200, {
+    'Content-Type': 'text/csv',
+    "Content-Disposition": "attachment; filename=reportExcel.csv",
+  });
+});
 
   ctx.body = fs.createReadStream(path);
 
