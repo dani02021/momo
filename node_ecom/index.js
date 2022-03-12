@@ -97,7 +97,7 @@ async function getProducts(ctx) {
     filters['search'] = ''
   }
 
-  let categories, products, page = 1;
+  let categories, page = 1;
   await Category.findAll().then((categoriesv) => categories = categoriesv);
 
   if (ctx.params.page) 
@@ -122,16 +122,16 @@ async function getProducts(ctx) {
   if (filters.cat)
     whereParam['categoryId'] = filters.cat;
 
-  products = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval);
+  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval);
 
   await ctx.render('product-list', {
     selected: 'products',
     session: ctx.session,
     categories: categories,
-    products: products,
+    products: await products,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(products[0].dataValues.c / utilsEcom.PRODUCTS_PER_PAGE)),
+    pages: utilsEcom.givePages(page, Math.ceil((await (count))[0].dataValues.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 }
 

@@ -13,7 +13,7 @@ const Staff = models.staff();
 const Role = models.role();
 const User = models.user();
 const Order = models.order();
-const OrderItem = models.orderitem();
+const Product = models.product();
 
 const fs = require('fs');
 const os = require('os');
@@ -364,28 +364,56 @@ function createTempFile (name = 'temp_file', data = '', encoding = 'utf8') {
 }
 
 async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval) {
-    let text = `SELECT * FROM products, products_count 
+    let text = `SELECT * FROM products 
     WHERE ("deletedAt" IS NULL) 
     AND (hide = false)`;
     
     if (name != '' || cat != '' || minval != 0 || maxval != 99999) 
     {
-        text += ' WHERE'
-    }
+        if (name != '') 
+        {
+            text += ` AND\n name ILIKE '%${name}%'\n`
+        }
 
-    // todo
+        if (cat != '') 
+        {
+            text += ` AND\n "categoryId" = ${cat}\n`;
+        }
+
+        if (minval != 0) 
+        {
+            text += ` AND\n "discountPrice" >= ${minval}\n`;
+        }
+
+        if (maxval != 99999) 
+        {
+            text += ` AND\n "discountPrice" <= ${maxval}\n`;
+        }
+    }
 
     if (offset > 0) 
     {
         text += ` OFFSET ${offset}\n`;
     }
-    text += `LIMIT ${limit};`;
+    text += ` LIMIT ${limit};`;
 
-    return db.query(, { 
-    type: 'SELECT',
-    plain: false,
-    model: OrderItem,
-   });
+    // Count
+    let countText = text.replace("*", "count(*)");
+    if (countText.indexOf("OFFSET") != -1)
+        countText = countText.substring(0, countText.indexOf("OFFSET"));
+
+    return [
+        db.query(text, { 
+        type: 'SELECT',
+        plain: false,
+        model: Product,
+        }),
+        db.query(countText, { 
+        type: 'SELECT',
+        plain: false,
+        model: Product,
+        })
+    ];
 }
 
 async function saveReport(reportRes) {
