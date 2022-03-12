@@ -13,6 +13,7 @@ const Staff = models.staff();
 const Role = models.role();
 const User = models.user();
 const Order = models.order();
+const OrderItem = models.orderitem();
 const Product = models.product();
 
 const fs = require('fs');
@@ -318,23 +319,26 @@ async function validateStatus(ctx, orderId, responce)
 }
 
 async function getReportResponce(filters, limit, offset, time) {
-    let text = `select date_trunc('${time}', orderitems."createdAt") as "startDate", 
+    let text = `select date_trunc('${time}', orders."orderedAt") as "startDate", 
     sum(orderitems.quantity) as products, 
     count(distinct orders.id) as orders, 
     sum(distinct price) as total 
-    from orderitems 
+    from orders 
     inner join 
-    orders on 
+    orderitems on 
     orderitems."orderId" = orders.id 
     where status > 0 and 
-    "orderedAt" between '${filters.ordAfter.toISOString()}' 
-    and '${filters.ordBefore.toISOString()}' 
+    "orderedAt" between '${filters.ordAfter}' 
+    and '${filters.ordBefore}' 
     group by "startDate" 
-    offset ${offset};`;
+    offset ${offset}`;
+
     if (limit >= 0) 
     {
-        text += `limit ${limit}`;
+        text += ` limit ${limit}`;
     }
+
+    text += ";";
 
     return db.query(text, { 
     type: 'SELECT',

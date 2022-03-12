@@ -8,11 +8,11 @@
             <div class="row">
               <div class="col-sm-4">
                 <input name="ordAfter" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="Ordered after" type="datetime-local" value="{{ pass_order_after }}"><br>
+                  title="Ordered after" type="datetime-local" value="<%= filters.ordAfter %>"><br>
               </div>
               <div class="col-sm-4">
                 <input name="ordBefore" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="Ordered before" type="datetime-local" value="{{ pass_order_before }}">
+                  title="Ordered before" type="datetime-local" value="<%= filters.ordBefore %>">
               </div>
               <div class="col-sm-4">
                 <select name="timegroup" class="form-select">

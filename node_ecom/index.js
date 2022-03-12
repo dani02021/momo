@@ -1515,6 +1515,17 @@ router.post('/admin/orders/delete', async ctx => {
 });
 
 router.get('/admin/orders/edit/:id', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    await ctx.redirect('/admin/login');
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'orders.update')) {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to update a order' };
+    await ctx.redirect('/admin/orders');
+    return;
+  }
+
   const order = await Order.findOne({
     where: {
       id: ctx.params.id
@@ -1547,6 +1558,17 @@ router.get('/admin/orders/edit/:id', async ctx => {
 });
 
 router.post('/admin/orders/edit/:id', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    await ctx.redirect('/admin/login');
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'orders.update')) {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to update a order' };
+    await ctx.redirect('/admin/orders');
+    return;
+  }
+
   const order = await Order.findOne({
     where: {
       id: ctx.params.id
@@ -1893,6 +1915,17 @@ router.post('/captureOrder', async ctx => {
 });
 
 router.get('/admin/report', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    await ctx.redirect('/admin/login');
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'report.read')) {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see reports' };
+    await ctx.redirect('/admin');
+    return;
+  }
+
   // Get filters
   let filters = {}, filtersToReturn = {};
 
@@ -1906,13 +1939,14 @@ router.get('/admin/report', async ctx => {
     filters['ordBefore'] = ctx.query.ordBefore;
     filtersToReturn['ordBefore'] = ctx.query.ordBefore;
   } else {
-    filters['ordBefore'] = new Date();
+    filters['ordBefore'] = new Date().toISOString();
   }
   if (ctx.query.ordAfter) {
+    console.log(ctx.query.ordAfter);
     filters['ordAfter'] = ctx.query.ordAfter;
     filtersToReturn['ordAfter'] = ctx.query.ordAfter;
   } else {
-    filters['ordAfter'] = new Date(0);
+    filters['ordAfter'] = new Date(0).toISOString();
   }
 
   let page = 1;
@@ -1921,8 +1955,6 @@ router.get('/admin/report', async ctx => {
     page = parseInt(ctx.params.page)
   }
 
-  let count = 0;
-
   let limit = utilsEcom.PRODUCTS_PER_PAGE;
   let offset = 0;
 
@@ -1930,19 +1962,19 @@ router.get('/admin/report', async ctx => {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
-  const time = 'month';
+  let time = 'month';
 
   switch(filters.timegroup) {
-    case 0:
+    case '0':
       time = 'day';
       break;
-    case 1:
+    case '1':
       time = 'week';
       break;
-    case 2:
+    case '2':
       time = 'month';
       break;
-    case 3:
+    case '3':
       time = 'year';
       break;
   }
