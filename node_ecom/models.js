@@ -2,6 +2,26 @@ const db = require("./db.js");
 const { Sequelize, Model, DataTypes } = require("sequelize");
 const bcrypt = require("bcrypt");
 
+const Log = db.define("log", {
+  timestamp: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: Sequelize.fn('NOW')
+  },
+  level: {
+    type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  message: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+},
+{
+  paranoid: true,
+  timestamps: false
+});
+
 const User = db.define("user", {
   username: {
     type: DataTypes.STRING(50),
@@ -416,9 +436,13 @@ function codtransaction() {
   return CODTransaction;
 }
 
+function log() {
+  return Log;
+}
+
 module.exports = {
   category, product, user, staff, session, permission, role, order, orderitem, transaction,
-  paypaltransacion, codtransaction
+  paypaltransacion, codtransaction, log
 };
 
 // Alter the database

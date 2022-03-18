@@ -2,7 +2,9 @@ require('dotenv').config();
 
 const crypto = require('crypto');
 const nodemailer = require("nodemailer");
+const winston = require('winston');
 const paypal = require('@paypal/checkout-server-sdk');
+const WinstonTransport = require('winston-transport');
 let environment = new paypal.core.SandboxEnvironment(process.env.PAYPAL_CLIENT_ID, process.env.PAYPAL_CLIENT_SECRET);
 let paypalClient = new paypal.core.PayPalHttpClient(environment);
 
@@ -15,6 +17,7 @@ const User = models.user();
 const Order = models.order();
 const OrderItem = models.orderitem();
 const Product = models.product();
+const Log = models.log();
 
 const fs = require('fs');
 const os = require('os');
@@ -40,7 +43,7 @@ const NotEnoughQuantityException = (message)=>({
     code: 'NOT_ENOUGH_QUANTITY'
 });
 
-const transport = nodemailer.createTransport({
+const EmailTransport = nodemailer.createTransport({
     pool: true,
     service: 'gmail',
     secure: true, // use TLS
@@ -50,10 +53,41 @@ const transport = nodemailer.createTransport({
     },
 });
 
-transport.verify(function (error, success) {
+EmailTransport.verify(function (error, success) {
     if (error) {
       console.log(error);
     }
+});
+
+class SequelizeTransport extends WinstonTransport {
+    constructor(opts) {
+      super(opts);
+      //
+      // Consume any custom options here. e.g.:
+      // - Connection information for databases
+      // - Authentication information for APIs (e.g. loggly, papertrail,
+      //   logentries, etc.).
+      //
+    }
+  
+    log(info, callback) {
+      setImmediate(() => {
+        this.emit('logged', info);
+      });
+
+      Log.create({ timestamp: new Date().toISOString(), level: info.level, message: info.message });
+  
+      // Perform the writing to the remote service
+      callback();
+    }
+};
+
+const logger = winston.createLogger({
+    transports: [
+      new SequelizeTransport({
+          level: "debug"
+      })
+    ]
   });
 
 function givePages(page, lastPage) {
@@ -103,7 +137,7 @@ async function sendEmail(email, token) {
         text: `Here is your link: http://localhost:3000/verify_account/${token}`,
     };
 
-    transport.sendMail(message);
+    EmailTransport.sendMail(message);
 }
 
 function configPostgreSessions() {
@@ -472,6 +506,7 @@ module.exports = {
     PRODUCTS_PER_PAGE,
     SESSION_MAX_AGE,
     STATUS_DISPLAY,
+    logger,
     givePages,
     generateEmailVerfToken,
     generateSessionKey,

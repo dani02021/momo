@@ -142,7 +142,7 @@
 
   var cache1 = {};
   $("#roleitem-permission").autocomplete({
-    source: "/admin/permissions/get/",
+    source: "/api/permissions/get/",
     minLength: 2,
     source: function (request, response) {
       var term = request.term;
@@ -151,7 +151,7 @@
         return;
       }
 
-      $.getJSON("/admin/permissions/get/", request, function (data, status, xhr) {
+      $.getJSON("/api/permissions/get/", request, function (data, status, xhr) {
         cache1[term] = data;
         response(data);
       });
