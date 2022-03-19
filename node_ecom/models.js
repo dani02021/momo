@@ -8,6 +8,11 @@ const Log = db.define("log", {
     allowNull: false,
     defaultValue: Sequelize.fn('NOW')
   },
+  user: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    defaultValue: ""
+  },
   level: {
     type: DataTypes.STRING(50),
     allowNull: false
@@ -365,7 +370,6 @@ Order.prototype.getTotal = async function () {
 }
 
 Order.prototype.orderedAtHTML = function() {
-  console.log(this.orderedAt.toISOString());
   return this.orderedAt.toISOString().substring(0, 19);
 }
 

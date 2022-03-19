@@ -38,10 +38,13 @@ const STATUS_DISPLAY = [
     ]
 
 // Exceptions
-const NotEnoughQuantityException = (message)=>({
-    error: new Error(message),
-    code: 'NOT_ENOUGH_QUANTITY'
-});
+class NotEnoughQuantityException extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "NotEnoughQuantityException";
+    this.code = "NOT_ENOUGH_QUANTITY";
+  }
+}
 
 const EmailTransport = nodemailer.createTransport({
     pool: true,
@@ -56,6 +59,9 @@ const EmailTransport = nodemailer.createTransport({
 EmailTransport.verify(function (error, success) {
     if (error) {
       console.log(error);
+      logger.log('alert',
+        `Email transport cannot be verified!
+        ${err.message}`);
     }
 });
 
@@ -75,7 +81,12 @@ class SequelizeTransport extends WinstonTransport {
         this.emit('logged', info);
       });
 
-      Log.create({ timestamp: new Date().toISOString(), level: info.level, message: info.message });
+      let user = "";
+      
+      if (info.user)
+        user = info.user;
+    
+      Log.create({ timestamp: new Date().toISOString(), user: user, level: info.level, message: info.message });
   
       // Perform the writing to the remote service
       callback();
@@ -83,6 +94,15 @@ class SequelizeTransport extends WinstonTransport {
 };
 
 const logger = winston.createLogger({
+    levels: {
+        alert: 0,
+        error: 1,
+        warn: 2,
+        info: 3,
+        verbose: 4,
+        debug: 5,
+        silly: 6
+    },
     transports: [
       new SequelizeTransport({
           level: "debug"
@@ -236,6 +256,7 @@ async function captureOrder(orderId, debug=false) {
     try {
         const request = new paypal.orders.OrdersCaptureRequest(orderId);
         request.requestBody({});
+
         const response = await paypalClient.execute(request);
         if (debug) 
         {
@@ -262,8 +283,14 @@ async function captureOrder(orderId, debug=false) {
         return response;
     }
     catch (e) {
-        console.log(e)
+        console.log(e);
+
+        logger.log('alert',
+                `There was an error while trying to capture the order!
+                ${e.message}`);
     }
+
+    return null;
 }
 
 async function addProductQtyFromOrder(cart) 
@@ -286,7 +313,13 @@ async function removeProductQtyFromOrder(cart)
 
         if (cartProduct.quantity < cartOrderItems[i].quantity) 
         {
-            throw NotEnoughQuantityException(cartProduct.name + " has only " + cartProduct.quantity + " quantity, but order #" + cartOrderItems[i].id + " is trying to order " + cartOrderItems[i].quantity + "!");
+            const err = new NotEnoughQuantityException(cartProduct.name + " has only " + cartProduct.quantity + " quantity, but order #" + cartOrderItems[i].id + " is trying to order " + cartOrderItems[i].quantity + "!");
+            
+            logger.log('alert',
+            `Invalid operation!
+            ${err.message}`);
+            
+            throw err;
         }
 
         cartProduct.update({quantity: cartProduct.quantity - cartOrderItems[i].quantity});
@@ -353,23 +386,23 @@ async function validateStatus(ctx, orderId, responce)
 }
 
 async function getReportResponce(filters, limit, offset, time) {
-    let text = `select date_trunc('${time}', orders."orderedAt") as "startDate", 
-    sum(orderitems.quantity) as products, 
-    count(distinct orders.id) as orders, 
-    sum(distinct price) as total 
-    from orders 
-    inner join 
-    orderitems on 
+    let text = `SELECT date_trunc('${time}', orders."orderedAt") as "startDate", 
+    SUM(orderitems.quantity) as products, 
+    COUNT(distinct orders.id) as orders, 
+    SUM(distinct price) as total 
+    FROM orders 
+    INNER JOIN 
+    orderitems ON 
     orderitems."orderId" = orders.id 
-    where status > 0 and 
-    "orderedAt" between '${filters.ordAfter}' 
-    and '${filters.ordBefore}' 
-    group by "startDate" 
-    offset ${offset}`;
+    WHERE status > 0 AND 
+    "orderedAt" BETWEEN '${filters.ordAfter}' 
+    AND '${filters.ordBefore}' 
+    GROUP BY "startDate" 
+    OFFSET ${offset}`;
 
     if (limit >= 0) 
     {
-        text += ` limit ${limit}`;
+        text += ` LIMIT ${limit}`;
     }
 
     text += ";";
@@ -467,6 +500,37 @@ async function saveReport(reportRes) {
     return createTempFile('excel_report.csv', dataToWrite);
 }
 
+// Generate
+async function generateOrders(x = 100) 
+{
+    const products = await Product.findAll();
+
+    for (o = 0; o < x; o++) 
+    {
+        const order = await Order.create({
+            status: 1,
+            orderedAt: Sequelize.fn('NOW'),
+        });
+
+        for (i = 0; i <= Math.floor(Math.random() * 3) + 1; i++) 
+        {
+            // Get product
+            const product = products[Math.floor(Math.random() * 3) + 1];
+
+            const orderitem = await OrderItem.create({
+                quantity: Math.floor(Math.random() * 3) + 1
+            });
+
+            await orderitem.setProduct(product);
+
+            await order.addOrderitem(orderitem);
+            
+            order.update({price: await order.getTotal()});
+        }
+    }
+}
+
+// generateOrders(100);
 /*
 def validate_status(request, uid, order_id, order):
     elif order.result.status == 'PAYER_ACTION_REQUIRED':
