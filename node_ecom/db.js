@@ -13,7 +13,7 @@ module.exports = new Sequelize('ecommercenodejs', process.env.DB_USER, Buffer.fr
   
     // pool configuration used to pool database connections
     pool: {
-      max: 50,
+      max: 150,
       idle: 30000,
       acquire: 60000,
     },

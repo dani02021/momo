@@ -23,6 +23,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const { id, user } = require('rangen');
+
 const db = require("./db.js");
 
 const PRODUCTS_PER_PAGE = 12;
@@ -397,8 +399,11 @@ async function getReportResponce(filters, limit, offset, time) {
     WHERE status > 0 AND 
     "orderedAt" BETWEEN '${filters.ordAfter}' 
     AND '${filters.ordBefore}' 
-    GROUP BY "startDate" 
-    OFFSET ${offset}`;
+    GROUP BY "startDate" `;
+
+    let countText = `SELECT COUNT(*) FROM (${text}) AS foo;`;
+
+    text += `OFFSET ${offset}`;
 
     if (limit >= 0) 
     {
@@ -407,12 +412,18 @@ async function getReportResponce(filters, limit, offset, time) {
 
     text += ";";
 
-    return db.query(text, { 
-    type: 'SELECT',
-    plain: false,
-    model: OrderItem,
-    mapToModel: true,
-   });
+    return [
+        db.query(text, { 
+        type: 'SELECT',
+        plain: false,
+        model: OrderItem,
+        mapToModel: true,
+        }),
+        db.query(countText, { 
+        type: 'SELECT',
+        plain: false,
+        })
+        ]
 }
 
 function createTempFile (name = 'temp_file', data = '', encoding = 'utf8') {
@@ -488,10 +499,11 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval) 
 }
 
 async function saveReport(reportRes) {
-    var dataToWrite = "startDate, products, orders, total\n";
+    var dataToWrite = "startDate, orders, products, total\n";
 
     for(i = 0; i < reportRes.length; i++) 
     {
+        console.log(reportRes[i]);
         dataToWrite += reportRes[i].dataValues.startDate + ", " + 
             reportRes[i].dataValues.orders + ", " +  reportRes[i].dataValues.products + ", " +
             reportRes[i].dataValues.total + "\n";
@@ -504,18 +516,19 @@ async function saveReport(reportRes) {
 async function generateOrders(x = 100) 
 {
     const products = await Product.findAll();
+    const users = await User.findAll();
 
     for (o = 0; o < x; o++) 
     {
         const order = await Order.create({
             status: 1,
-            orderedAt: Sequelize.fn('NOW'),
+            orderedAt: new Date(+(new Date()) - Math.floor(Math.random()*900000000000)),
         });
 
         for (i = 0; i <= Math.floor(Math.random() * 3) + 1; i++) 
         {
             // Get product
-            const product = products[Math.floor(Math.random() * 3) + 1];
+            const product = products[Math.floor(Math.random() * 10_000) + 1];
 
             const orderitem = await OrderItem.create({
                 quantity: Math.floor(Math.random() * 3) + 1
@@ -524,13 +537,43 @@ async function generateOrders(x = 100)
             await orderitem.setProduct(product);
 
             await order.addOrderitem(orderitem);
-            
+
+            const user = users[Math.floor(Math.random() * 10_000) + 1];
+
             order.update({price: await order.getTotal()});
+
+            user.addOrder(order);
         }
     }
 }
 
-// generateOrders(100);
+async function generateUsers(x = 100) {
+    const testUsers = user({
+        count: x
+    });
+
+    for (o = 0; o < x; o++) 
+    {
+        let token = generateEmailVerfToken();
+
+        User.create({
+            username: id(),
+            email: testUsers[o].email+id(),
+            password: id(),
+            firstName: testUsers[o].name.first,
+            lastName: testUsers[o].name.last,
+            address: "Bulgaria",
+            country: "Bulgaria",
+            emailConfirmed: true,
+            verificationToken: token
+    });
+    }
+}
+
+// generateUsers(1000);
+
+// generateOrders(80000);
+
 /*
 def validate_status(request, uid, order_id, order):
     elif order.result.status == 'PAYER_ACTION_REQUIRED':

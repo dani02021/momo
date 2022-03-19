@@ -60,6 +60,9 @@ async function getIndex(ctx) {
   ctx.session.messages = null;
 }
 
+const categories1 = Category.findAll();
+const prodscount = utilsEcom.getProductsAndCountRaw(0, 12, "", "", 0, 99999);
+
 async function getProducts(ctx) {
   // Get filters
   let filters = {}, filtersToReturn = {};
@@ -97,7 +100,7 @@ async function getProducts(ctx) {
   }
 
   let categories, page = 1;
-  await Category.findAll().then((categoriesv) => categories = categoriesv);
+  // await Category.findAll().then((categoriesv) => categories = categoriesv);
 
   if (ctx.params.page) 
   {
@@ -121,16 +124,16 @@ async function getProducts(ctx) {
   if (filters.cat)
     whereParam['categoryId'] = filters.cat;
 
-  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval);
-
+  // let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval);
+  
   await ctx.render('product-list', {
     selected: 'products',
     session: ctx.session,
-    categories: categories,
-    products: await products,
+    categories: await categories1,
+    products: (await (await prodscount)[0]),
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil((await (count))[0].dataValues.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil((await (await prodscount)[1])[0].dataValues.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 }
 
@@ -534,6 +537,91 @@ async function getAdminOrders(ctx) {
 
   // Clear the messages
   ctx.session.messages = null;
+}
+
+async function getAdminReport(ctx) {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    ctx.redirect('/admin/login');
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'report.read')) {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see reports' };
+    utilsEcom.logger.log('info',
+        `Staff ${ctx.session.dataValues.username} tried to see report without rights`,
+        {user: ctx.session.dataValues.username});
+    
+    ctx.redirect('/admin');
+    return;
+  }
+
+  // Get filters
+  let filters = {}, filtersToReturn = {};
+
+  if (ctx.query.timegroup) {
+    filters['timegroup'] = ctx.query.timegroup
+    filtersToReturn['timegroup'] = ctx.query.timegroup
+  } else {
+    filtersToReturn['timegroup'] = '2';
+  }
+  if (ctx.query.ordBefore) {
+    filters['ordBefore'] = ctx.query.ordBefore;
+    filtersToReturn['ordBefore'] = ctx.query.ordBefore;
+  } else {
+    filters['ordBefore'] = new Date().toISOString();
+  }
+  if (ctx.query.ordAfter) {
+    filters['ordAfter'] = ctx.query.ordAfter;
+    filtersToReturn['ordAfter'] = ctx.query.ordAfter;
+  } else {
+    filters['ordAfter'] = new Date(0).toISOString();
+  }
+
+  let page = 1;
+
+  if (ctx.params.page) {
+    page = parseInt(ctx.params.page)
+  }
+
+  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let offset = 0;
+
+  if (ctx.params.page) {
+    offset = (parseInt(ctx.params.page) - 1) * limit;
+  }
+
+  let time = 'month';
+
+  switch(filters.timegroup) {
+    case '0':
+      time = 'day';
+      break;
+    case '1':
+      time = 'week';
+      break;
+    case '2':
+      time = 'month';
+      break;
+    case '3':
+      time = 'year';
+      break;
+  }
+
+  const [reportRes, count] = await utilsEcom.getReportResponce(filters, limit, offset, time);
+
+  utilsEcom.logger.log('info',
+        `Staff ${ctx.session.dataValues.username} generated orders report from ${filters.ordAfter} to ${filters.ordBefore} trunced by ${time} `,
+        {user: ctx.session.dataValues.username});
+
+  await ctx.render('/admin/report', {
+    layout: '/admin/base',
+    selected: 'report',
+    session: ctx.session,
+    report: await reportRes,
+    filters: filtersToReturn,
+    page: page,
+    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].count / utilsEcom.PRODUCTS_PER_PAGE)),
+  });
 }
 
 router.get("/", async ctx => getIndex(ctx));
@@ -1863,6 +1951,13 @@ router.post('/admin/orders/edit/:id', async ctx => {
 
   await utilsEcom.removeProductQtyFromOrder(order);
 
+  if (order.status != ctx.request.fields.status) 
+  {
+    utilsEcom.logger.log('info',
+      `Staff ${ctx.session.dataValues.username} updated status of order #${ctx.params.id} from ${utilsEcom.STATUS_DISPLAY[order.status]} to ${utilsEcom.STATUS_DISPLAY[ctx.request.fields.status]}`,
+      {user: ctx.session.dataValues.username});
+  }
+
   // Update status, price and orderedAt
   await order.update({
     status: ctx.request.fields.status,
@@ -1875,9 +1970,6 @@ router.post('/admin/orders/edit/:id', async ctx => {
   await order.addUser(await User.findOne({where: {username: ctx.request.fields.user}}));
 
   ctx.session.messages = {'orderEdited': `Order with id ${ctx.params.id} has been updated!`};
-  utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} updated order #${ctx.params.id}`,
-      {user: ctx.session.dataValues.username});
   
   ctx.redirect('/admin/orders');
 });
@@ -2174,88 +2266,10 @@ router.post('/captureOrder', async ctx => {
   await order.setTransacion(transaction);
 });
 
-router.get('/admin/report', async ctx => {
-  // Check for admin rights
-  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
-    ctx.redirect('/admin/login');
-  }
+router.get('/admin/report', async ctx => getAdminReport(ctx));
+router.get('/admin/report/:page', async ctx => getAdminReport(ctx));
 
-  if (!await utilsEcom.hasPermission(ctx, 'report.read')) {
-    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see reports' };
-    utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to see report without rights`,
-        {user: ctx.session.dataValues.username});
-    
-    ctx.redirect('/admin');
-    return;
-  }
-
-  // Get filters
-  let filters = {}, filtersToReturn = {};
-
-  if (ctx.query.timegroup) {
-    filters['timegroup'] = ctx.query.timegroup
-    filtersToReturn['timegroup'] = ctx.query.timegroup
-  } else {
-    filtersToReturn['timegroup'] = '2';
-  }
-  if (ctx.query.ordBefore) {
-    filters['ordBefore'] = ctx.query.ordBefore;
-    filtersToReturn['ordBefore'] = ctx.query.ordBefore;
-  } else {
-    filters['ordBefore'] = new Date().toISOString();
-  }
-  if (ctx.query.ordAfter) {
-    filters['ordAfter'] = ctx.query.ordAfter;
-    filtersToReturn['ordAfter'] = ctx.query.ordAfter;
-  } else {
-    filters['ordAfter'] = new Date(0).toISOString();
-  }
-
-  let page = 1;
-
-  if (ctx.params.page) {
-    page = parseInt(ctx.params.page)
-  }
-
-  let limit = utilsEcom.PRODUCTS_PER_PAGE;
-  let offset = 0;
-
-  if (ctx.params.page) {
-    offset = (parseInt(ctx.params.page) - 1) * limit;
-  }
-
-  let time = 'month';
-
-  switch(filters.timegroup) {
-    case '0':
-      time = 'day';
-      break;
-    case '1':
-      time = 'week';
-      break;
-    case '2':
-      time = 'month';
-      break;
-    case '3':
-      time = 'year';
-      break;
-  }
-
-  const reportRes = await utilsEcom.getReportResponce(filters, limit, offset, time);
-
-  await ctx.render('/admin/report', {
-    layout: '/admin/base',
-    selected: 'report',
-    session: ctx.session,
-    report: reportRes,
-    filters: filtersToReturn,
-    page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(reportRes.length / utilsEcom.PRODUCTS_PER_PAGE)),
-  });
-});
-
-router.get('/admin/report/excel', async ctx => {
+router.get('/admin/export/report/excel', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
@@ -2312,9 +2326,13 @@ router.get('/admin/report/excel', async ctx => {
 
   const reportRes = await utilsEcom.getReportResponce(filters, -1, 0, time);
 
-  const path = await utilsEcom.saveReport(reportRes);
+  const path = await utilsEcom.saveReport((await reportRes[0]));
 
   ctx.body = fs.createReadStream(path);
+
+  utilsEcom.logger.log('info',
+        `Staff ${ctx.session.dataValues.username} downloaded generated orders report from ${filters.ordAfter} to ${filters.ordBefore} trunced by ${time} in .csv format`,
+        {user: ctx.session.dataValues.username});
 
   ctx.res.writeHead(200, {
     'Content-Type': 'text/csv',
