@@ -27,6 +27,8 @@ const { id, user } = require('rangen');
 
 const db = require("./db.js");
 
+const excelJS = require("exceljs");
+
 const PRODUCTS_PER_PAGE = 12;
 const SESSION_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000; // 2 weeks
 const STATUS_DISPLAY = [
@@ -110,7 +112,7 @@ const logger = winston.createLogger({
           level: "debug"
       })
     ]
-  });
+});
 
 function givePages(page, lastPage) {
     var delta = 1,
@@ -187,7 +189,7 @@ function configPostgreSessions() {
 
 async function isAuthenticatedUser(ctx) 
 {
-    if (ctx.session.dataValues.username) {
+    if (ctx.session.dataValues.username && !ctx.session.dataValues.isStaff) {
         const user = await User.findOne({ where: { username: ctx.session.dataValues.username }});
 
         if (user == null) 
@@ -288,7 +290,7 @@ async function captureOrder(orderId, debug=false) {
         console.log(e);
 
         logger.log('alert',
-                `There was an error while trying to capture the order!
+                `There was an error while trying to capture order #${orderId}!
                 ${e.message}`);
     }
 
@@ -318,8 +320,8 @@ async function removeProductQtyFromOrder(cart)
             const err = new NotEnoughQuantityException(cartProduct.name + " has only " + cartProduct.quantity + " quantity, but order #" + cartOrderItems[i].id + " is trying to order " + cartOrderItems[i].quantity + "!");
             
             logger.log('alert',
-            `Invalid operation!
-            ${err.message}`);
+                `Not enough quantity for ${cartProduct.name}!
+                ${err.message}`);
             
             throw err;
         }
@@ -448,68 +450,109 @@ function createTempFile (name = 'temp_file', data = '', encoding = 'utf8') {
 async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval) {
     let text = `SELECT * FROM products 
     WHERE ("deletedAt" IS NULL) 
-    AND (hide = false)`;
+    AND (hide = false) \n`;
     
     if (name != '' || cat != '' || minval != 0 || maxval != 99999) 
     {
-        if (name != '') 
+        if (name && name != '') 
         {
-            text += ` AND\n name ILIKE '%${name}%'\n`
+            text += ` AND position(upper($1) in upper(name)) > 0 \n`
         }
 
-        if (cat != '') 
+        if (cat && cat != '') 
         {
-            text += ` AND\n "categoryId" = ${cat}\n`;
+            text += ` AND "categoryId" = ${cat}\n`;
         }
 
-        if (minval != 0) 
+        if (minval && minval != 0) 
         {
-            text += ` AND\n "discountPrice" >= ${minval}\n`;
+            text += ` AND "discountPrice" >= ${minval}\n`;
         }
 
-        if (maxval != 99999) 
+        if (maxval && maxval != 99999) 
         {
-            text += ` AND\n "discountPrice" <= ${maxval}\n`;
+            text += ` AND "discountPrice" <= ${maxval}\n`;
         }
     }
+    
+    // Count
+    let countText = text.replace("*", "count(*)");
+    if (countText.indexOf("OFFSET") != -1)
+        countText = countText.substring(0, countText.indexOf("OFFSET"));
+    
+    text += ` ORDER BY "createdAt"`;
 
     if (offset > 0) 
     {
         text += ` OFFSET ${offset}\n`;
     }
-    text += ` LIMIT ${limit};`;
 
-    // Count
-    let countText = text.replace("*", "count(*)");
-    if (countText.indexOf("OFFSET") != -1)
-        countText = countText.substring(0, countText.indexOf("OFFSET"));
+    text += ` LIMIT ${limit}`;
+    
+    let returnParams = {
+        type: 'SELECT',
+        plain: false,
+        model: Product,
+    }
 
+    if (name && name != '') 
+    {
+        returnParams.bind = [name];
+    }
+    
     return [
-        db.query(text, { 
-        type: 'SELECT',
-        plain: false,
-        model: Product,
-        }),
-        db.query(countText, { 
-        type: 'SELECT',
-        plain: false,
-        model: Product,
-        })
+        db.query(text, returnParams),
+        db.query(countText, returnParams)
     ];
 }
 
-async function saveReport(reportRes) {
+async function saveReportCsv(reportRes) {
     var dataToWrite = "startDate, orders, products, total\n";
 
     for(i = 0; i < reportRes.length; i++) 
     {
-        console.log(reportRes[i]);
-        dataToWrite += reportRes[i].dataValues.startDate + ", " + 
+        dataToWrite += reportRes[i].dataValues.startDate.toISOString() + ", " + 
             reportRes[i].dataValues.orders + ", " +  reportRes[i].dataValues.products + ", " +
             reportRes[i].dataValues.total + "\n";
     }
 
-    return createTempFile('excel_report.csv', dataToWrite);
+    return createTempFile('excelReport.csv', dataToWrite);
+}
+
+async function saveReportExcel(reportRes) 
+{
+    const workbook = new excelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Report Orders");
+    const path = "./files";  // Path to download excel
+
+    // Column for data in excel. key must match data key
+    worksheet.columns = [
+        { header: "Start Date", key: "startDate", width: 10 }, 
+        { header: "Orders", key: "orders", width: 10 },
+        { header: "Products", key: "products", width: 10 },
+        { header: "Total", key: "total", width: 10 },
+    ];
+
+    reportRes.forEach(report => {
+        let data = [
+            report.dataValues.startDate,
+            parseInt(report.dataValues.orders),
+            parseInt(report.dataValues.products),
+            parseFloat(report.dataValues.total)];
+        
+        worksheet.addRow(data);
+    });
+
+    // Make first row bold
+    worksheet.getRow(1).eachCell((cell) => {
+        cell.font = { bold: true };
+    });
+
+    // await workbook.xlsx.writeFile(`${path}/users.xlsx`);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    return createTempFile('excel_report.xlsx', buffer);
 }
 
 // Generate
@@ -567,6 +610,63 @@ async function generateUsers(x = 100) {
             emailConfirmed: true,
             verificationToken: token
     });
+    }
+}
+
+async function generateLogs(x = 100) {
+    let users = await User.findAll();
+    let orders = await Order.findAll();
+
+    for (o = 0; o < x; o++) 
+    {
+        let rand = Math.floor(Math.random() * 8);
+
+        let user = users[Math.floor(Math.random() * 10_000) + 1];
+        let order = orders[Math.floor(Math.random() * 10_000) + 1];
+
+        switch (rand) 
+        {
+            case 0:
+                let date1 = new Date(+(new Date()) - Math.floor(Math.random()*900000000000));
+                let date2 = new Date(+(date1) - Math.floor(Math.random()*10000000000));
+
+                logger.log('info',
+                    `Staff ${user.username} downloaded generated orders report from ${date1.toISOString()} to ${date2.toISOString()} trunced by month in .csv format`,
+                    {user: user.username});
+                break;
+            case 1:
+                logger.log('info',
+                    `Staff ${user.username} tried to see report without rights`,
+                    {user: user.username});
+                break;
+            case 2:
+                logger.log('info',
+                    `Staff ${user.username} updated status of order #${order.id} from ${STATUS_DISPLAY[1]} to ${STATUS_DISPLAY[Math.floor(Math.random() * 5)]}`,
+                    {user: user.username});
+                break;
+            case 3:
+                logger.log('info',
+                    `Staff ${user.username} tried to log in with invalid password!`,
+                    {user: user.username});
+                break;
+            case 4:
+                logger.log('info',
+                    `User ${user.username} logged in!`,
+                    {user: user.username});
+                break;
+            case 5:
+                logger.log('info',
+                    `User ${user.username} logged out!`,
+                    {user: user.username});
+                break;
+            case 6:
+                logger.log('alert',
+                    `There was an error while trying to capture order #${order.id}!`);
+                break;
+            case 7:
+                logger.log('alert',
+                    `Not enough quantity for ${order.getOrderitems()[0].name}!`);
+        }
     }
 }
 
@@ -628,6 +728,7 @@ module.exports = {
     removeProductQtyFromOrder,
     getReportResponce,
     getProductsAndCountRaw,
-    saveReport,
+    saveReportCsv,
+    saveReportExcel,
     createTempFile,
 };

@@ -10,6 +10,7 @@ const utilsEcom = require("./utils.js");
 const session = require('koa-session');
 
 const fs = require('fs');
+const db = require("./db.js");
 
 const { Sequelize } = require("sequelize");
 const Op = Sequelize.Op;
@@ -27,6 +28,7 @@ const OrderItem = models.orderitem();
 const Transaction = models.transaction();
 const PayPalTransaction = models.paypaltransacion();
 const CODTransaction = models.codtransaction();
+const Log = models.log();
 
 const app = new Koa();
 const router = new KoaRouter();
@@ -59,9 +61,6 @@ async function getIndex(ctx) {
   // Remove the message
   ctx.session.messages = null;
 }
-
-const categories1 = Category.findAll();
-const prodscount = utilsEcom.getProductsAndCountRaw(0, 12, "", "", 0, 99999);
 
 async function getProducts(ctx) {
   // Get filters
@@ -100,7 +99,7 @@ async function getProducts(ctx) {
   }
 
   let categories, page = 1;
-  // await Category.findAll().then((categoriesv) => categories = categoriesv);
+  await Category.findAll().then((categoriesv) => categories = categoriesv);
 
   if (ctx.params.page) 
   {
@@ -114,26 +113,16 @@ async function getProducts(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
-  let whereParam = {
-    hide: false,
-    name: { [Op.iLike]: `%${filters.search}%` },
-    discountPrice: { [Op.gte]: filters.minval },
-    discountPrice: { [Op.lte]: filters.maxval },
-  }
+  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval);
 
-  if (filters.cat)
-    whereParam['categoryId'] = filters.cat;
-
-  // let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval);
-  
   await ctx.render('product-list', {
     selected: 'products',
     session: ctx.session,
-    categories: await categories1,
-    products: (await (await prodscount)[0]),
+    categories: categories,
+    products: await products,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil((await (await prodscount)[1])[0].dataValues.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 }
 
@@ -181,24 +170,10 @@ async function getAdminProducts(ctx) {
     filters['name'] = '';
   }
 
-  let whereParam = {
-    hide: false,
-    name: { [Op.iLike]: `%${filters.name}%` },
-    [Op.and]: [
-      { discountPrice: { [Op.gte]: filters.minprice } },
-      { discountPrice: { [Op.lte]: filters.maxprice } }
-    ]
-  }
-
-  if (filters.category)
-    whereParam['categoryId'] = filters.category
-
-  let categories, products;
-  await Category.findAll().then((categoriesv) => categories = categoriesv);
+  const categories = await Category.findAll();
 
   // Paginator
   let page = 1;
-  let count = 0;
 
   let limit = utilsEcom.PRODUCTS_PER_PAGE;
   let offset = 0;
@@ -207,31 +182,24 @@ async function getAdminProducts(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
-  await Product.findAndCountAll({
-    where: whereParam,
-    limit: limit,
-    offset: offset,
-    order: [
-      ['createdAt', 'DESC']
-    ]
-  }).then((productsv) => { products = productsv.rows; count = productsv.count });
-
   let categoriesNames = {};
 
   for (let i = 0; i < categories.length; i++) {
     categoriesNames[categories[i].id] = categories[i].name;
   }
 
+  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.name, filters.category, filters.minprice, filters.maxprice);
+
   await ctx.render('/admin/products', {
     layout: '/admin/base',
     selected: 'products',
     session: ctx.session,
-    products: products,
+    products: await products,
     categories: categories,
     categoriesNames: categoriesNames, // Find better way
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear old messages
@@ -288,27 +256,32 @@ async function getAdminAccounts(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
-  const result = await User.findAndCountAll({
-    where: {
-      username: { [Op.iLike]: `%${filters.user}%` },
-      email: { [Op.iLike]: `%${filters.email}%` },
-      country: { [Op.iLike]: `%${filters.country}%` },
-    },
-    limit: limit,
-    offset: offset,
-    order: [
-      ['createdAt', 'DESC']
-    ]
-  });
+  let result = await db.query(`SELECT * FROM users WHERE position(upper($1) in upper(username)) > 0 AND
+    position(upper($2) in upper(email)) > 0 AND position(upper($3) in upper(country)) > 0
+    ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`, { 
+      type: 'SELECT',
+      plain: false,
+      model: User,
+      mapToModel: true,
+      bind: [filters.user, filters.email, filters.country]
+  }).catch(function err(e) { console.log(e); });
+
+  let count = await db.query(`SELECT COUNT(*) FROM users WHERE position(upper($1) in upper(username)) > 0 AND
+    position(upper($2) in upper(email)) > 0 AND position(upper($3) in upper(country)) > 0`, { 
+      type: 'SELECT',
+      plain: false,
+      model: User,
+      bind: [filters.user, filters.email, filters.country]
+    });
 
   await ctx.render('admin/accounts', {
     layout: 'admin/base',
     selected: 'accounts',
     session: ctx.session,
-    users: result.rows,
+    users: result,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count[0].dataValues.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear the messages
@@ -622,6 +595,86 @@ async function getAdminReport(ctx) {
     page: page,
     pages: utilsEcom.givePages(page, Math.ceil((await count)[0].count / utilsEcom.PRODUCTS_PER_PAGE)),
   });
+}
+
+async function getAdminAudit(ctx) {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    await ctx.redirect('/admin/login');
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'audit.read')) {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see audit' };
+    utilsEcom.logger.log('info',
+        `Staff ${ctx.session.dataValues.username} tried to see audit without rights`,
+        {user: ctx.session.dataValues.username});
+    await ctx.redirect('/admin');
+    return;
+  }
+
+  // Get filters
+  let filters = {}, filtersToReturn = {};
+
+  if (ctx.query.user) {
+    filters['user'] = ctx.query.user;
+    filtersToReturn['user'] = ctx.query.user;
+  } else {
+    filters['user'] = '';
+  }
+  if (ctx.query.ordBefore) {
+    filters['ordBefore'] = ctx.query.ordBefore;
+    filtersToReturn['ordBefore'] = ctx.query.ordBefore;
+  } else {
+    filters['ordBefore'] = new Date();
+  }
+  if (ctx.query.ordAfter) {
+    filters['ordAfter'] = ctx.query.ordAfter;
+    filtersToReturn['ordAfter'] = ctx.query.ordAfter;
+  } else {
+    filters['ordAfter'] = new Date(0);
+  }
+
+  let page = 1;
+
+  if (ctx.params.page) {
+    page = parseInt(ctx.params.page)
+  }
+
+  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let offset = 0;
+
+  if (ctx.params.page) {
+    offset = (parseInt(ctx.params.page) - 1) * limit;
+  }
+
+  const result = await Log.findAndCountAll({
+    where: {
+      user: {
+        [Op.iLike]: `%${filters.user}%`
+      },
+      timestamp: {
+        [Op.between]: [filters['ordAfter'], filters['ordBefore']]
+      }
+    },
+    limit: limit,
+    offset: offset,
+    order: [
+      ['timestamp', 'DESC']
+    ]
+  }).catch(function e(err) {console.log(err)});
+
+  await ctx.render("/admin/audit", {
+    layout: "/admin/base",
+    session: ctx.session,
+    selected: "audit",
+    report: result.rows,
+    filters: filtersToReturn,
+    page: page,
+    pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
+  });
+
+  // Clear the messages
+  ctx.session.messages = null;
 }
 
 router.get("/", async ctx => getIndex(ctx));
@@ -1165,6 +1218,7 @@ router.get('/product-detail/:id', async ctx => {
     session: ctx.session,
     selected: 'product-detail',
     product: product,
+    i: 2,
     categories: categories,
   });
 });
@@ -2227,9 +2281,7 @@ router.post('/captureOrder', async ctx => {
 
     await utilsEcom.validateStatus(ctx, null, responce);
   } else {
-    await transaction.createCodtransaction({
-
-    });
+    await transaction.createCodtransaction({ });
 
     const user = await User.findOne({
       where: {
@@ -2298,13 +2350,13 @@ router.get('/admin/export/report/excel', async ctx => {
     filters['ordBefore'] = ctx.query.ordBefore;
     filtersToReturn['ordBefore'] = ctx.query.ordBefore;
   } else {
-    filters['ordBefore'] = new Date();
+    filters['ordBefore'] = new Date().toISOString();
   }
   if (ctx.query.ordAfter) {
     filters['ordAfter'] = ctx.query.ordAfter;
     filtersToReturn['ordAfter'] = ctx.query.ordAfter;
   } else {
-    filters['ordAfter'] = new Date(0);
+    filters['ordAfter'] = new Date(0).toISOString();
   }
 
   const time = 'month';
@@ -2326,7 +2378,78 @@ router.get('/admin/export/report/excel', async ctx => {
 
   const reportRes = await utilsEcom.getReportResponce(filters, -1, 0, time);
 
-  const path = await utilsEcom.saveReport((await reportRes[0]));
+  const path = await utilsEcom.saveReportExcel((await reportRes[0]));
+
+  ctx.body = fs.createReadStream(path);
+
+  utilsEcom.logger.log('info',
+        `Staff ${ctx.session.dataValues.username} downloaded generated orders report from ${filters.ordAfter} to ${filters.ordBefore} trunced by ${time} in .xlsx format`,
+        {user: ctx.session.dataValues.username});
+
+  ctx.res.writeHead(200, {
+    'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    "Content-Disposition": "attachment; filename=reportExcel.xlsx",
+  });
+});
+
+router.get('/admin/export/report/csv', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    ctx.redirect('/admin/login');
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'report.read')) {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see reports' };
+    utilsEcom.logger.log('info',
+        `Staff ${ctx.session.dataValues.username} tried to see report without rights`,
+        {user: ctx.session.dataValues.username});
+    
+    ctx.redirect('/admin');
+    return;
+  }
+
+  // Get filters
+  let filters = {}, filtersToReturn = {};
+
+  if (ctx.query.timegroup) {
+    filters['timegroup'] = ctx.query.timegroup
+    filtersToReturn['timegroup'] = ctx.query.timegroup
+  } else {
+    filtersToReturn['timegroup'] = '2';
+  }
+  if (ctx.query.ordBefore) {
+    filters['ordBefore'] = ctx.query.ordBefore;
+    filtersToReturn['ordBefore'] = ctx.query.ordBefore;
+  } else {
+    filters['ordBefore'] = new Date().toISOString();
+  }
+  if (ctx.query.ordAfter) {
+    filters['ordAfter'] = ctx.query.ordAfter;
+    filtersToReturn['ordAfter'] = ctx.query.ordAfter;
+  } else {
+    filters['ordAfter'] = new Date(0).toISOString();
+  }
+
+  const time = 'month';
+
+  switch(filters.timegroup) {
+    case 0:
+      time = 'day';
+      break;
+    case 1:
+      time = 'week';
+      break;
+    case 2:
+      time = 'month';
+      break;
+    case 3:
+      time = 'year';
+      break;
+  }
+
+  const reportRes = await utilsEcom.getReportResponce(filters, -1, 0, time);
+
+  const path = await utilsEcom.saveReportCsv((await reportRes[0]));
 
   ctx.body = fs.createReadStream(path);
 
@@ -2339,6 +2462,9 @@ router.get('/admin/export/report/excel', async ctx => {
     "Content-Disposition": "attachment; filename=reportExcel.csv",
   });
 });
+
+router.get('/admin/audit', async ctx => getAdminAudit(ctx));
+router.get('/admin/audit/:page', async ctx => getAdminAudit(ctx));
 
 /* WARNING: 
    The session can be null at any request

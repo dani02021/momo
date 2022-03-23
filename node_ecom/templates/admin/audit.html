@@ -1,0 +1,119 @@
+<div class="container mt-5">
+  <div class="row tm-content-row">
+    <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
+      <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 850px;">
+        <h2 class="tm-block-title">Audit</h2>
+        <div class="container">
+          <form action="/admin/audit" method="get" onsubmit="checkAuditFilter(this);">
+            <div class="row">
+              <div class="col-sm-4">
+                <input name="ordAfter" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
+                  title="Ordered after" type="datetime-local" value="<%= filters.ordAfter %>"><br>
+              </div>
+              <div class="col-sm-4">
+                <input name="ordBefore" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
+                  title="Ordered before" type="datetime-local" value="<%= filters.ordBefore %>">
+              </div>
+              <div class="col-sm-4">
+                <input class="form-universal" name="user" placeholder="Username" value="<%= filters['user'] %>">
+              </div>
+            </div>
+            <div class="row" style="margin-bottom: 12px;">
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
+                <a href="/admin/audit" class="btn btn-primary text-uppercase">Clear filters</a>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="tm-product-table-container">
+          <table id="table1" class="table table-hover tm-table-small tm-product-table">
+            <thead>
+              <tr>
+                <th scope="col">TIMESTAMP</th>
+                <th scope="col">LEVEL</th>
+                <th scope="col">USER</th>
+                <th scope="col">MESSAGE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% for(i = 0; i < report.length; i++) { %>
+              <tr>
+                <td><b><%= report[i].dataValues.timestamp %></b></td>
+                <td><%= report[i].dataValues.level %></td>
+                <td><%= report[i].dataValues.user %></td>
+                <td><%= report[i].dataValues.message %></td>
+              </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Pagination Start -->
+<div class="col-md-12">
+  <nav>
+    <ul class="pagination justify-content-center">
+      <% if(page > 1) { %>
+      <li class="page-item">
+        <a class="page-link" href="javascript:moveToPage(<%= page - 1 %>);">Previous</a>
+      </li>
+      <% } else { %>
+      <li class="page-item disabled">
+        <a class="page-link" href="" tabindex="-1">Previous</a>
+      </li>
+      <% } %>
+      <% for(var i = 0; i < pages.length; i++) { %>
+      <% if(pages[i] == page) { %>
+      <li class="page-item active"><a class="page-link" href=""><%= page %></a></li>
+      <% } else { %>
+      <li class="page-item <% if (pages[i] == '...') {%> disabled <% } %>"><a class="page-link" href="javascript:moveToPage(<%= pages[i] %>);">
+        <%= pages[i] %></a></li>
+      <% } %>
+      <% } %>
+      {<% if(page < pages[pages.length - 1]) { %>
+      <li class="page-item">
+        <a class="page-link" href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
+      </li>
+      <% } else { %>
+      <li class="page-item disabled">
+        <a class="page-link" href="">Next</a>
+      </li>
+      <% } %>
+    </ul>
+  </nav>
+</div>
+<!-- Modal -->
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-product-item" tabindex="-1"
+  aria-labelledby="add-product-item" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="remove-cat-title">Add Product to search</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label>Product:</label>
+        <div>
+          <input type="text" name="add-product-name" id="add-product-name" placeholder="Product name">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+        <button type="button" data-bs-dismiss="modal"
+          onclick="addOrderItemModal(this);" class="btn btn-primary">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function checkAuditFilter(form) {
+    for (const elem of form.elements) {
+      if (elem.value === '')
+        elem.disabled = true;
+    }
+  }
+</script>

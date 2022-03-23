@@ -26,6 +26,7 @@
     "babel-preset-env": "^1.7.0",
     "bcrypt": "^5.0.1",
     "dotenv": "^14.2.0",
+    "exceljs": "^4.3.0",
     "koa": "^2.13.4",
     "koa-better-body": "^3.3.9",
     "koa-ejs": "^4.3.0",

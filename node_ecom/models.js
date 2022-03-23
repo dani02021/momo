@@ -315,7 +315,8 @@ const OrderItem = db.define("orderitem", {
   });
 
 OrderItem.belongsTo(Product, {
-  foreignKey: 'productId'
+  foreignKey: 'productId',
+  allowNull: false
 });
 
 OrderItem.prototype.getTotal = async function () {
@@ -346,7 +347,7 @@ const Order = db.define("order", {
 Order.belongsToMany(User, { through: 'user_orders' });
 User.belongsToMany(Order, { through: 'user_orders' });
 
-Order.hasMany(OrderItem, { foreignKey: 'orderId' });
+Order.hasMany(OrderItem, { foreignKey: 'orderId', allowNull: false });
 OrderItem.belongsTo(Order);
 
 Order.prototype.getItems = function () {
@@ -488,6 +489,7 @@ module.exports = {
   Permission.create({name: 'staff.update'});
   Permission.create({name: 'staff.delete'});
   Permission.create({name: 'report.read'});
+  Permission.create({name: 'audit.read'});
   */
 
   // Create associations
@@ -516,6 +518,7 @@ module.exports = {
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'staff.update'}}).then(perm => {role.addPermission(perm);})});
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'staff.delete'}}).then(perm => {role.addPermission(perm);})});
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'report.read'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'audit.read'}}).then(perm => {role.addPermission(perm);})});
   */
 
   // Staff.findOne({where: {username: 'dakata'}}).then(user => {Role.findOne({where: {name: 'Admin'}}).then(role => {user.addRole(role);})});

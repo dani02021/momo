@@ -143,10 +143,17 @@
                     </div>
                 </div>
                 <div class="col-md-6">
+                    <% if (locals.filters && filters['Search']) { %>
+                    <div class="search">
+                        <input type="text" value="<%= filters['Search'] %>" onkeyup="addSearchA(this);" id="searchProductGlobal">
+                        <button><i class="fa fa-search"></i></button>
+                    </div>
+                    <% } else { %>
                     <div class="search">
                         <input type="text" placeholder="Search" onkeyup="addSearchA(this);" id="searchProductGlobal">
                         <button><i class="fa fa-search"></i></button>
                     </div>
+                    <% } %>
                 </div>
                 <div class="col-md-3">
                     <div class="user">

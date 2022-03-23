@@ -29,7 +29,7 @@
                                 </div>
                                 <div class="quantity">
                                     <h4>Quantity:</h4>
-                                    <% if(product.quantity == 0 ) { %>
+                                    <% console.log(product); if(product.quantity == 0 ) { %>
                                     <div class="qty">
                                         <button class="btn-minus" disabled><i class="fa fa-minus"></i></button>
                                         <input id="qtyNum" type="text" value="0">
@@ -48,7 +48,7 @@
                                 <% if(product.quantity == 0 ) { %>
                                 <h5 style="color: grey;">Out of Stock</h5>
                                 <% } else if(product.quantity < 10 ) { %>
-                                <h5 style="color: red;">Only <% product[i].quantity %> Left!</h5>
+                                <h5 style="color: red;">Only <%= product[i].quantity %> Left!</h5>
                                 <% } %>
                                 <label class="form-label" style="color: red;" id="detail-error"></label>
                                     <div class="action">
