@@ -104,8 +104,7 @@ const logger = winston.createLogger({
         warn: 2,
         info: 3,
         verbose: 4,
-        debug: 5,
-        silly: 6
+        debug: 5
     },
     transports: [
       new SequelizeTransport({

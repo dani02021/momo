@@ -12,7 +12,7 @@ const session = require('koa-session');
 const fs = require('fs');
 const db = require("./db.js");
 
-const { Sequelize } = require("sequelize");
+const { Sequelize, ValidationError } = require("sequelize");
 const Op = Sequelize.Op;
 
 const models = require("./models.js");
@@ -257,17 +257,17 @@ async function getAdminAccounts(ctx) {
   }
 
   let result = await db.query(`SELECT * FROM users WHERE position(upper($1) in upper(username)) > 0 AND
-    position(upper($2) in upper(email)) > 0 AND position(upper($3) in upper(country)) > 0
+    position(upper($2) in upper(email)) > 0 AND position(upper($3) in upper(country)) > 0 AND "deletedAt" is NULL
     ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`, { 
       type: 'SELECT',
       plain: false,
       model: User,
       mapToModel: true,
       bind: [filters.user, filters.email, filters.country]
-  }).catch(function err(e) { console.log(e); });
+  });
 
   let count = await db.query(`SELECT COUNT(*) FROM users WHERE position(upper($1) in upper(username)) > 0 AND
-    position(upper($2) in upper(email)) > 0 AND position(upper($3) in upper(country)) > 0`, { 
+    position(upper($2) in upper(email)) > 0 AND position(upper($3) in upper(country)) > 0 AND "deletedAt" = NULL`, { 
       type: 'SELECT',
       plain: false,
       model: User,
@@ -332,26 +332,36 @@ async function getAdminStaffs(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
-  const result = await Staff.findAndCountAll({
-    where: {
-      username: { [Op.iLike]: `%${filters.user}%` },
-      email: { [Op.iLike]: `%${filters.email}%` },
-    },
-    limit: limit,
-    offset: offset,
-    order: [
-      ['createdAt', 'DESC']
-    ]
-  });
+  const result = await db.query(`SELECT * FROM staffs WHERE
+    position(upper($1) in upper(username)) > 0 AND
+    position(upper($2) in upper(email)) > 0 AND
+    "deletedAt" = NULL ORDER BY "createdAt" DESC
+    LIMIT ${limit} OFFSET ${offset}`, {
+      type: 'SELECT',
+      plain: false,
+      model: Staff,
+      mapToModel: true,
+      bind: [filters.user, filters.email]
+    });
+
+  const count = await db.query(`SELECT COUNT(*) FROM staffs WHERE
+    position(upper($1) in upper(username)) > 0 AND
+    position(upper($2) in upper(email)) > 0 AND
+    "deletedAt" = NULL`, {
+      type: 'SELECT',
+      plain: false,
+      model: Staff,
+      bind: [filters.user, filters.email]
+    });
 
   await ctx.render('admin/staff', {
     layout: 'admin/base',
     selected: 'staff',
     session: ctx.session,
-    staff: result.rows,
+    staff: result,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil((count)[0].dataValues.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear the messages
@@ -437,7 +447,7 @@ async function getAdminOrders(ctx) {
   } else {
     let stat = [];
 
-    for(i = 0; i < utilsEcom.STATUS_DISPLAY.length; i++)
+    for(i = 1; i < utilsEcom.STATUS_DISPLAY.length; i++)
       stat.push(i);
 
     filters['status'] = stat;
@@ -446,13 +456,13 @@ async function getAdminOrders(ctx) {
     filters['ordBefore'] = ctx.query.ordBefore;
     filtersToReturn['ordBefore'] = ctx.query.ordBefore;
   } else {
-    filters['ordBefore'] = new Date();
+    filters['ordBefore'] = new Date().toISOString();
   }
   if (ctx.query.ordAfter) {
     filters['ordAfter'] = ctx.query.ordAfter;
     filtersToReturn['ordAfter'] = ctx.query.ordAfter;
   } else {
-    filters['ordAfter'] = new Date(0);
+    filters['ordAfter'] = new Date(0).toISOString();
   }
 
   let page = 1;
@@ -468,44 +478,45 @@ async function getAdminOrders(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
-  const result = await Order.findAndCountAll({
-    where: {
-      status: filters.status,
-      orderedAt: {
-        [Op.between]: [filters['ordAfter'], filters['ordBefore']]
-      }
-    },
-    limit: limit,
-    offset: offset,
-    order: [
-      ['createdAt', 'DESC']
-    ],
-    include: [{
-      model: User,
-      required: true,
-      where: {
-        'username': { [Op.iLike]: `%${filters.user}%` },
-      }
-    }],
-  }).catch(function e(err) {console.log(err)});
+  const result = await db.query(`SELECT foo.id, foo.status, foo."userId", foo."orderedAt", foo.price,
+    users."firstName",
+    users."lastName", users.country, users.address, username
+    FROM (SELECT ord.id, ord.status, "userId",
+    ord."orderedAt", price FROM orders AS ord
+    INNER JOIN user_orders AS uo ON "orderId" = ord.id) AS foo
+    INNER JOIN users ON "userId" = users.id
+    WHERE status IN (${filters.status}) AND
+    "orderedAt" BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}' AND
+    position(upper($1) in upper(username)) > 0 AND "deletedAt" = NULL ORDER BY "createdAt" DESC
+    LIMIT ${limit} OFFSET ${offset};`, {
+      type: 'SELECT',
+      plain: false,
+      bind: [filters.user]
+    });
 
-  let users = []
-
-  for(i = 0; i < result.rows.length; i++) 
-  {
-    users.push((await (result.rows[i].getUsers()))[0]);
-  }
-
+  const count = await db.query(`SELECT COUNT(*)
+    FROM (SELECT ord.id, ord.status, "userId",
+    ord."orderedAt", price FROM orders AS ord
+    INNER JOIN user_orders AS uo ON "orderId" = ord.id) AS foo
+    INNER JOIN users ON "userId" = users.id
+    WHERE status IN (${filters.status}) AND
+    "orderedAt" BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}' AND
+    position(upper($1) in upper(username)) > 0 AND "deletedAt" = NULL
+    LIMIT ${limit} OFFSET ${offset};`, {
+      type: 'SELECT',
+      plain: false,
+      bind: [filters.user]
+    });
+  
   await ctx.render("/admin/orders", {
     layout: "/admin/base",
     session: ctx.session,
     selected: "orders",
-    orders: result.rows,
+    orders: result,
     statuses: utilsEcom.STATUS_DISPLAY,
     filters: filtersToReturn,
-    users: users,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear the messages
@@ -1336,12 +1347,12 @@ router.post('/admin/accounts/add', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'accounts.create')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to create an account' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to create account without rights`,
+        `Staff ${ctx.session.dataValues.username} tried to create an account without rights`,
         {user: ctx.session.dataValues.username});
     ctx.redirect('/admin/accounts');
     return;
   }
-
+  
   let defaultParams = {
     username: ctx.request.fields.username,
     email: ctx.request.fields.email,
@@ -1353,16 +1364,27 @@ router.post('/admin/accounts/add', async ctx => {
     emailConfirmed: true
   };
 
-  const [user, created] = await User.findOrCreate({
-    where: {
-      [Op.or]: [
-        { email: ctx.request.fields.email },
-        { username: ctx.request.fields.username }
-      ]
-    },
-    paranoid: false,
-    defaults: defaultParams
-  });
+  let [user, created] = [null, null];
+  try {
+    [user, created] = await User.findOrCreate({
+      where: {
+        [Op.or]: [
+          { email: ctx.request.fields.email },
+          { username: ctx.request.fields.username }
+        ]
+      },
+      paranoid: false,
+      defaults: defaultParams
+    });
+  } catch (e) 
+  {
+    if (e instanceof ValidationError) 
+    {
+      ctx.session.messages = { 'validationError': e.errors[0].message };
+      ctx.redirect('/admin/accounts');
+      return;
+    }
+  }
 
   if (!created) {
     if (!user.deletedAt) {

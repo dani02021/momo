@@ -105,9 +105,9 @@
                   <% } %>
                   <%= statuses[orders[i].status] %>
                 </td>
-                <td><b><%= users[i].firstName + " " + users[i].lastName %></b></td>
-                <td><b><%= users[i].country %></b></td>
-                <td><b><%= users[i].address %></b></td>
+                <td><b><%= orders[i].firstName + " " + orders[i].lastName %></b></td>
+                <td><b><%= orders[i].country %></b></td>
+                <td><b><%= orders[i].address %></b></td>
                 <td style="text-align: right;"><b><%= orders[i].price %> $</b></td>
                 <td><a href="/admin/orders/edit/<%= orders[i].id %>" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>

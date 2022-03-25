@@ -31,12 +31,25 @@ const User = db.define("user", {
   username: {
     type: DataTypes.STRING(50),
     unique: true,
-    allowNull: false
+    allowNull: false,
+    validate: {
+      is: {
+        args: /^[a-zA-Z0-9]([._](?![._])|[a-zA-Z0-9]){5,50}[a-zA-Z0-9]$/i,
+        msg: "Username must contains alphabetical, numerical characters, sypport . and/or _ can't start/end with . or _"
+      },
+      len: {
+        args: [5, 50],
+        msg: "Username must be at least 5 characters and not more than 50"
+      }
+    }
   },
   email: {
     type: DataTypes.STRING(50),
     unique: true,
-    allowNull: true
+    allowNull: true,
+    validate: {
+      isEmail: true
+    }
   },
   firstName: {
     type: DataTypes.STRING(50),
@@ -49,6 +62,12 @@ const User = db.define("user", {
   password: {
     type: DataTypes.STRING(100),
     allowNull: false,
+    validate: {
+      is: {
+        args: ["^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{7,32}$", "i"],
+        msg: "Password must contain at least 1 digit, 1 uppercase and 1 lowercase character, with size 7-32"
+      }
+    },
     set(pass) {
       const salt = bcrypt.genSaltSync(5);
       const hash = bcrypt.hashSync(pass, salt, 5);
@@ -95,7 +114,10 @@ const Staff = db.define("staff", {
   email: {
     type: DataTypes.STRING(50),
     unique: true,
-    allowNull: true
+    allowNull: true,
+    validate: {
+      isEmail: true
+    }
   },
   firstName: {
     type: DataTypes.STRING(50),
@@ -108,6 +130,12 @@ const Staff = db.define("staff", {
   password: {
     type: DataTypes.STRING(100),
     allowNull: false,
+    validate: {
+      is: {
+        args: /^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[*.!@$%^&(){}[]:;<>,.?\/~_+-=|\\]).{7,32}$\i /,
+        msg: "Password must contain at least 1 digit, 1 uppercase and 1 lowercase character, with size 7-32"
+      }
+    },
     set(pass) {
       const salt = bcrypt.genSaltSync(5);
       const hash = bcrypt.hashSync(pass, salt, 5);
