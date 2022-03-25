@@ -45,7 +45,7 @@
             <tbody>
               <% for(i = 0; i < report.length; i++) { %>
               <tr>
-                <td><b><%= report[i].dataValues.startDate %></b></td>
+                <td><b><%= report[i].dataValues.startDate.toISOString().substring(0, report[i].dataValues.startDate.toISOString().indexOf("T")) %></b></td>
                 <td id="id"><b><%= report[i].dataValues.orders %></b></td>
                 <td>
                   <%= report[i].dataValues.products %>

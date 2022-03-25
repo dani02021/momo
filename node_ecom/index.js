@@ -69,28 +69,24 @@ async function getProducts(ctx) {
   if (ctx.query.cat) {
     filters['cat'] = ctx.query.cat
     filtersToReturn['Category'] = ctx.query.cat
-  } else 
-  {
+  } else {
     filters['cat'] = '';
   }
   if (ctx.query.minval) {
     filters['minval'] = ctx.query.minval
     filtersToReturn['Min price'] = ctx.query.minval
   }
-  else 
-  {
+  else {
     filters['minval'] = 0
   }
   if (ctx.query.maxval) {
     filters['maxval'] = ctx.query.maxval
     filtersToReturn['Max price'] = ctx.query.maxval
   }
-  else 
-  {
+  else {
     filters['maxval'] = 99999
   }
-  if (ctx.query.search) 
-  {
+  if (ctx.query.search) {
     filters['search'] = ctx.query.search
     filtersToReturn['Search'] = ctx.query.search
   }
@@ -101,8 +97,7 @@ async function getProducts(ctx) {
   let categories, page = 1;
   await Category.findAll().then((categoriesv) => categories = categoriesv);
 
-  if (ctx.params.page) 
-  {
+  if (ctx.params.page) {
     page = parseInt(ctx.params.page)
   }
 
@@ -135,8 +130,8 @@ async function getAdminProducts(ctx) {
   if (!await utilsEcom.hasPermission(ctx, 'products.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see products' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to see products without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see products without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     await ctx.redirect('/admin');
     return;
   }
@@ -215,8 +210,8 @@ async function getAdminAccounts(ctx) {
   if (!await utilsEcom.hasPermission(ctx, 'accounts.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see accounts' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to see accounts without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see accounts without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     await ctx.redirect('/admin');
     return;
   }
@@ -258,21 +253,20 @@ async function getAdminAccounts(ctx) {
 
   let result = await db.query(`SELECT * FROM users WHERE position(upper($1) in upper(username)) > 0 AND
     position(upper($2) in upper(email)) > 0 AND position(upper($3) in upper(country)) > 0 AND "deletedAt" is NULL
-    ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`, { 
-      type: 'SELECT',
-      plain: false,
-      model: User,
-      mapToModel: true,
-      bind: [filters.user, filters.email, filters.country]
+    ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`, {
+    type: 'SELECT',
+    plain: false,
+    model: User,
+    mapToModel: true,
+    bind: [filters.user, filters.email, filters.country]
   });
 
   let count = await db.query(`SELECT COUNT(*) FROM users WHERE position(upper($1) in upper(username)) > 0 AND
-    position(upper($2) in upper(email)) > 0 AND position(upper($3) in upper(country)) > 0 AND "deletedAt" = NULL`, { 
-      type: 'SELECT',
-      plain: false,
-      model: User,
-      bind: [filters.user, filters.email, filters.country]
-    });
+    position(upper($2) in upper(email)) > 0 AND position(upper($3) in upper(country)) > 0 AND "deletedAt" is NULL`, {
+    type: 'SELECT',
+    plain: true,
+    bind: [filters.user, filters.email, filters.country]
+  });
 
   await ctx.render('admin/accounts', {
     layout: 'admin/base',
@@ -281,7 +275,7 @@ async function getAdminAccounts(ctx) {
     users: result,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count[0].dataValues.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear the messages
@@ -292,13 +286,14 @@ async function getAdminStaffs(ctx) {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     await ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'staff.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see staff' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to see staffs without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see staffs without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     await ctx.redirect('/admin');
     return;
   }
@@ -335,24 +330,23 @@ async function getAdminStaffs(ctx) {
   const result = await db.query(`SELECT * FROM staffs WHERE
     position(upper($1) in upper(username)) > 0 AND
     position(upper($2) in upper(email)) > 0 AND
-    "deletedAt" = NULL ORDER BY "createdAt" DESC
+    "deletedAt" is NULL ORDER BY "createdAt" DESC
     LIMIT ${limit} OFFSET ${offset}`, {
-      type: 'SELECT',
-      plain: false,
-      model: Staff,
-      mapToModel: true,
-      bind: [filters.user, filters.email]
-    });
+    type: 'SELECT',
+    plain: false,
+    model: Staff,
+    mapToModel: true,
+    bind: [filters.user, filters.email]
+  });
 
   const count = await db.query(`SELECT COUNT(*) FROM staffs WHERE
     position(upper($1) in upper(username)) > 0 AND
     position(upper($2) in upper(email)) > 0 AND
-    "deletedAt" = NULL`, {
-      type: 'SELECT',
-      plain: false,
-      model: Staff,
-      bind: [filters.user, filters.email]
-    });
+    "deletedAt" is NULL`, {
+    type: 'SELECT',
+    plain: true,
+    bind: [filters.user, filters.email]
+  });
 
   await ctx.render('admin/staff', {
     layout: 'admin/base',
@@ -361,7 +355,7 @@ async function getAdminStaffs(ctx) {
     staff: result,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil((count)[0].dataValues.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear the messages
@@ -377,8 +371,8 @@ async function getAdminRoles(ctx) {
   if (!await utilsEcom.hasPermission(ctx, 'roles.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see roles' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to see roles without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see roles without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     await ctx.redirect('/admin');
     return;
   }
@@ -426,8 +420,8 @@ async function getAdminOrders(ctx) {
   if (!await utilsEcom.hasPermission(ctx, 'orders.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see orders' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to see orders without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see orders without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     await ctx.redirect('/admin');
     return;
   }
@@ -447,7 +441,7 @@ async function getAdminOrders(ctx) {
   } else {
     let stat = [];
 
-    for(i = 1; i < utilsEcom.STATUS_DISPLAY.length; i++)
+    for (i = 1; i < utilsEcom.STATUS_DISPLAY.length; i++)
       stat.push(i);
 
     filters['status'] = stat;
@@ -487,12 +481,12 @@ async function getAdminOrders(ctx) {
     INNER JOIN users ON "userId" = users.id
     WHERE status IN (${filters.status}) AND
     "orderedAt" BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}' AND
-    position(upper($1) in upper(username)) > 0 AND "deletedAt" = NULL ORDER BY "createdAt" DESC
+    position(upper($1) in upper(username)) > 0 AND "deletedAt" is NULL ORDER BY "orderedAt" DESC
     LIMIT ${limit} OFFSET ${offset};`, {
-      type: 'SELECT',
-      plain: false,
-      bind: [filters.user]
-    });
+    type: 'SELECT',
+    plain: false,
+    bind: [filters.user]
+  });
 
   const count = await db.query(`SELECT COUNT(*)
     FROM (SELECT ord.id, ord.status, "userId",
@@ -501,13 +495,13 @@ async function getAdminOrders(ctx) {
     INNER JOIN users ON "userId" = users.id
     WHERE status IN (${filters.status}) AND
     "orderedAt" BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}' AND
-    position(upper($1) in upper(username)) > 0 AND "deletedAt" = NULL
+    position(upper($1) in upper(username)) > 0 AND "deletedAt" is NULL
     LIMIT ${limit} OFFSET ${offset};`, {
-      type: 'SELECT',
-      plain: false,
-      bind: [filters.user]
-    });
-  
+    type: 'SELECT',
+    plain: true,
+    bind: [filters.user]
+  });
+
   await ctx.render("/admin/orders", {
     layout: "/admin/base",
     session: ctx.session,
@@ -516,7 +510,7 @@ async function getAdminOrders(ctx) {
     statuses: utilsEcom.STATUS_DISPLAY,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear the messages
@@ -532,9 +526,9 @@ async function getAdminReport(ctx) {
   if (!await utilsEcom.hasPermission(ctx, 'report.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see reports' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to see report without rights`,
-        {user: ctx.session.dataValues.username});
-    
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see report without rights`,
+      { user: ctx.session.dataValues.staffUsername });
+
     ctx.redirect('/admin');
     return;
   }
@@ -576,7 +570,7 @@ async function getAdminReport(ctx) {
 
   let time = 'month';
 
-  switch(filters.timegroup) {
+  switch (filters.timegroup) {
     case '0':
       time = 'day';
       break;
@@ -594,8 +588,8 @@ async function getAdminReport(ctx) {
   const [reportRes, count] = await utilsEcom.getReportResponce(filters, limit, offset, time);
 
   utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} generated orders report from ${filters.ordAfter} to ${filters.ordBefore} trunced by ${time} `,
-        {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} generated orders report from ${filters.ordAfter} to ${filters.ordBefore} trunced by ${time} `,
+    { user: ctx.session.dataValues.staffUsername });
 
   await ctx.render('/admin/report', {
     layout: '/admin/base',
@@ -617,8 +611,8 @@ async function getAdminAudit(ctx) {
   if (!await utilsEcom.hasPermission(ctx, 'audit.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see audit' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to see audit without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see audit without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     await ctx.redirect('/admin');
     return;
   }
@@ -632,17 +626,23 @@ async function getAdminAudit(ctx) {
   } else {
     filters['user'] = '';
   }
+  if (ctx.query.level) {
+    filters['level'] = ctx.query.level;
+    filtersToReturn['level'] = ctx.query.level;
+  } else {
+    filters['level'] = '';
+  }
   if (ctx.query.ordBefore) {
     filters['ordBefore'] = ctx.query.ordBefore;
     filtersToReturn['ordBefore'] = ctx.query.ordBefore;
   } else {
-    filters['ordBefore'] = new Date();
+    filters['ordBefore'] = new Date().toISOString();
   }
   if (ctx.query.ordAfter) {
     filters['ordAfter'] = ctx.query.ordAfter;
     filtersToReturn['ordAfter'] = ctx.query.ordAfter;
   } else {
-    filters['ordAfter'] = new Date(0);
+    filters['ordAfter'] = new Date(0).toISOString();
   }
 
   let page = 1;
@@ -658,30 +658,40 @@ async function getAdminAudit(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
-  const result = await Log.findAndCountAll({
-    where: {
-      user: {
-        [Op.iLike]: `%${filters.user}%`
-      },
-      timestamp: {
-        [Op.between]: [filters['ordAfter'], filters['ordBefore']]
-      }
-    },
-    limit: limit,
-    offset: offset,
-    order: [
-      ['timestamp', 'DESC']
-    ]
-  }).catch(function e(err) {console.log(err)});
+  // todo finish ilike to position transition
+
+  const result = await db.query(`SELECT * FROM logs WHERE
+      position(upper($1) in upper(user)) > 0 AND
+      position(upper($2) in upper(level)) > 0 AND
+      timestamp BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}'
+      ORDER BY timestamp DESC
+      LIMIT ${limit} OFFSET ${offset}`, {
+        type: 'SELECT',
+        plain: false,
+        model: Log,
+        mapToModel: true,
+        bind: [filters.user, filters.level]
+  });
+
+  const count = await db.query(`SELECT COUNT(*) FROM logs WHERE
+      position(upper($1) in upper(user)) > 0 AND
+      position(upper($2) in upper(level)) > 0 AND
+      timestamp BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}'
+      LIMIT ${limit} OFFSET ${offset}`, {
+        type: 'SELECT',
+        plain: true,
+        bind: [filters.user, filters.level]
+  });
 
   await ctx.render("/admin/audit", {
     layout: "/admin/base",
     session: ctx.session,
     selected: "audit",
-    report: result.rows,
+    report: result,
     filters: filtersToReturn,
+    levels: utilsEcom.LOG_LEVELS,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear the messages
@@ -723,6 +733,7 @@ router.post("/register", async ctx => {
   if (!unique) {
     let message = { 'userExists': 'User already exists with this email or username' };
     ctx.session.messages = message;
+
     utilsEcom.logger.info(`Tried to register already existing user ${ctx.request.fields.username}`);
     ctx.redirect('/register');
   }
@@ -730,24 +741,32 @@ router.post("/register", async ctx => {
     // Send email
     let token = utilsEcom.generateEmailVerfToken();
 
-    User.create({
-      username: ctx.request.fields.username,
-      email: ctx.request.fields.email,
-      password: ctx.request.fields.password1,
-      firstName: ctx.request.fields.first,
-      lastName: ctx.request.fields.last,
-      address: ctx.request.fields.address,
-      country: ctx.request.fields.country,
-      verificationToken: token,
-    });
+    try 
+    {
+      User.create({
+        username: ctx.request.fields.username,
+        email: ctx.request.fields.email,
+        password: ctx.request.fields.password1,
+        firstName: ctx.request.fields.first,
+        lastName: ctx.request.fields.last,
+        address: ctx.request.fields.address,
+        country: ctx.request.fields.country,
+        verificationToken: token,
+      });
+    } catch (e) 
+    {
+      if (e instanceof ValidationError) 
+      {
+        ctx.session.messages = { 'validationError': e.errors[0].message };
+        ctx.redirect('/register');
+        return;
+      }
+    }
 
     utilsEcom.sendEmail(ctx.request.fields.email, token);
 
-    utilsEcom.logger.log('info',
-        `User ${ctx.request.fields.username} registered!`,
-        {user: ctx.request.fields.username});
-
-    let messages = { 'registerSuccess': 'Please validate your e-mail!' };
+    let message = { 'registerSuccess': 'Please validate your e-mail!' };
+    ctx.session.messages = message;
     ctx.redirect('/');
   }
 });
@@ -776,79 +795,60 @@ router.get('/verify_account/:token', async ctx => {
     ctx.session.messages = messages;
 
     utilsEcom.logger.log('info',
-        `User ${ctx.request.fields.username} validated their e-mail!`,
-        {user: ctx.request.fields.username});
-    
+      `User ${ctx.request.fields.username} validated their e-mail!`,
+      { user: ctx.request.fields.username });
+
     ctx.redirect('/');
   } else {
     let messages = { 'verfError': 'Invalid token!' };
     ctx.session.messages = messages;
 
     utilsEcom.logger.log('info',
-        `User ${ctx.request.fields.username} has entered invalid token ${ctx.params.token}!`,
-        {user: ctx.request.fields.username});
-    
+      `User ${ctx.request.fields.username} has entered invalid token ${ctx.params.token}!`,
+      { user: ctx.request.fields.username });
+
     ctx.redirect('/');
   }
 });
 
 router.post("/login", async ctx => {
-  let userFound = false;
-
-  await User.findOne({
+  const user = await User.findOne({
     where: {
       username: ctx.request.fields.username
     }
-  }).then(async userv => {
-    if (userv == null)
-      return;
-
-    if (userv.authenticate(ctx.request.fields.password)) {
-      // Log-out first
-      if (await utilsEcom.isAuthenticatedStaff(ctx)) 
-      {
-        utilsEcom.logger.log('info',
-          `Staff ${ctx.session.dataValues.username} logged out!`,
-          {user: ctx.session.dataValues.username});
-      }
-      if (await utilsEcom.isAuthenticatedUser(ctx)) 
-      {
-        utilsEcom.logger.log('info',
-          `User ${ctx.session.dataValues.username} logged out!`,
-          {user: ctx.session.dataValues.username});
-      }
-
-      ctx.session.username = null;
-
-      let messages = { 'loginSuccess': 'Successful login!' };
-      ctx.session.messages = messages;
-      ctx.session.username = ctx.request.fields.username;
-      ctx.session.isStaff = false;
-      
-      utilsEcom.logger.log('info',
-          `User ${ctx.request.fields.username} logged in!`,
-          {user: ctx.request.fields.username});
-
-      await userv.update({
-        lastLogin: Sequelize.fn('NOW')
-      });
-    }
-    else {
-      let messages = { 'loginErrorPass': 'Wrong password!' };
-      ctx.session.messages = messages;
-
-      utilsEcom.logger.log('info',
-          `User ${ctx.request.fields.username} tried to log in with invalid password!`,
-          {user: ctx.request.fields.username});
-    }
-
-    userFound = true;
   });
 
-  if (!userFound) {
-    // User not found
+  if (!user) {
     let messages = { 'loginErrorUser': 'User not found!' };
     ctx.session.messages = messages;
+
+    utilsEcom.logger.log('info',
+      `Tried to log in with invalid username ${ctx.request.fields.username} as user!`);
+    ctx.redirect("/");
+
+    return;
+  }
+
+  if (user.authenticate(ctx.request.fields.password)) {
+    let messages = { 'loginSuccess': 'Successful login!' };
+    ctx.session.messages = messages;
+    ctx.session.username = ctx.request.fields.username;
+
+    utilsEcom.logger.log('info',
+      `User ${ctx.request.fields.username} logged in!`,
+      { user: ctx.request.fields.username });
+
+    await user.update({
+      lastLogin: Sequelize.fn('NOW')
+    });
+  }
+  else {
+    let messages = { 'loginErrorPass': 'Wrong password!' };
+    ctx.session.messages = messages;
+
+    utilsEcom.logger.log('info',
+      `User ${ctx.request.fields.username} tried to log in with invalid password!`,
+      { user: ctx.request.fields.username });
   }
 
   ctx.redirect('/');
@@ -856,10 +856,12 @@ router.post("/login", async ctx => {
 
 router.get('/logout', async ctx => {
   ctx.session.messages = { 'logout': 'Log-out successful!' };
-  ctx.session.username = null;
+  
   utilsEcom.logger.log('info',
-      `User ${ctx.request.fields.username} logged out!`,
-      {user: ctx.request.fields.username});
+    `User ${ctx.session.username} logged out!`,
+    { user: ctx.session.username });
+  
+  ctx.session.username = null;
 
   ctx.redirect('/')
 });
@@ -889,7 +891,7 @@ router.get('/admin', async ctx => {
       layout: "/admin/base",
       selected: 'dashboard',
       session: ctx.session,
-      user: await Staff.findOne({ where: { username: ctx.session.dataValues.username } }),
+      user: await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } }),
       orders: orders,
       orderitems: orderitems,
       users: users,
@@ -914,62 +916,44 @@ router.get('/admin/login', async ctx => {
 });
 
 router.post('/admin/login', async ctx => {
-  let userFound = false;
-
-  await Staff.findOne({
+  const user = await Staff.findOne({
     where: {
       username: ctx.request.fields.username
     }, include: Role
-  }).then(async userv => {
-    if (!userv)
-      return;
-
-    if (userv.authenticate(ctx.request.fields.password)) {
-      // Log-out first
-      if (await utilsEcom.isAuthenticatedStaff(ctx)) 
-      {
-        utilsEcom.logger.log('info',
-          `Staff ${ctx.session.dataValues.username} logged out!`,
-          {user: ctx.session.dataValues.username});
-      }
-      if (await utilsEcom.isAuthenticatedUser(ctx)) 
-      {
-        utilsEcom.logger.log('info',
-          `User ${ctx.session.dataValues.username} logged out!`,
-          {user: ctx.session.dataValues.username});
-      }
-
-      ctx.session.username = null;
-
-      let messages = { 'loginSuccess': 'Successful login!' };
-      ctx.session.messages = messages;
-      ctx.session.username = ctx.request.fields.username;
-      ctx.session.isStaff = true;
-
-      utilsEcom.logger.log('info',
-          `Staff ${ctx.request.fields.username} logged in!`,
-          {user: ctx.request.fields.username});
-
-      await userv.update({
-        lastLogin: Sequelize.fn('NOW')
-      });
-    }
-    else {
-      let messages = { 'loginErrorPass': 'Wrong password!' };
-      ctx.session.messages = messages;
-
-      utilsEcom.logger.log('info',
-          `Staff ${ctx.request.fields.username} tried to log in with invalid password!`,
-          {user: ctx.request.fields.username});
-    }
-
-    userFound = true;
   });
 
-  if (!userFound) {
-    // User not found
+  if (!user) 
+  {
     let messages = { 'loginErrorUser': 'User not found!' };
     ctx.session.messages = messages;
+
+    utilsEcom.logger.log('info',
+      `Tried to log in with invalid username ${ctx.request.fields.username} as staff!`);
+    ctx.redirect("/admin");
+
+    return;
+  }
+
+  if (user.authenticate(ctx.request.fields.password)) {
+    let messages = { 'loginSuccess': 'Successful login!' };
+    ctx.session.messages = messages;
+    ctx.session.staffUsername = ctx.request.fields.username;
+
+    utilsEcom.logger.log('info',
+      `Staff ${ctx.request.fields.username} logged in!`,
+      { user: ctx.request.fields.username });
+
+    await user.update({
+      lastLogin: Sequelize.fn('NOW')
+    });
+  }
+  else {
+    let messages = { 'loginErrorPass': 'Wrong password!' };
+    ctx.session.messages = messages;
+
+    utilsEcom.logger.log('info',
+      `Staff ${ctx.request.fields.username} tried to log in with invalid password!`,
+      { user: ctx.request.fields.username });
   }
 
   ctx.redirect('/admin');
@@ -978,10 +962,10 @@ router.post('/admin/login', async ctx => {
 router.get('/admin/logout', async ctx => {
   ctx.session.messages = { 'logout': 'Log-out successful!' };
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} logged out!`,
-      {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} logged out!`,
+    { user: ctx.session.dataValues.staffUsername });
 
-  ctx.session.username = null
+  ctx.session.staffUsername = null
 
   ctx.redirect('/admin/login');
 });
@@ -998,8 +982,8 @@ router.post('/admin/products/add', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'product.create')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to create product' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to create a product without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to create a product without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/products');
     return;
   }
@@ -1073,8 +1057,8 @@ router.post('/admin/products/add', async ctx => {
   }
   ctx.session.messages = { 'productCreated': `Product with id ${product.id} has been created!` };
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} created product #${product.id}`,
-      {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} created product #${product.id}`,
+    { user: ctx.session.dataValues.staffUsername });
   ctx.redirect('/admin/products');
 });
 
@@ -1083,16 +1067,16 @@ router.get('/admin/products/edit/:id', async ctx => {
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
   }
-  
+
   if (!await utilsEcom.hasPermission(ctx, 'products.update')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to update a product' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to update product #${ctx.params.id} without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to update product #${ctx.params.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/products');
     return;
   }
-  
+
   let categories = {};
 
   await Category.findAll().then((categoriesv) => categories = categoriesv);
@@ -1124,8 +1108,8 @@ router.post('/admin/products/edit/:id', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'products.update')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to update a product' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to update product #${ctx.params.id} without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to update product #${ctx.params.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/products');
     return;
   }
@@ -1155,7 +1139,7 @@ router.post('/admin/products/edit/:id', async ctx => {
     fs.renameSync(ctx.request.files[0].path + '', __dirname + '/static/media/id' + ctx.params.id + '/' + ctx.request.files[0].name, function (err) {
       if (err) {
         utilsEcom.logger.log('error',
-        `There was an error while trying to edit the image of product # ${ctx.params.id}!
+          `There was an error while trying to edit the image of product # ${ctx.params.id}!
         ${err.message}`);
         throw err;
       }
@@ -1178,10 +1162,10 @@ router.post('/admin/products/edit/:id', async ctx => {
     });
 
   ctx.session.messages = { 'productEdited': `Product with id ${ctx.params.id} was edited!` };
-  utilsEcom.logger.log('info', 
-      `Staff ${ctx.session.dataValues.username} updated product #${ctx.params.id}`, 
-      {user: ctx.session.dataValues.username});
-  
+  utilsEcom.logger.log('info',
+    `Staff ${ctx.session.dataValues.staffUsername} updated product #${ctx.params.id}`,
+    { user: ctx.session.dataValues.staffUsername });
+
   ctx.redirect('/admin/products/edit/' + ctx.params.id);
 });
 
@@ -1194,8 +1178,8 @@ router.post('/admin/products/delete', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'products.delete')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to delete a product' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to delete product/s with id/s ${ctx.request.fields.id} without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to delete product/s with id/s ${ctx.request.fields.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/products');
     return;
   }
@@ -1210,8 +1194,8 @@ router.post('/admin/products/delete', async ctx => {
 
   ctx.session.messages = { 'productDeleted': 'Selected product/s have been deleted!' }
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} deleted product/s with id/s ${ctx.request.fields.id}`,
-      {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} deleted product/s with id/s ${ctx.request.fields.id}`,
+    { user: ctx.session.dataValues.staffUsername });
 
   ctx.redirect('/admin/products');
 });
@@ -1246,8 +1230,8 @@ router.post('/admin/accounts/delete', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'accounts.delete')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to delete a account' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to delete account/s with id/s ${ctx.request.fields.id} without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to delete account/s with id/s ${ctx.request.fields.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/accounts');
     return;
   }
@@ -1262,8 +1246,8 @@ router.post('/admin/accounts/delete', async ctx => {
 
   ctx.session.messages = { 'accountDeleted': 'Selected accounts have been deleted!' }
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} deleted account/s with id/s ${ctx.request.id}`,
-      {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} deleted account/s with id/s ${ctx.request.id}`,
+    { user: ctx.session.dataValues.staffUsername });
 
   ctx.redirect('/admin/accounts');
 });
@@ -1277,8 +1261,8 @@ router.get('/admin/accounts/edit/:id', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'accounts.update')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to update an account' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to update account #${ctx.params.id} without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to update account #${ctx.params.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/accounts');
     return;
   }
@@ -1302,8 +1286,8 @@ router.post('/admin/accounts/edit/:id', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'accounts.update')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to update an account' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to update account #${ctx.params.id} without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to update account #${ctx.params.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/accounts');
     return;
   }
@@ -1332,8 +1316,8 @@ router.post('/admin/accounts/edit/:id', async ctx => {
 
   ctx.session.messages = { 'accountEdited': `User with id ${ctx.params.id} was edited!` }
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} updated account #${ctx.params.id}`,
-      {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} updated account #${ctx.params.id}`,
+    { user: ctx.session.dataValues.staffUsername });
 
   ctx.redirect('/admin/accounts');
 });
@@ -1347,12 +1331,12 @@ router.post('/admin/accounts/add', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'accounts.create')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to create an account' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to create an account without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to create an account without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/accounts');
     return;
   }
-  
+
   let defaultParams = {
     username: ctx.request.fields.username,
     email: ctx.request.fields.email,
@@ -1376,10 +1360,8 @@ router.post('/admin/accounts/add', async ctx => {
       paranoid: false,
       defaults: defaultParams
     });
-  } catch (e) 
-  {
-    if (e instanceof ValidationError) 
-    {
+  } catch (e) {
+    if (e instanceof ValidationError) {
       ctx.session.messages = { 'validationError': e.errors[0].message };
       ctx.redirect('/admin/accounts');
       return;
@@ -1399,8 +1381,8 @@ router.post('/admin/accounts/add', async ctx => {
   }
   ctx.session.messages = { 'accountCreated': `User with id ${user.id} has been created!` };
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} created account #${user.id}`,
-      {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} created account #${user.id}`,
+    { user: ctx.session.dataValues.staffUsername });
 
   ctx.redirect('/admin/accounts');
 });
@@ -1417,8 +1399,8 @@ router.post('/admin/staff/add', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'staff.create')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to create a staff' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to create a staff without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to create a staff without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/staff');
     return;
   }
@@ -1431,20 +1413,32 @@ router.post('/admin/staff/add', async ctx => {
     lastName: ctx.request.fields.lastname,
   };
 
-  const [user, created] = await Staff.findOrCreate({
-    where: {
-      [Op.or]: [
-        { email: ctx.request.fields.email },
-        { username: ctx.request.fields.username }
-      ]
-    },
-    paranoid: false,
-    defaults: defaultParams
-  });
+  const [user, created] = [null, null];
+
+  try {
+    [user, created] = await Staff.findOrCreate({
+      where: {
+        [Op.or]: [
+          { email: ctx.request.fields.email },
+          { username: ctx.request.fields.username }
+        ]
+      },
+      paranoid: false,
+      defaults: defaultParams
+    });
+  } catch (e) 
+  {
+    if (e instanceof ValidationError) 
+    {
+      ctx.session.messages = { 'validationError': e.errors[0].message };
+      ctx.redirect('/admin/staff');
+      return;
+    }
+  }
 
   if (!created) {
     if (!user.deletedAt) {
-      ctx.session.messages = { 'staffExist': `The Staff ${ctx.session.dataValues.username} already exists!` };
+      ctx.session.messages = { 'staffExist': `The Staff ${ctx.session.dataValues.staffUsername} already exists!` };
       ctx.redirect('/admin/staff');
       return;
     } else {
@@ -1455,8 +1449,8 @@ router.post('/admin/staff/add', async ctx => {
   }
   ctx.session.messages = { 'staffCreated': `Staff with id ${user.id} has been created!` };
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} created staff #${user.id}`,
-      {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} created staff #${user.id}`,
+    { user: ctx.session.dataValues.staffUsername });
 
   ctx.redirect('/admin/staff');
 });
@@ -1470,8 +1464,8 @@ router.post('/admin/staff/delete', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'staff.delete')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to delete staff' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to delete staff/s with id/s ${ctx.request.fields.id} without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to delete staff/s with id/s ${ctx.request.fields.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/staff');
     return;
   }
@@ -1485,8 +1479,8 @@ router.post('/admin/staff/delete', async ctx => {
 
   ctx.session.messages = { 'staffDeleted': 'Selected staff are deleted!' }
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} deleted staff/s with id/s ${ctx.request.fields.id}`,
-      {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} deleted staff/s with id/s ${ctx.request.fields.id}`,
+    { user: ctx.session.dataValues.staffUsername });
 
   ctx.redirect('/admin/staff');
 });
@@ -1500,8 +1494,8 @@ router.get('/admin/staff/edit/:id', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'staff.update')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to update staff' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to update staff #${ctx.params.id} without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to update staff #${ctx.params.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/staff');
     return;
   }
@@ -1528,8 +1522,8 @@ router.post('/admin/staff/edit/:id', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'staff.update')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to update staff' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to update staff #${ctx.params.id} without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to update staff #${ctx.params.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/staff');
     return;
   }
@@ -1558,8 +1552,8 @@ router.post('/admin/staff/edit/:id', async ctx => {
   }
   ctx.session.messages = { 'staffEdited': `Staff with id ${ctx.params.id} was edited!` };
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} updated staff #${ctx.params.id}`,
-      {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} updated staff #${ctx.params.id}`,
+    { user: ctx.session.dataValues.staffUsername });
   ctx.redirect('/admin/staff/edit/' + ctx.params.id);
 });
 
@@ -1572,8 +1566,8 @@ router.post('/admin/categories/add', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'categories.create')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to create a category' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to create a category without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to create a category without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/products');
     return;
   }
@@ -1588,8 +1582,8 @@ router.post('/admin/categories/add', async ctx => {
   if (created) {
     ctx.session.messages = { 'categoryCreated': `Category with id ${ctx.params.id} has been created!` };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} created category #${ctx.params.id}`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} created category #${ctx.params.id}`,
+      { user: ctx.session.dataValues.staffUsername });
   }
   else {
     ctx.session.messages = { 'categoryExist': `Category with id ${ctx.params.id} already exists!` };
@@ -1607,8 +1601,8 @@ router.post('/admin/categories/delete', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'categories.delete')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to delete a category' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to delete category/ies with id/s ${ctx.params.id} without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to delete category/ies with id/s ${ctx.params.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/products');
     return;
   }
@@ -1621,8 +1615,8 @@ router.post('/admin/categories/delete', async ctx => {
 
   ctx.session.messages = { 'categoryDeleted': `Selected categories have been deleted!` };
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} deleted category/ies with id/s ${ctx.params.id}`,
-      {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} deleted category/ies with id/s ${ctx.params.id}`,
+    { user: ctx.session.dataValues.staffUsername });
   ctx.redirect('/admin/products');
 });
 
@@ -1635,8 +1629,8 @@ router.post('/admin/roles/add', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'roles.create')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to create a role' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to create a role without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to create a role without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/roles');
     return;
   }
@@ -1661,8 +1655,8 @@ router.post('/admin/roles/add', async ctx => {
   if (created) {
     ctx.session.messages = { 'roleCreated': `Role with id ${ctx.params.id} has been created!` };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} created role #${ctx.params.id}`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} created role #${ctx.params.id}`,
+      { user: ctx.session.dataValues.staffUsername });
   }
   else {
     ctx.session.messages = { 'roleExist': `Role with id ${ctx.params.id} already exists!` };
@@ -1680,8 +1674,8 @@ router.post('/admin/roles/delete', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'roles.delete')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to delete a role' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to delete role/s with id/s ${ctx.params.id} without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to delete role/s with id/s ${ctx.params.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/roles');
     return;
   }
@@ -1693,8 +1687,8 @@ router.post('/admin/roles/delete', async ctx => {
   });
   ctx.session.messages = { 'roleDeleted': 'Selected roles are deleted!' }
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} deleted role/s with id/s ${ctx.params.id}`,
-      {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} deleted role/s with id/s ${ctx.params.id}`,
+    { user: ctx.session.dataValues.staffUsername });
 
   ctx.redirect('/admin/roles');
 });
@@ -1708,8 +1702,8 @@ router.get('/admin/roles/edit/:id', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'roles.update')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to update a role' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to update role #${ctx.params.id} without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to update role #${ctx.params.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/roles');
     return;
   }
@@ -1738,8 +1732,8 @@ router.post('/admin/roles/edit/:id', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'roles.update')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to update a role' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to update role #${ctx.params.id} without rights`,
-        {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} tried to update role #${ctx.params.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/roles');
     return;
   }
@@ -1765,9 +1759,9 @@ router.post('/admin/roles/edit/:id', async ctx => {
 
   ctx.session.messages = { 'roleEdited': `Role with id ${ctx.params.id} was edited!` };
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} updated role #${ctx.params.id}`,
-      {user: ctx.session.dataValues.username});
-  
+    `Staff ${ctx.session.dataValues.staffUsername} updated role #${ctx.params.id}`,
+    { user: ctx.session.dataValues.staffUsername });
+
   ctx.redirect('/admin/roles');
 });
 
@@ -1829,9 +1823,9 @@ router.post('/admin/orders/add', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'orders.create')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to create an order' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to create an order without rights`,
-        {user: ctx.session.dataValues.username});
-    
+      `Staff ${ctx.session.dataValues.staffUsername} tried to create an order without rights`,
+      { user: ctx.session.dataValues.staffUsername });
+
     ctx.redirect('/admin/orders');
     return;
   }
@@ -1843,27 +1837,24 @@ router.post('/admin/orders/add', async ctx => {
     orderedAt: Sequelize.fn('NOW'),
   });
 
-  if(items instanceof Array) 
-  {
-    for(i = 0; i < items.length; i++) 
-    {
+  if (items instanceof Array) {
+    for (i = 0; i < items.length; i++) {
       let orderitem = await OrderItem.create({ quantity: parseInt(items[i].split(" ")[1]) });
-      let product = await Product.findOne({where: {id: parseInt(items[i].split(" ")[0])}});
+      let product = await Product.findOne({ where: { id: parseInt(items[i].split(" ")[0]) } });
       await orderitem.setProduct(product);
 
       await order.addOrderitem(orderitem);
     }
-  } 
-  else 
-  {
+  }
+  else {
     let orderitem = await OrderItem.create({ quantity: parseInt(items.split(" ")[1]) });
-    let product = await Product.findOne({where: {id: parseInt(items.split(" ")[0])}});
+    let product = await Product.findOne({ where: { id: parseInt(items.split(" ")[0]) } });
     await orderitem.setProduct(product);
 
     await order.addOrderitem(orderitem);
   }
 
-  await order.update({price: await order.getTotal()});
+  await order.update({ price: await order.getTotal() });
 
   let user = await User.findOne({
     where: {
@@ -1875,10 +1866,10 @@ router.post('/admin/orders/add', async ctx => {
 
   await utilsEcom.removeProductQtyFromOrder(order);
 
-  ctx.session.messages = {'orderCreated': 'Order created!'};
+  ctx.session.messages = { 'orderCreated': 'Order created!' };
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} created order #${order.id}`,
-      {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} created order #${order.id}`,
+    { user: ctx.session.dataValues.staffUsername });
 
   ctx.redirect('/admin/orders');
 });
@@ -1892,23 +1883,21 @@ router.post('/admin/orders/delete', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'orders.delete')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to delete an order' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to delete order/s with id/s ${ctx.params.id} without rights`,
-        {user: ctx.session.dataValues.username});
-    
+      `Staff ${ctx.session.dataValues.staffUsername} tried to delete order/s with id/s ${ctx.params.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
+
     ctx.redirect('/admin/orders');
     return;
   }
 
   ids = ctx.request.fields.id;
 
-  if(ids instanceof Array) 
-  {
-    for(i = 0; i < ids.length; i++) 
-    {
-      utilsEcom.addProductQtyFromOrder(await Order.findOne({where: {id: ids[i]}}));
+  if (ids instanceof Array) {
+    for (i = 0; i < ids.length; i++) {
+      utilsEcom.addProductQtyFromOrder(await Order.findOne({ where: { id: ids[i] } }));
     }
   } else {
-    utilsEcom.addProductQtyFromOrder(await Order.findOne({where: {id: ids}}));
+    utilsEcom.addProductQtyFromOrder(await Order.findOne({ where: { id: ids } }));
   }
 
   await Order.destroy({
@@ -1919,8 +1908,8 @@ router.post('/admin/orders/delete', async ctx => {
 
   ctx.session.messages = { 'orderDeleted': 'Selected orders have been deleted!' };
   utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} deleted order/s with id/s ${ctx.params.id}`,
-      {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} deleted order/s with id/s ${ctx.params.id}`,
+    { user: ctx.session.dataValues.staffUsername });
 
   ctx.redirect('/admin/orders');
 });
@@ -1934,9 +1923,9 @@ router.get('/admin/orders/edit/:id', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'orders.update')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to update an order' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to update order #${ctx.params.id} without rights`,
-        {user: ctx.session.dataValues.username});
-    
+      `Staff ${ctx.session.dataValues.staffUsername} tried to update order #${ctx.params.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
+
     ctx.redirect('/admin/orders');
     return;
   }
@@ -1981,9 +1970,9 @@ router.post('/admin/orders/edit/:id', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'orders.update')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to update an order' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to update order #${ctx.params.id} without rights`,
-        {user: ctx.session.dataValues.username});
-    
+      `Staff ${ctx.session.dataValues.staffUsername} tried to update order #${ctx.params.id} without rights`,
+      { user: ctx.session.dataValues.staffUsername });
+
     ctx.redirect('/admin/orders');
     return;
   }
@@ -1999,27 +1988,23 @@ router.post('/admin/orders/edit/:id', async ctx => {
 
   let orderitems = await order.getOrderitems();
 
-  for (i = 0; i < orderitems.length; i++) 
-  {
+  for (i = 0; i < orderitems.length; i++) {
     await orderitems[i].destroy();
   }
 
   // Add new orderitems to the order
-  if (ctx.request.fields.items instanceof Array) 
-  {
-    for (i = 0; i < ctx.request.fields.items.length; i++) 
-    {
-      let product = await Product.findOne({where: {id: ctx.request.fields.items[i].split(", ")[0]}});
-      let orderitem = await OrderItem.create({quantity: ctx.request.fields.items[i].split(", ")[1]});
+  if (ctx.request.fields.items instanceof Array) {
+    for (i = 0; i < ctx.request.fields.items.length; i++) {
+      let product = await Product.findOne({ where: { id: ctx.request.fields.items[i].split(", ")[0] } });
+      let orderitem = await OrderItem.create({ quantity: ctx.request.fields.items[i].split(", ")[1] });
       await orderitem.setProduct(product);
 
       await order.addOrderitem(orderitem);
     }
-  } 
-  else 
-  {
-    let product = await Product.findOne({where: {id: ctx.request.fields.items.split(", ")[0]}});
-    let orderitem = await OrderItem.create({quantity: ctx.request.fields.items.split(", ")[1]});
+  }
+  else {
+    let product = await Product.findOne({ where: { id: ctx.request.fields.items.split(", ")[0] } });
+    let orderitem = await OrderItem.create({ quantity: ctx.request.fields.items.split(", ")[1] });
     await orderitem.setProduct(product);
 
     await order.addOrderitem(orderitem);
@@ -2027,11 +2012,10 @@ router.post('/admin/orders/edit/:id', async ctx => {
 
   await utilsEcom.removeProductQtyFromOrder(order);
 
-  if (order.status != ctx.request.fields.status) 
-  {
+  if (order.status != ctx.request.fields.status) {
     utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.username} updated status of order #${ctx.params.id} from ${utilsEcom.STATUS_DISPLAY[order.status]} to ${utilsEcom.STATUS_DISPLAY[ctx.request.fields.status]}`,
-      {user: ctx.session.dataValues.username});
+      `Staff ${ctx.session.dataValues.staffUsername} updated status of order #${ctx.params.id} from ${utilsEcom.STATUS_DISPLAY[order.status]} to ${utilsEcom.STATUS_DISPLAY[ctx.request.fields.status]}`,
+      { user: ctx.session.dataValues.staffUsername });
   }
 
   // Update status, price and orderedAt
@@ -2043,10 +2027,10 @@ router.post('/admin/orders/edit/:id', async ctx => {
 
   // Set the new user
   await order.removeUsers(await order.getUsers());
-  await order.addUser(await User.findOne({where: {username: ctx.request.fields.user}}));
+  await order.addUser(await User.findOne({ where: { username: ctx.request.fields.user } }));
 
-  ctx.session.messages = {'orderEdited': `Order with id ${ctx.params.id} has been updated!`};
-  
+  ctx.session.messages = { 'orderEdited': `Order with id ${ctx.params.id} has been updated!` };
+
   ctx.redirect('/admin/orders');
 });
 
@@ -2280,7 +2264,7 @@ router.post('/captureOrder', async ctx => {
     let product = await orderitems[i].getProduct();
     if (product.quantity < orderitems[i].quantity) {
       ctx.body = { 'msg': 'There is not enough quantity of ' + product.name, 'status': 'error' };
-      
+
       return;
     }
   }
@@ -2303,7 +2287,7 @@ router.post('/captureOrder', async ctx => {
 
     await utilsEcom.validateStatus(ctx, null, responce);
   } else {
-    await transaction.createCodtransaction({ });
+    await transaction.createCodtransaction({});
 
     const user = await User.findOne({
       where: {
@@ -2352,9 +2336,9 @@ router.get('/admin/export/report/excel', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'report.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see reports' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to see report without rights`,
-        {user: ctx.session.dataValues.username});
-    
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see report without rights`,
+      { user: ctx.session.dataValues.staffUsername });
+
     ctx.redirect('/admin');
     return;
   }
@@ -2383,7 +2367,7 @@ router.get('/admin/export/report/excel', async ctx => {
 
   const time = 'month';
 
-  switch(filters.timegroup) {
+  switch (filters.timegroup) {
     case 0:
       time = 'day';
       break;
@@ -2405,8 +2389,8 @@ router.get('/admin/export/report/excel', async ctx => {
   ctx.body = fs.createReadStream(path);
 
   utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} downloaded generated orders report from ${filters.ordAfter} to ${filters.ordBefore} trunced by ${time} in .xlsx format`,
-        {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${filters.ordAfter} to ${filters.ordBefore} trunced by ${time} in .xlsx format`,
+    { user: ctx.session.dataValues.staffUsername });
 
   ctx.res.writeHead(200, {
     'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -2423,9 +2407,9 @@ router.get('/admin/export/report/csv', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'report.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see reports' };
     utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} tried to see report without rights`,
-        {user: ctx.session.dataValues.username});
-    
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see report without rights`,
+      { user: ctx.session.dataValues.staffUsername });
+
     ctx.redirect('/admin');
     return;
   }
@@ -2454,7 +2438,7 @@ router.get('/admin/export/report/csv', async ctx => {
 
   const time = 'month';
 
-  switch(filters.timegroup) {
+  switch (filters.timegroup) {
     case 0:
       time = 'day';
       break;
@@ -2476,8 +2460,8 @@ router.get('/admin/export/report/csv', async ctx => {
   ctx.body = fs.createReadStream(path);
 
   utilsEcom.logger.log('info',
-        `Staff ${ctx.session.dataValues.username} downloaded generated orders report from ${filters.ordAfter} to ${filters.ordBefore} trunced by ${time} in .csv format`,
-        {user: ctx.session.dataValues.username});
+    `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${filters.ordAfter} to ${filters.ordBefore} trunced by ${time} in .csv format`,
+    { user: ctx.session.dataValues.staffUsername });
 
   ctx.res.writeHead(200, {
     'Content-Type': 'text/csv',

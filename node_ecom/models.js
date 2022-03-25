@@ -1,5 +1,5 @@
 const db = require("./db.js");
-const { Sequelize, Model, DataTypes } = require("sequelize");
+const { Sequelize, Model, DataTypes, ValidationError } = require("sequelize");
 const bcrypt = require("bcrypt");
 
 const Log = db.define("log", {
@@ -130,13 +130,12 @@ const Staff = db.define("staff", {
   password: {
     type: DataTypes.STRING(100),
     allowNull: false,
-    validate: {
-      is: {
-        args: /^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[*.!@$%^&(){}[]:;<>,.?\/~_+-=|\\]).{7,32}$\i /,
-        msg: "Password must contain at least 1 digit, 1 uppercase and 1 lowercase character, with size 7-32"
-      }
-    },
     set(pass) {
+      if (!(/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[*.!@$%^&(){}[]:;<>,.?\/~_+-=|\\]).{7,32}$\i/.exec(pass)).length) 
+      {
+        throw new ValidationError("Password must contain at least 1 digit, 1 uppercase and 1 lowercase character, with size 7-32");
+      }
+      
       const salt = bcrypt.genSaltSync(5);
       const hash = bcrypt.hashSync(pass, salt, 5);
       this.setDataValue('password', hash);
@@ -258,8 +257,8 @@ const Session = db.define("session", {
   username: {
     type: DataTypes.STRING(50)
   },
-  isStaff: {
-    type: DataTypes.BOOLEAN
+  staffUsername: {
+    type: DataTypes.STRING(50)
   },
 },
   {

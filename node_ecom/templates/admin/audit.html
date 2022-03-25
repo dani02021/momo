@@ -6,16 +6,24 @@
         <div class="container">
           <form action="/admin/audit" method="get" onsubmit="checkAuditFilter(this);">
             <div class="row">
-              <div class="col-sm-4">
+              <div class="col-sm-3">
                 <input name="ordAfter" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
                   title="Ordered after" type="datetime-local" value="<%= filters.ordAfter %>"><br>
               </div>
-              <div class="col-sm-4">
+              <div class="col-sm-3">
                 <input name="ordBefore" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
                   title="Ordered before" type="datetime-local" value="<%= filters.ordBefore %>">
               </div>
-              <div class="col-sm-4">
+              <div class="col-sm-3">
                 <input class="form-universal" name="user" placeholder="Username" value="<%= filters['user'] %>">
+              </div>
+              <div class="col-sm-3">
+                <select name="level" class="form-select">
+                  <option value="-1" selected disabled>Select level:</option>
+                  <% for(i in levels) { %>
+                  <option value="<%= i %>" <% if (i == filters['level']) { %> selected <% } %>> <%= i %></option>
+                  <% } %>
+                </select>
               </div>
             </div>
             <div class="row" style="margin-bottom: 12px;">
@@ -39,7 +47,7 @@
             <tbody>
               <% for(i = 0; i < report.length; i++) { %>
               <tr>
-                <td><b><%= report[i].dataValues.timestamp %></b></td>
+                <td><b><%= report[i].dataValues.timestamp.toISOString() %></b></td>
                 <td><%= report[i].dataValues.level %></td>
                 <td><%= report[i].dataValues.user %></td>
                 <td><%= report[i].dataValues.message %></td>
@@ -84,29 +92,6 @@
       <% } %>
     </ul>
   </nav>
-</div>
-<!-- Modal -->
-<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-product-item" tabindex="-1"
-  aria-labelledby="add-product-item" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="remove-cat-title">Add Product to search</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <label>Product:</label>
-        <div>
-          <input type="text" name="add-product-name" id="add-product-name" placeholder="Product name">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-        <button type="button" data-bs-dismiss="modal"
-          onclick="addOrderItemModal(this);" class="btn btn-primary">Add</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>

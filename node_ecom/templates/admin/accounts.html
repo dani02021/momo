@@ -11,7 +11,7 @@
     <strong><%= session.dataValues.messages[i] %></strong>
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
-  <% } %>
+<% } %>
 <% if(i == 'accountCreated') { %>
 <div class="alert alert-success alert-dismissible fade show" role="alert">
   <strong>Account is created!</strong>
@@ -78,7 +78,7 @@
               <% for (i = 0; i < users.length; i++) { %>
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b><%= users[i].createdAt %></b></td>
+                <td><b><%= users[i].createdAt.toISOString() %></b></td>
                 <td data-id="<%= users[i].id %>"><b>#<%= users[i].id %></b></td>
                 <td><b><%= users[i].username %></b></td>
                 <td><b><%= users[i].firstName + ' ' + users[i].lastName %></b></td>

@@ -39,7 +39,15 @@ const STATUS_DISPLAY = [
     "Completed",
     "Not payed",
     "Payer action needed"
-    ]
+]
+const LOG_LEVELS = {
+    alert: 0,
+    error: 1,
+    warn: 2,
+    info: 3,
+    verbose: 4,
+    debug: 5
+}
 
 // Exceptions
 class NotEnoughQuantityException extends Error {
@@ -98,14 +106,7 @@ class SequelizeTransport extends WinstonTransport {
 };
 
 const logger = winston.createLogger({
-    levels: {
-        alert: 0,
-        error: 1,
-        warn: 2,
-        info: 3,
-        verbose: 4,
-        debug: 5
-    },
+    levels: LOG_LEVELS,
     transports: [
       new SequelizeTransport({
           level: "debug"
@@ -120,6 +121,11 @@ function givePages(page, lastPage) {
         range = [],
         rangeWithDots = [],
         l;
+    
+    if (page < 1)
+        page = 1;
+    if (lastPage < 1)
+        lastPage = 1;
 
     for (let i = 1; i <= lastPage; i++) {
         if (i == 1 || i == lastPage || i >= left && i < right) {
@@ -177,7 +183,7 @@ function configPostgreSessions() {
       set: async (key, session, maxAge, { rolling, changed }) => 
       {
         await Session.upsert({key: key, expire: session._expire, maxAge: maxAge,
-            messages: session.messages, username: session.username, isStaff: session.isStaff});
+            messages: session.messages, username: session.username, staffUsername: session.staffUsername});
       },
   
       // Destroy session for key.
@@ -188,45 +194,32 @@ function configPostgreSessions() {
 
 async function isAuthenticatedUser(ctx) 
 {
-    if (ctx.session.dataValues.username && !ctx.session.dataValues.isStaff) {
+    if (ctx.session.dataValues.username) {
         const user = await User.findOne({ where: { username: ctx.session.dataValues.username }});
 
-        if (user == null) 
-        {
-            return false;
-        } 
-        else 
-        {
-            return true;
-        }
+        return user != null;
     }
 
     return false;
 }
 async function isAuthenticatedStaff(ctx) 
 {
-    if (ctx.session.dataValues && ctx.session.dataValues.isStaff) 
+    if (ctx.session.dataValues) 
     {
-        if (ctx.session.dataValues.username) {
-            const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.username }});
+        if (ctx.session.dataValues.staffUsername) {
+            const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername }});
     
-            if (staff == null) 
-            {
-                return false;
-            } 
-            else 
-            {
-                return true;
-            }
+            return staff != null;
         }
     }
 
     return false;
 }
 
+// Staff only function !
 async function hasPermission(ctx, permission) 
 {
-    const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.username }, include: Role });
+    const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername }, include: Role });
 
     if (staff == null) {
         return false;
@@ -630,33 +623,33 @@ async function generateLogs(x = 100) {
                 let date2 = new Date(+(date1) - Math.floor(Math.random()*10000000000));
 
                 logger.log('info',
-                    `Staff ${user.username} downloaded generated orders report from ${date1.toISOString()} to ${date2.toISOString()} trunced by month in .csv format`,
-                    {user: user.username});
+                    `Staff ${user.staffUsername} downloaded generated orders report from ${date1.toISOString()} to ${date2.toISOString()} trunced by month in .csv format`,
+                    {user: user.staffUsername});
                 break;
             case 1:
                 logger.log('info',
-                    `Staff ${user.username} tried to see report without rights`,
-                    {user: user.username});
+                    `Staff ${user.staffUsername} tried to see report without rights`,
+                    {user: user.staffUsername});
                 break;
             case 2:
                 logger.log('info',
-                    `Staff ${user.username} updated status of order #${order.id} from ${STATUS_DISPLAY[1]} to ${STATUS_DISPLAY[Math.floor(Math.random() * 5)]}`,
-                    {user: user.username});
+                    `Staff ${user.staffUsername} updated status of order #${order.id} from ${STATUS_DISPLAY[1]} to ${STATUS_DISPLAY[Math.floor(Math.random() * 5)]}`,
+                    {user: user.staffUsername});
                 break;
             case 3:
                 logger.log('info',
-                    `Staff ${user.username} tried to log in with invalid password!`,
-                    {user: user.username});
+                    `Staff ${user.staffUsername} tried to log in with invalid password!`,
+                    {user: user.staffUsername});
                 break;
             case 4:
                 logger.log('info',
-                    `User ${user.username} logged in!`,
-                    {user: user.username});
+                    `User ${user.staffUsername} logged in!`,
+                    {user: user.staffUsername});
                 break;
             case 5:
                 logger.log('info',
-                    `User ${user.username} logged out!`,
-                    {user: user.username});
+                    `User ${user.staffUsername} logged out!`,
+                    {user: user.staffUsername});
                 break;
             case 6:
                 logger.log('alert',
@@ -712,6 +705,7 @@ module.exports = {
     PRODUCTS_PER_PAGE,
     SESSION_MAX_AGE,
     STATUS_DISPLAY,
+    LOG_LEVELS,
     logger,
     givePages,
     generateEmailVerfToken,

@@ -21,6 +21,12 @@
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 <% } %>
+<% if(i == 'validationError') { %>
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong><%= session.dataValues.messages[i] %></strong>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+<% } %>
 <% } %>
 <% } %>
 <div class="container mt-5">
@@ -64,7 +70,7 @@
               <% for(i = 0; i < staff.length; i++) { %>
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b><%= staff[i].createdAt %></b></td>
+                <td><b><%= staff[i].createdAt.toISOString() %></b></td>
                 <td data-id="<%= staff[i].id %>"><b>#<%= staff[i].id %></b></td>
                 <td><b><%= staff[i].username %></b></td>
                 <td><b><%= staff[i].firstName + ' ' + staff[i].lastName %></b></td>

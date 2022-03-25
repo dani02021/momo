@@ -89,7 +89,7 @@
               <% for(i = 0; i < orders.length; i++) { %>
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b><%= orders[i].orderedAt %></b></td>
+                <td><b><%= orders[i].orderedAt.toISOString() %></b></td>
                 <td data-id="<%= orders[i].id %>"><b>#<%= orders[i].id %></b></td>
                 <td>
                   <% if (orders[i].status == 1) { %>
