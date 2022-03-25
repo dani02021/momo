@@ -660,8 +660,6 @@ async function getAdminAudit(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
-  // todo finish ilike to position transition
-
   const result = await db.query(`SELECT * FROM logs WHERE
       position(upper($1) in upper(user)) > 0 AND
       position(upper($2) in upper(level)) > 0 AND
@@ -1777,12 +1775,24 @@ router.get('/api/permissions/get', async ctx => {
     return;
   }
 
-  ctx.body = JSON.stringify(await Permission.findAll({
-    attributes: ['id', ['name', 'value']],
-    where: {
-      name: { [Op.iLike]: `%${ctx.request.query.term}%` },
-    }
-  }));
+  let term = ctx.request.query.term;
+
+  if (!term) 
+  {
+    ctx.body = {};
+    return;
+  }
+
+  ctx.body = JSON.stringify(
+    await db.query(`SELECT id, name as value FROM permissions WHERE
+      position(upper($1) in upper(name)) > 0`, {
+        type: "SELECT",
+        plain: false,
+        model: Permission,
+        mapToModel: true,
+        bind: [term]
+    })
+  );
 });
 
 router.get('/api/accounts/get', async ctx => {
@@ -1791,12 +1801,24 @@ router.get('/api/accounts/get', async ctx => {
     return;
   }
 
-  ctx.body = JSON.stringify(await User.findAll({
-    attributes: ['id', ['username', 'value']],
-    where: {
-      username: { [Op.iLike]: `%${ctx.request.query.term}%` },
-    }
-  }));
+  let term = ctx.request.query.term;
+
+  if (!term) 
+  {
+    ctx.body = {};
+    return;
+  }
+
+  ctx.body = JSON.stringify(
+    await db.query(`SELECT id, username as value FROM accounts WHERE
+      position(upper($1) in upper(name)) > 0`, {
+        type: "SELECT",
+        plain: false,
+        model: Permission,
+        mapToModel: true,
+        bind: [term]
+    })
+  );
 });
 
 router.get('/api/products/get', async ctx => {
@@ -1805,12 +1827,24 @@ router.get('/api/products/get', async ctx => {
     return;
   }
 
-  ctx.body = JSON.stringify(await Product.findAll({
-    attributes: ['id', ['name', 'value']],
-    where: {
-      name: { [Op.iLike]: `%${ctx.request.query.term}%` },
-    }
-  }));
+  let term = ctx.request.query.term;
+
+  if (!term) 
+  {
+    ctx.body = {};
+    return;
+  }
+
+  ctx.body = JSON.stringify(
+    await db.query(`SELECT id, name as value FROM products WHERE
+      position(upper($1) in upper(name)) > 0`, {
+        type: "SELECT",
+        plain: false,
+        model: Permission,
+        mapToModel: true,
+        bind: [term]
+    })
+  );
 });
 
 router.get('/admin/orders', async ctx => getAdminOrders(ctx));
