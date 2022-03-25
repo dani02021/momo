@@ -1,5 +1,7 @@
 require('dotenv').config();
 
+const http = require("http");
+const https = require("https");
 const Koa = require('koa');
 const KoaRouter = require('koa-router');
 const KoaBodyParser = require('koa-better-body');
@@ -2499,4 +2501,12 @@ render(app, {
 
 app.use(router.routes()).use(router.allowedMethods());
 
-app.listen(3210);
+// app.listen(3210);
+
+const options = {
+  key: fs.readFileSync('key.pem'),
+  cert: fs.readFileSync('cert.pem')
+};
+
+http.createServer(app.callback()).listen(3210);
+https.createServer(app.callback()).listen(3211, (e) => {console.log(e);});

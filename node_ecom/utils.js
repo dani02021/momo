@@ -563,7 +563,7 @@ async function generateOrders(x = 100)
         for (i = 0; i <= Math.floor(Math.random() * 3) + 1; i++) 
         {
             // Get product
-            const product = products[Math.floor(Math.random() * 10_000) + 1];
+            const product = products[Math.floor(Math.random() * 10000) + 1];
 
             const orderitem = await OrderItem.create({
                 quantity: Math.floor(Math.random() * 3) + 1
@@ -573,7 +573,7 @@ async function generateOrders(x = 100)
 
             await order.addOrderitem(orderitem);
 
-            const user = users[Math.floor(Math.random() * 10_000) + 1];
+            const user = users[Math.floor(Math.random() * 10000) + 1];
 
             order.update({price: await order.getTotal()});
 
@@ -613,8 +613,8 @@ async function generateLogs(x = 100) {
     {
         let rand = Math.floor(Math.random() * 8);
 
-        let user = users[Math.floor(Math.random() * 10_000) + 1];
-        let order = orders[Math.floor(Math.random() * 10_000) + 1];
+        let user = users[Math.floor(Math.random() * 10000) + 1];
+        let order = orders[Math.floor(Math.random() * 10000) + 1];
 
         switch (rand) 
         {
@@ -660,7 +660,7 @@ async function generateLogs(x = 100) {
                     `Not enough quantity for ${order.getOrderitems()[0].name}!`);
         }
     }
-}
+} // tb-office-23
 
 // generateUsers(1000);
 
