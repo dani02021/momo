@@ -10,6 +10,7 @@ let paypalClient = new paypal.core.PayPalHttpClient(environment);
 
 const models = require("./models.js");
 const { Sequelize } = require('./db.js');
+const Op = Sequelize.Op;
 const Session = models.session();
 const Staff = models.staff();
 const Role = models.role();
@@ -582,6 +583,23 @@ async function generateOrders(x = 100)
     }
 }
 
+async function generateStaff(x = 100) {
+    const testUsers = user({
+        count: x
+    });
+
+    for (o = 0; o < x; o++) 
+    {
+        Staff.create({
+            username: id(),
+            email: id()+testUsers[o].email,
+            password: id()+id()+id(),
+            firstName: testUsers[o].name.first,
+            lastName: testUsers[o].name.last
+        });
+    }
+}
+
 async function generateUsers(x = 100) {
     const testUsers = user({
         count: x
@@ -607,13 +625,15 @@ async function generateUsers(x = 100) {
 
 async function generateLogs(x = 100) {
     let users = await User.findAll();
-    let orders = await Order.findAll();
+    let staffs = await Staff.findAll();
+    let orders = await Order.findAll({where: {status: { [Op.gte]: 1  }}});
 
     for (o = 0; o < x; o++) 
     {
         let rand = Math.floor(Math.random() * 8);
 
         let user = users[Math.floor(Math.random() * 10000) + 1];
+        let staff = staffs[Math.floor(Math.random() * 10000) + 1];
         let order = orders[Math.floor(Math.random() * 10000) + 1];
 
         switch (rand) 
@@ -623,33 +643,33 @@ async function generateLogs(x = 100) {
                 let date2 = new Date(+(date1) - Math.floor(Math.random()*10000000000));
 
                 logger.log('info',
-                    `Staff ${user.staffUsername} downloaded generated orders report from ${date1.toISOString()} to ${date2.toISOString()} trunced by month in .csv format`,
-                    {user: user.staffUsername});
+                    `Staff ${staff.username} downloaded generated orders report from ${date1.toISOString()} to ${date2.toISOString()} trunced by month in .csv format`,
+                    {user: staff.username});
                 break;
             case 1:
                 logger.log('info',
-                    `Staff ${user.staffUsername} tried to see report without rights`,
-                    {user: user.staffUsername});
+                    `Staff ${staff.username} tried to see report without rights`,
+                    {user: staff.username});
                 break;
             case 2:
                 logger.log('info',
-                    `Staff ${user.staffUsername} updated status of order #${order.id} from ${STATUS_DISPLAY[1]} to ${STATUS_DISPLAY[Math.floor(Math.random() * 5)]}`,
-                    {user: user.staffUsername});
+                    `Staff ${staff.username} updated status of order #${order.id} from ${STATUS_DISPLAY[1]} to ${STATUS_DISPLAY[Math.floor(Math.random() * 5)]}`,
+                    {user: staff.username});
                 break;
             case 3:
                 logger.log('info',
-                    `Staff ${user.staffUsername} tried to log in with invalid password!`,
-                    {user: user.staffUsername});
+                    `Staff ${staff.username} tried to log in with invalid password!`,
+                    {user: staff.username});
                 break;
             case 4:
                 logger.log('info',
-                    `User ${user.staffUsername} logged in!`,
-                    {user: user.staffUsername});
+                    `User ${user.username} logged in!`,
+                    {user: user.username});
                 break;
             case 5:
                 logger.log('info',
-                    `User ${user.staffUsername} logged out!`,
-                    {user: user.staffUsername});
+                    `User ${user.username} logged out!`,
+                    {user: user.username});
                 break;
             case 6:
                 logger.log('alert',
@@ -657,7 +677,7 @@ async function generateLogs(x = 100) {
                 break;
             case 7:
                 logger.log('alert',
-                    `Not enough quantity for ${order.getOrderitems()[0].name}!`);
+                    `Not enough quantity for ${(await order.getOrderitems())[0].name}!`);
         }
     }
 } // tb-office-23
