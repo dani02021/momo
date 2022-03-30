@@ -253,8 +253,11 @@ async function getAdminAccounts(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
-  let result = await db.query(`SELECT * FROM users WHERE position(upper($1) in upper(username)) > 0 AND
-    position(upper($2) in upper(email)) > 0 AND position(upper($3) in upper(country)) > 0 AND "deletedAt" is NULL
+  let result = await db.query(`SELECT * FROM users 
+    WHERE position(upper($1) in upper(username)) > 0
+    AND position(upper($2) in upper(email)) > 0
+    AND position(upper($3) in upper(country)) > 0
+    AND "deletedAt" is NULL
     ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`, {
     type: 'SELECT',
     plain: false,
@@ -263,8 +266,11 @@ async function getAdminAccounts(ctx) {
     bind: [filters.user, filters.email, filters.country]
   });
 
-  let count = await db.query(`SELECT COUNT(*) FROM users WHERE position(upper($1) in upper(username)) > 0 AND
-    position(upper($2) in upper(email)) > 0 AND position(upper($3) in upper(country)) > 0 AND "deletedAt" is NULL`, {
+  let count = await db.query(`SELECT COUNT(*) FROM users
+    WHERE position(upper($1) in upper(username)) > 0
+    AND position(upper($2) in upper(email)) > 0
+    AND position(upper($3) in upper(country)) > 0
+    AND "deletedAt" is NULL`, {
     type: 'SELECT',
     plain: true,
     bind: [filters.user, filters.email, filters.country]
@@ -483,7 +489,8 @@ async function getAdminOrders(ctx) {
     INNER JOIN users ON "userId" = users.id
     WHERE status IN (${filters.status}) AND
     "orderedAt" BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}' AND
-    position(upper($1) in upper(username)) > 0 AND "deletedAt" is NULL ORDER BY "orderedAt" DESC
+    position(upper($1) in upper(username)) > 0
+    AND "deletedAt" is NULL ORDER BY "orderedAt" DESC
     LIMIT ${limit} OFFSET ${offset};`, {
     type: 'SELECT',
     plain: false,
@@ -497,7 +504,8 @@ async function getAdminOrders(ctx) {
     INNER JOIN users ON "userId" = users.id
     WHERE status IN (${filters.status}) AND
     "orderedAt" BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}' AND
-    position(upper($1) in upper(username)) > 0 AND "deletedAt" is NULL
+    position(upper($1) in upper(username)) > 0
+    AND "deletedAt" is NULL
     LIMIT ${limit} OFFSET ${offset};`, {
     type: 'SELECT',
     plain: true,
@@ -657,7 +665,7 @@ async function getAdminAudit(ctx) {
   let offset = 0;
 
   if (ctx.params.page) {
-    offset = (parseInt(ctx.params.page) - 1) * limit;
+    offset = (page - 1) * limit;
   }
 
   const result = await db.query(`SELECT * FROM logs WHERE
@@ -676,8 +684,7 @@ async function getAdminAudit(ctx) {
   const count = await db.query(`SELECT COUNT(*) FROM logs WHERE
       position(upper($1) in upper(user)) > 0 AND
       position(upper($2) in upper(level)) > 0 AND
-      timestamp BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}'
-      LIMIT ${limit} OFFSET ${offset}`, {
+      timestamp BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}'`, {
         type: 'SELECT',
         plain: true,
         bind: [filters.user, filters.level]
@@ -2538,9 +2545,10 @@ app.use(router.routes()).use(router.allowedMethods());
 // app.listen(3210);
 
 const options = {
-  key: fs.readFileSync('key.pem'),
-  cert: fs.readFileSync('cert.pem')
+  key: fs.readFileSync('/home/daniel/Desktop/repos/RootCA.key'),
+  cert: fs.readFileSync('/home/daniel/Desktop/repos/RootCA.crt')
 };
 
-http.createServer(app.callback()).listen(3210);
-https.createServer(app.callback()).listen(3211, (e) => {console.log(e);});
+app.listen(process.env.PORT || 3210);
+// http.createServer(app.callback()).listen(3210);
+// https.createServer(options, app.callback()).listen(3211);
