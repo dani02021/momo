@@ -62,13 +62,12 @@ const User = db.define("user", {
   password: {
     type: DataTypes.STRING(100),
     allowNull: false,
-    validate: {
-      is: {
-        args: ["^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{7,32}$", "i"],
-        msg: "Password must contain at least 1 digit, 1 uppercase and 1 lowercase character, with size 7-32"
-      }
-    },
     set(pass) {
+      if (/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{7,32}$/i.exec(pass) == null) 
+      {
+        throw new ValidationError("Password must contain at least 1 digit, 1 uppercase and 1 lowercase character, with size 7-32");
+      }
+
       const salt = bcrypt.genSaltSync(5);
       const hash = bcrypt.hashSync(pass, salt, 5);
       this.setDataValue('password', hash);
@@ -131,7 +130,7 @@ const Staff = db.define("staff", {
     type: DataTypes.STRING(100),
     allowNull: false,
     set(pass) {
-      if (!(/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[*.!@$%^&(){}[]:;<>,.?\/~_+-=|\\]).{7,32}$\i/.exec(pass)).length) 
+      if (/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{7,32}$/i.exec(pass) == null) 
       {
         throw new ValidationError("Password must contain at least 1 digit, 1 uppercase and 1 lowercase character, with size 7-32");
       }
