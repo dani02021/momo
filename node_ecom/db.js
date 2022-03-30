@@ -1,7 +1,13 @@
 require('dotenv').config();
 const { Sequelize } = require("sequelize");
 
-module.exports = new Sequelize('ecommercenodejs', process.env.DB_USER, Buffer.from(process.env.DB_PASSWORD, "base64").toString('ascii'), {
+let uri = process.env.DB_URI;
+
+if (process.env.HEROKU_DB_URI) 
+{
+  uri = process.env.HEROKU_DB_URI
+}
+module.exports = new Sequelize(uri, {
     // the sql dialect of the database
     // currently supported: 'mysql', 'sqlite', 'postgres', 'mssql'
     dialect: 'postgres',
