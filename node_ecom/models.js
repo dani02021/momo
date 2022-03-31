@@ -34,12 +34,8 @@ const User = db.define("user", {
     allowNull: false,
     validate: {
       is: {
-        args: /^[a-zA-Z0-9]([._](?![._])|[a-zA-Z0-9]){5,50}[a-zA-Z0-9]$/i,
-        msg: "Username must contains alphabetical, numerical characters, sypport . and/or _ can't start/end with . or _"
-      },
-      len: {
-        args: [5, 50],
-        msg: "Username must be at least 5 characters and not more than 50"
+        args: /^([a-zA-Z0-9]{4,14})$/i,
+        msg: "Username must contains only alphabetical characters and numbers and should be of size 4-14"
       }
     }
   },

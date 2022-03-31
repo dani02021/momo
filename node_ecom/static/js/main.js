@@ -361,7 +361,22 @@ function checkRegisterForm() {
         return false;
     }
 
-    return true;
+    $.post( "/register", {
+        username: $( "#username" ).val(),
+        email: $( "#email" ).val(),
+        password1: pass,
+        first: $( "#first" ).val(),
+        last: $( "#last" ).val(),
+        address: $( "#address" ).val(),
+        country: $( "#country" ).val()
+    }, function( data ) {
+        if(data.ok)
+            window.location.replace("/");
+        else 
+            $( "#errorMsg" ).html(data.message);
+    });
+
+    return false;
 }
 
 function buyProduct(id, qty, variation = '') {

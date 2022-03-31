@@ -758,3 +758,7 @@ input[type=number] {
 .ui-autocomplete {
   z-index: 9999999999;
 }
+
+th.clickable {
+  cursor: pointer;
+}

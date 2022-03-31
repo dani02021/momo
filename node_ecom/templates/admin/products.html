@@ -73,27 +73,27 @@
           </form>
         </div>
         <div class="tm-product-table-container">
-          <table id="table1" class="table table-hover tm-table-small tm-product-table">
+          <table id="table1" class="table table-hover tm-table-small tm-product-table sortable">
             <thead>
               <tr>
                 <th scope="col">&nbsp;</th>
-                <th scope="col">PRODUCT NO.</th>
-                <th scope="col">PRODUCT NAME</th>
-                <th scope="col">PRICE</th>
-                <th scope="col">DISCOUNT PRICE</th>
-                <th scope="col">IN STOCK</th>
-                <th scope="col">CATEGORY</th>
-                <th scope="col">&nbsp;</th>
+                <th scope="col" class="clickable">PRODUCT NO.</th>
+                <th scope="col" class="clickable">PRODUCT NAME</th>
+                <th scope="col" class="clickable">PRICE</th>
+                <th scope="col" class="clickable">DISCOUNT PRICE</th>
+                <th scope="col" class="clickable">IN STOCK</th>
+                <th scope="col" class="clickable">CATEGORY</th>
+                <th scope="col">ACTION</th>
               </tr>
             </thead>
             <tbody>
               <% for(var i = 0; i < products.length; i++) { %>
-              <tr>
+              <tr class="item">
                 <th scope="row"><input type="checkbox" /></th>
                 <td data-id="<%= products[i].id %>"><b>#<%= products[i].id %></b></td>
                 <td class="tm-product-name"><%= products[i].name %></td>
                 <td style="text-align: right;"><%= products[i].price %> $</td>
-                <td style="text-align: right;"><%= products[i].discountPrice %> $</td>
+                <td style="text-align: right;">$<%= products[i].discountPrice %></td>
                 <td style="text-align: right;"><%= products[i].quantity %></td>
                 <td><%= categoriesNames[products[i].categoryId] %></td>
                 <td><a href="/admin/products/edit/<%= products[i].id %>" class="tm-order-edit-link">

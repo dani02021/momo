@@ -71,17 +71,17 @@
           </form>
         </div>
         <div class="tm-product-table-container">
-          <table id="table1" class="table table-hover tm-table-small tm-product-table">
+          <table id="table1" class="table table-hover tm-table-small tm-product-table sortable">
             <thead>
               <tr>
                 <th scope="col">&nbsp;</th>
-                <th scope="col">TIMESTAMP</th>
-                <th scope="col">ORDER NO.</th>
-                <th scope="col">STATUS</th>
-                <th scope="col">NAME</th>
-                <th scope="col">COUNTRY</th>
-                <th scope="col">ADDRESS</th>
-                <th scope="col">TOTAL PRICE</th>
+                <th scope="col" class="clickable">TIMESTAMP</th>
+                <th scope="col" class="clickable">ORDER NO.</th>
+                <th scope="col" class="clickable">STATUS</th>
+                <th scope="col" class="clickable">NAME</th>
+                <th scope="col" class="clickable">COUNTRY</th>
+                <th scope="col" class="clickable">ADDRESS</th>
+                <th scope="col" class="clickable">TOTAL PRICE</th>
                 <th scope="col">ACTION</th>
               </tr>
             </thead>
@@ -108,7 +108,7 @@
                 <td><b><%= orders[i].firstName + " " + orders[i].lastName %></b></td>
                 <td><b><%= orders[i].country %></b></td>
                 <td><b><%= orders[i].address %></b></td>
-                <td style="text-align: right;"><b><%= orders[i].price %> $</b></td>
+                <td style="text-align: right;"><b>$<%= orders[i].price %></b></td>
                 <td><a href="/admin/orders/edit/<%= orders[i].id %>" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>

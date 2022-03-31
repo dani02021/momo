@@ -164,7 +164,7 @@ async function sendEmail(email, token) {
         from: "danielgudjenev@gmail.com",
         to: email,
         subject: "Email Verification NodeJS",
-        text: `Here is your link: http://localhost:3000/verify_account/${token}`,
+        text: `Here is your link: https://` + ( process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : 'localhost:3210') + `/verify_account/${token}`,
     };
 
     EmailTransport.sendMail(message);

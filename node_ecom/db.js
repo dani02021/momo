@@ -25,14 +25,12 @@ if (process.env.HEROKU_DB_URI)
 {
   uri = process.env.HEROKU_DB_URI;
 
-  options += {
-    dialectOptions: {
+  options["dialectOptions"] = {
       ssl: {
         require:  true,
         rejectUnauthorized: false // <<<<<<< YOU NEED THIS
       }
-    },
-  };
+    };
 }
 
 module.exports = new Sequelize(uri, options);

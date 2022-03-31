@@ -18,6 +18,7 @@ const { Sequelize, ValidationError } = require("sequelize");
 const Op = Sequelize.Op;
 
 const models = require("./models.js");
+const { parse } = require('path');
 const Category = models.category();
 const Product = models.product();
 const User = models.user();
@@ -95,6 +96,8 @@ async function getProducts(ctx) {
   else {
     filters['search'] = ''
   }
+
+  ctx.cookies.set('foo', 'bar', {httpOnly: false});
 
   let categories, page = 1;
   await Category.findAll().then((categoriesv) => categories = categoriesv);
@@ -738,11 +741,16 @@ router.post("/register", async ctx => {
   }); // User already exists
 
   if (!unique) {
-    let message = { 'userExists': 'User already exists with this email or username' };
-    ctx.session.messages = message;
+    // let message = { 'userExists': 'User already exists with this email or username' };
+    // ctx.session.messages = message;
 
-    utilsEcom.logger.info(`Tried to register already existing user ${ctx.request.fields.username}`);
-    ctx.redirect('/register');
+    utilsEcom.logger.info(`Someone tried to register already existing user ${ctx.request.fields.username}`);
+    // ctx.redirect('/register');
+
+    ctx.body = {
+      message: 'User already exists with this email or username'
+    };
+    return;
   }
   else {
     // Send email
@@ -750,7 +758,7 @@ router.post("/register", async ctx => {
 
     try 
     {
-      User.create({
+      await User.create({
         username: ctx.request.fields.username,
         email: ctx.request.fields.email,
         password: ctx.request.fields.password1,
@@ -764,8 +772,11 @@ router.post("/register", async ctx => {
     {
       if (e instanceof ValidationError) 
       {
-        ctx.session.messages = { 'validationError': e.errors[0].message };
-        ctx.redirect('/register');
+        // ctx.redirect('/register');
+        // ctx.session.messages = { 'validationError': e.message };
+        ctx.body = {
+          message: e.message
+        };
         return;
       }
     }
@@ -774,48 +785,53 @@ router.post("/register", async ctx => {
 
     let message = { 'registerSuccess': 'Please validate your e-mail!' };
     ctx.session.messages = message;
-    ctx.redirect('/');
+
+    ctx.body = {
+      ok: "redirect"
+    };
+    return;
+
+    // ctx.redirect('/');
   }
 });
 
 router.get('/verify_account/:token', async ctx => {
   let token = ctx.params.token;
-  let ok = false;
 
-  await User.findOne({
+  const user = await User.findOne({
     where: {
-      verificationToken: token,
-      emailConfirmed: false
+      verificationToken: token
     }
-  }).then(async (userv) => {
-    if (userv == null)
-      return;
-
-    userv.set({ emailConfirmed: true });
-    await userv.save();
-
-    ok = true;
   });
 
-  if (ok) {
-    let messages = { 'registerSuccess': 'Your email is validated!' };
-    ctx.session.messages = messages;
-
-    utilsEcom.logger.log('info',
-      `User ${ctx.request.fields.username} validated their e-mail!`,
-      { user: ctx.request.fields.username });
-
-    ctx.redirect('/');
-  } else {
+  if (user == null) {
     let messages = { 'verfError': 'Invalid token!' };
     ctx.session.messages = messages;
 
     utilsEcom.logger.log('info',
-      `User ${ctx.request.fields.username} has entered invalid token ${ctx.params.token}!`,
-      { user: ctx.request.fields.username });
-
+      `Someone has entered invalid token ${ctx.params.token}!`);
     ctx.redirect('/');
+    return;
   }
+
+  if (!user.emailConfirmed) 
+  {
+    var messages = { 'registerSuccess': 'Your email is validated!' };
+
+    user.set({ emailConfirmed: true });
+    await user.save();
+  } else 
+  {
+    var messages = { 'registerSuccess': 'Your email is already validated!' };
+  }
+
+  ctx.session.messages = messages;
+
+  utilsEcom.logger.log('info',
+    `User ${user.username} validated their e-mail!`,
+    { user: user.username });
+  
+  ctx.redirect('/');
 });
 
 router.post("/login", async ctx => {
@@ -918,7 +934,7 @@ router.get('/admin/login', async ctx => {
     ctx.redirect('/admin');
   }
   else {
-    await ctx.render('/admin/login', { layout: "/admin/base", selected: 'login', session: ctx.session });
+    await ctx.render('/admin/login', { layout: false, selected: 'login', session: ctx.session });
   }
 });
 
@@ -1220,7 +1236,6 @@ router.get('/product-detail/:id', async ctx => {
     session: ctx.session,
     selected: 'product-detail',
     product: product,
-    i: 2,
     categories: categories,
   });
 });
@@ -1368,10 +1383,14 @@ router.post('/admin/accounts/add', async ctx => {
       defaults: defaultParams
     });
   } catch (e) {
-    if (e instanceof ValidationError) {
-      ctx.session.messages = { 'validationError': e.errors[0].message };
+    if (e instanceof ValidationError) 
+    {
+      ctx.session.messages = { 'validationError': e.message };
       ctx.redirect('/admin/accounts');
       return;
+    } else 
+    {
+      throw e;
     }
   }
 
@@ -1420,7 +1439,7 @@ router.post('/admin/staff/add', async ctx => {
     lastName: ctx.request.fields.lastname,
   };
 
-  const [user, created] = [null, null];
+  let [user, created] = [null, null];
 
   try {
     [user, created] = await Staff.findOrCreate({
@@ -1437,11 +1456,16 @@ router.post('/admin/staff/add', async ctx => {
   {
     if (e instanceof ValidationError) 
     {
-      ctx.session.messages = { 'validationError': e.errors[0].message };
+      ctx.session.messages = { 'validationError': e.message };
       ctx.redirect('/admin/staff');
       return;
+    } else 
+    {
+      throw e;
     }
   }
+
+  console.log(created);
 
   if (!created) {
     if (!user.deletedAt) {
@@ -2080,8 +2104,39 @@ router.post('/admin/orders/edit/:id', async ctx => {
 router.get('/addToCart', async ctx => {
   // Currently working only for registered users
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    ctx.session.messages = { 'noPermission': 'You are not registered!' };
-    ctx.redirect('/');
+    console.log(ctx.cookies.get('products'));
+    if (!ctx.cookies.get('products'))
+      ctx.cookies.set('products', `{${ctx.query.id}: ${ctx.query.quantity}}`, {httpOnly: false, expires: new Date(2147483647e3)});
+    else 
+    {
+      try 
+      {
+        var cooks = JSON.parse(ctx.cookies.get('products'));
+      } catch (e) 
+      {
+        var cooks = { };
+      }
+
+      if (!cooks[ctx.query.id])
+        cooks[ctx.query.id] = ctx.query.quantity;
+      else 
+      {
+        try 
+        {
+          cooks[ctx.query.id] = parseInt(cooks[ctx.query.id]) + parseInt(cooks[ctx.query.id]);
+        } catch (e) 
+        {
+          cooks[ctx.query.id] = ctx.query.quantity;
+        }
+      }
+
+      ctx.cookies.set('products', JSON.stringify(cooks), {httpOnly: false, expires: new Date(2147483647e3)});
+    }
+    
+    ctx.session.messages = { 'productAdded': 'Product added to cart!' };
+    ctx.redirect('/products');
+    // ctx.session.messages = { 'noPermission': 'You are not registered!' };
+    // ctx.redirect('/');
     return;
   }
 
@@ -2165,14 +2220,16 @@ router.get('/removeFromCart', async ctx => {
 
   ctx.session.messages = { 'cartRemoved': 'Removed selected items from the cart' };
 
-  await ctx.redirect('/cart');
+  ctx.redirect('/cart');
 });
 
 router.get('/cart', async ctx => {
   // Currently working only for registered users
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    ctx.session.messages = { 'noPermission': 'You are not registered!' };
-    ctx.redirect('/');
+    // ctx.session.messages = { 'noPermission': 'You are not registered!' };
+    // ctx.redirect('/');
+
+    // todo
     return;
   }
 
@@ -2544,11 +2601,4 @@ app.use(router.routes()).use(router.allowedMethods());
 
 // app.listen(3210);
 
-const options = {
-  key: fs.readFileSync('/home/daniel/Desktop/repos/RootCA.key'),
-  cert: fs.readFileSync('/home/daniel/Desktop/repos/RootCA.crt')
-};
-
 app.listen(process.env.PORT || 3210);
-// http.createServer(app.callback()).listen(3210);
-// https.createServer(options, app.callback()).listen(3211);
