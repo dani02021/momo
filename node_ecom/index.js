@@ -500,19 +500,9 @@ async function getAdminOrders(ctx) {
     bind: [filters.user]
   });
 
-  const count = await db.query(`SELECT COUNT(*)
-    FROM (SELECT ord.id, ord.status, "userId",
-    ord."orderedAt", price FROM orders AS ord
-    INNER JOIN user_orders AS uo ON "orderId" = ord.id) AS foo
-    INNER JOIN users ON "userId" = users.id
-    WHERE status IN (${filters.status}) AND
-    "orderedAt" BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}' AND
-    position(upper($1) in upper(username)) > 0
-    AND "deletedAt" is NULL
-    LIMIT ${limit} OFFSET ${offset};`, {
+  const count = await db.query(`SELECT COUNT(*) FROM orders;`, {
     type: 'SELECT',
-    plain: true,
-    bind: [filters.user]
+    plain: true
   });
 
   await ctx.render("/admin/orders", {
@@ -892,6 +882,9 @@ router.get('/logout', async ctx => {
 router.get('/admin', async ctx => {
   if (await utilsEcom.isAuthenticatedStaff(ctx)) {
     const orders = await Order.findAll({
+      where: {
+        status: { [Op.gte]: 1 }
+      },
       order: [
         ['createdAt', 'DESC']
       ],
@@ -2226,8 +2219,8 @@ router.get('/removeFromCart', async ctx => {
 router.get('/cart', async ctx => {
   // Currently working only for registered users
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    // ctx.session.messages = { 'noPermission': 'You are not registered!' };
-    // ctx.redirect('/');
+    ctx.session.messages = { 'noPermission': 'You are not registered!' };
+    ctx.redirect('/');
 
     // todo
     return;

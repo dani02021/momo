@@ -198,6 +198,8 @@ async function isAuthenticatedUser(ctx)
     if (ctx.session.dataValues.username) {
         const user = await User.findOne({ where: { username: ctx.session.dataValues.username }});
 
+        console.log(user);
+
         return user != null;
     }
 
@@ -548,6 +550,66 @@ async function saveReportExcel(reportRes)
     return createTempFile('excel_report.xlsx', buffer);
 }
 
+// Returns every product and how many times its ordered
+async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval) {
+    let text = `SELECT products.id, products.name, products.description, products.image,
+    products.price, products."discountPrice", products."categoryId",
+    products."createdAt", products."deletedAt", count
+    FROM products INNER JOIN (SELECT products.name, count(products.name) FROM
+    orderitems INNER JOIN products on products.id = orderitems."productId"
+    GROUP BY products.name order by count desc)
+    as foo on products.name = foo.name
+    WHERE products."deletedAt" IS NULL`;
+    
+    if (name != '' || cat != '' || minval != 0 || maxval != 99999) 
+    {
+        if (name && name != '') 
+        {
+            text += ` AND position(upper($1) in upper(name)) > 0 \n`
+        }
+
+        if (cat && cat != '') 
+        {
+            text += ` AND "categoryId" = ${cat}\n`;
+        }
+
+        if (minval && minval != 0) 
+        {
+            text += ` AND "discountPrice" >= ${minval}\n`;
+        }
+
+        if (maxval && maxval != 99999) 
+        {
+            text += ` AND "discountPrice" <= ${maxval}\n`;
+        }
+    }
+
+    text += ` ORDER BY count DESC`;
+
+    if (offset > 0) 
+    {
+        text += ` OFFSET ${offset}\n`;
+    }
+
+    text += ` LIMIT ${limit}`;
+
+    if (name && name != '') 
+    {
+        returnParams.bind = [name];
+    }
+    return [db.query(text, {
+                type: 'SELECT',
+                plain: false,
+                model: Product
+                }),
+            db.query(`SELECT count(*) FROM products`, { 
+                type: 'SELECT',
+                plain: false,
+                model: Product
+                })
+            ];
+}
+
 // Generate
 async function generateOrders(x = 100) 
 {
@@ -741,6 +803,7 @@ module.exports = {
     removeProductQtyFromOrder,
     getReportResponce,
     getProductsAndCountRaw,
+    getProductsAndOrderCount,
     saveReportCsv,
     saveReportExcel,
     createTempFile,

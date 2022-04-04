@@ -344,7 +344,7 @@ OrderItem.belongsTo(Product, {
 OrderItem.prototype.getTotal = async function () {
   let product = await this.getProduct();
 
-  return parseFloat(product.discountPrice) * parseFloat(this.quantity);
+  return parseFloat((parseFloat(product.discountPrice) * parseFloat(this.quantity)).toFixed(2)); // Bad practise !
 };
 
 const Order = db.define("order", {

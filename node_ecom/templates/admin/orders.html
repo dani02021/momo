@@ -51,15 +51,15 @@
                 </select>
               </div>
               <div class="col-sm-3">
-                <input name="user" class="form-select" style="background-image: none" placeholder="User" value="<%= filters['user'] %>">
-              </div>
-              <div class="col-sm-3">
-                <input name="ordBefore" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="Ordered before" type="datetime-local" value="<%= filters['ordBefore'] %>">
+                <input name="user" class="form-select" style="background-image: none" placeholder="Username" value="<%= filters['user'] %>">
               </div>
               <div class="col-sm-3">
                 <input name="ordAfter" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="Ordered after" type="datetime-local" value="<%= filters['ordAfter'] %>"><br>
+                  title="From date" type="datetime-local" value="<%= filters['ordAfter'] %>"><br>
+              </div>
+              <div class="col-sm-3">
+                <input name="ordBefore" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
+                  title="To date" type="datetime-local" value="<%= filters['ordBefore'] %>">
               </div>
             </div>
             <div class="row" style="margin-bottom: 12px;">
@@ -76,9 +76,10 @@
               <tr>
                 <th scope="col">&nbsp;</th>
                 <th scope="col" class="clickable">TIMESTAMP</th>
-                <th scope="col" class="clickable">ORDER NO.</th>
                 <th scope="col" class="clickable">STATUS</th>
-                <th scope="col" class="clickable">NAME</th>
+                <th scope="col" class="clickable">ORDER NO.</th>
+                <th scope="col" class="clickable">FULL NAME</th>
+                <th scope="col" class="clickable">USERNAME</th>
                 <th scope="col" class="clickable">COUNTRY</th>
                 <th scope="col" class="clickable">ADDRESS</th>
                 <th scope="col" class="clickable">TOTAL PRICE</th>
@@ -90,7 +91,6 @@
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
                 <td><b><%= orders[i].orderedAt.toISOString() %></b></td>
-                <td data-id="<%= orders[i].id %>"><b>#<%= orders[i].id %></b></td>
                 <td>
                   <% if (orders[i].status == 1) { %>
                   <div class="tm-status-circle pending"></div>
@@ -105,7 +105,9 @@
                   <% } %>
                   <%= statuses[orders[i].status] %>
                 </td>
+                <td data-id="<%= orders[i].id %>"><b>#<%= orders[i].id %></b></td>
                 <td><b><%= orders[i].firstName + " " + orders[i].lastName %></b></td>
+                <td><b>#<%= orders[i].username %></b></td>
                 <td><b><%= orders[i].country %></b></td>
                 <td><b><%= orders[i].address %></b></td>
                 <td style="text-align: right;"><b>$<%= orders[i].price %></b></td>

@@ -285,7 +285,6 @@ function addSearch(ele) {
 
 function addSearchA(ele) {
     if(event.key === 'Enter') {
-        // TODO: What if the products page location is changed?
         var product_page = window.location.origin + '/products/?'
 
         var searchParams = new URLSearchParams(window.location.search);
@@ -297,6 +296,12 @@ function addSearchA(ele) {
 function addSearchC(ele) {
     var searchParams = new URLSearchParams(window.location.search);
     searchParams.set("search", $( "#searchProduct" ).val());
+    window.location.search = searchParams.toString();
+}
+
+function addSortByParams(ele, text) {
+    var searchParams = new URLSearchParams(window.location.search);
+    searchParams.set("sort", text);
     window.location.search = searchParams.toString();
 }
 

@@ -92,7 +92,7 @@
                 <th scope="row"><input type="checkbox" /></th>
                 <td data-id="<%= products[i].id %>"><b>#<%= products[i].id %></b></td>
                 <td class="tm-product-name"><%= products[i].name %></td>
-                <td style="text-align: right;"><%= products[i].price %> $</td>
+                <td style="text-align: right;">$<%= products[i].price %></td>
                 <td style="text-align: right;">$<%= products[i].discountPrice %></td>
                 <td style="text-align: right;"><%= products[i].quantity %></td>
                 <td><%= categoriesNames[products[i].categoryId] %></td>
