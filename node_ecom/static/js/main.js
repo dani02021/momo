@@ -201,10 +201,12 @@
 
 
     // Quantity
+    // TODO: Move it to ajax function
     $('.qty button').on('click', function () {
         var $button = $(this);
         var oldValue = $( "#qtyNum" ).val();
         if ($button.hasClass('btn-plus')) {
+            console.log("add");
             var newVal = parseFloat(oldValue) + 1;
             if (newVal > parseFloat($( "#qtyNum" ).data( "max" ))) {
                 newVal = oldValue
@@ -395,21 +397,19 @@ function buyProduct(id, qty, variation = '') {
 }
 
 function addToCart(id, qty, isCart) {
-    /* Not working */
     $.ajax({
         url: "/addToCart",
         data: { 'id': id, 'quantity': qty, 'cart': isCart },
         success: function (obj) {
-            alert(obj);
+            // alert(obj);
         },
         error: function (obj) {
-            alert(obj);
+            // alert(JSON.stringify(obj));
         }
     });
 }
 
 function removeFromCart(id, qty) {
-    /* Not working */
     $.ajax({
         url: "/removeFromCart",
         data: { 'id': id, 'quantity': qty },

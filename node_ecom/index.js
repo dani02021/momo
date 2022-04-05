@@ -2203,13 +2203,45 @@ router.get('/removeFromCart', async ctx => {
 
   const quantity = ctx.query.quantity;
 
+  const order = await Order.findOne({
+    where: {
+      status: 0
+    },
+    include: [{
+      model: User,
+      required: true,
+      where: {
+        'username': ctx.session.dataValues.username
+      }
+    }],
+    paranoid: false,
+    defaults: {}
+  });
+
   const orderitem = await OrderItem.findOne({
     where: {
-      id: ctx.query.orderid
+      productId: ctx.query.id
+    },
+    include: [{
+      model: Order,
+      required: true,
+      where: {
+        id: order.id
+      }
+    }],
+    defaults: {
+      productId: ctx.query.id,
+      quantity: ctx.query.quantity,
     }
   });
 
   if (quantity > 0) {
+    if (orderitem.quantity < 1) 
+    {
+      ctx.status = 400;
+      return;
+    }
+    
     await orderitem.update({
       quantity: parseInt(orderitem.quantity) - parseInt(quantity)
     });
