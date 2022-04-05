@@ -5,6 +5,7 @@ import java.util.Scanner;
 public class Main {
 
     public static char[][] plane;
+    public static boolean[][] original;
     public static ArrayList<Character> objs;
     public static void main(String[] args) {
         Scanner scan = new Scanner(System.in);
@@ -13,6 +14,7 @@ public class Main {
         scan.nextLine(); // java...
 
         plane = new char[n*n][n*n];
+        original = new boolean[n*n][n*n];
 
         objs = new ArrayList<Character>();
 
@@ -23,8 +25,12 @@ public class Main {
             for (int a = 0; a < n*n; a++) {
                 char ch = objSplit[a].toCharArray()[0];
                 
-                if (ch != '0' && !objs.contains(ch))
-                    objs.add(ch);
+                if (ch != '0') {
+                    if (!objs.contains(ch))
+                        objs.add(ch);
+
+                    original[a][i] = true;
+                }
 
                 plane[a][i] = ch;
             }
@@ -41,7 +47,16 @@ public class Main {
                                 plane[j][i] = '0';
 
                                 int[] locs = moveBack(j, i);
-    
+
+                                if (original[locs[0]][locs[1]]) {
+                                    while (true) {
+                                        locs = moveBack(locs[0], locs[1]);
+
+                                        if (!original[locs[0]][locs[1]])
+                                            break;
+                                    }
+                                }
+
                                 j = locs[0];
                                 i = locs[1];
 
@@ -71,6 +86,9 @@ public class Main {
 
         for(int i=0; i<plane.length; i++) {
             for(int j=0; j<plane[i].length; j++) {
+                if (hasViolation(j, i, n) || plane[j][i] == '0') {
+                    System.out.println("VIOLATION");
+                }
                 System.out.print(plane[j][i] + " ");
             }
             System.out.println();
