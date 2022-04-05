@@ -399,7 +399,12 @@ function addToCart(id, qty, isCart) {
     $.ajax({
         url: "/addToCart",
         data: { 'id': id, 'quantity': qty, 'cart': isCart },
-        success: function (obj) { }
+        success: function (obj) {
+            alert(obj);
+        },
+        error: function (obj) {
+            alert(obj);
+        }
     });
 }
 
@@ -448,9 +453,13 @@ function showPaymentModal() {
 }
 
 function showHiddenAlert(alert, img, msg) {
-    $('#hidden-alert').addClass(alert)
-    $('#hidden-alert-icon').addClass(img)
-    $('#hidden-alert-msg').html(msg)
+    $('#hidden-alert').addClass("alert");
+    $('#hidden-alert').addClass(alert);
+    $('#hidden-alert').addClass("show");
+    $('#hidden-alert-icon').addClass(img);
+    $('#hidden-alert-msg').html(msg);
 
-    $('#hidden-alert').removeAttr('style')
+    $('#hidden-alert').removeAttr('style');
+
+    $('#hidden-alert').show();
 }

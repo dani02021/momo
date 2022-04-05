@@ -1261,7 +1261,7 @@ router.post('/admin/accounts/delete', async ctx => {
 
   ctx.session.messages = { 'accountDeleted': 'Selected accounts have been deleted!' }
   utilsEcom.logger.log('info',
-    `Staff ${ctx.session.dataValues.staffUsername} deleted account/s with id/s ${ctx.request.id}`,
+    `Staff ${ctx.session.dataValues.staffUsername} deleted account/s with id/s ${ctx.request.fields.id}`,
     { user: ctx.session.dataValues.staffUsername });
 
   ctx.redirect('/admin/accounts');
@@ -1639,7 +1639,7 @@ router.post('/admin/categories/delete', async ctx => {
 
   ctx.session.messages = { 'categoryDeleted': `Selected categories have been deleted!` };
   utilsEcom.logger.log('info',
-    `Staff ${ctx.session.dataValues.staffUsername} deleted category/ies with id/s ${ctx.params.id}`,
+    `Staff ${ctx.session.dataValues.staffUsername} deleted category/ies with id/s ${ctx.request.fields.id}`,
     { user: ctx.session.dataValues.staffUsername });
   ctx.redirect('/admin/products');
 });
@@ -1677,13 +1677,13 @@ router.post('/admin/roles/add', async ctx => {
   }
 
   if (created) {
-    ctx.session.messages = { 'roleCreated': `Role with id ${ctx.params.id} has been created!` };
+    ctx.session.messages = { 'roleCreated': `Role with id ${role.id} has been created!` };
     utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.staffUsername} created role #${ctx.params.id}`,
+      `Staff ${ctx.session.dataValues.staffUsername} created role #${role.id}`,
       { user: ctx.session.dataValues.staffUsername });
   }
   else {
-    ctx.session.messages = { 'roleExist': `Role with id ${ctx.params.id} already exists!` };
+    ctx.session.messages = { 'roleExist': `Role with id ${role.id} already exists!` };
   }
 
   ctx.redirect('/admin/roles');
@@ -1711,7 +1711,7 @@ router.post('/admin/roles/delete', async ctx => {
   });
   ctx.session.messages = { 'roleDeleted': 'Selected roles are deleted!' }
   utilsEcom.logger.log('info',
-    `Staff ${ctx.session.dataValues.staffUsername} deleted role/s with id/s ${ctx.params.id}`,
+    `Staff ${ctx.session.dataValues.staffUsername} deleted role/s with id/s ${ctx.request.fields.id}`,
     { user: ctx.session.dataValues.staffUsername });
 
   ctx.redirect('/admin/roles');
@@ -1943,7 +1943,7 @@ router.post('/admin/orders/delete', async ctx => {
   if (!await utilsEcom.hasPermission(ctx, 'orders.delete')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to delete an order' };
     utilsEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.staffUsername} tried to delete order/s with id/s ${ctx.params.id} without rights`,
+      `Staff ${ctx.session.dataValues.staffUsername} tried to delete order/s with id/s ${ctx.request.fields.id} without rights`,
       { user: ctx.session.dataValues.staffUsername });
 
     ctx.redirect('/admin/orders');
@@ -1968,7 +1968,7 @@ router.post('/admin/orders/delete', async ctx => {
 
   ctx.session.messages = { 'orderDeleted': 'Selected orders have been deleted!' };
   utilsEcom.logger.log('info',
-    `Staff ${ctx.session.dataValues.staffUsername} deleted order/s with id/s ${ctx.params.id}`,
+    `Staff ${ctx.session.dataValues.staffUsername} deleted order/s with id/s ${ctx.request.fields.id}`,
     { user: ctx.session.dataValues.staffUsername });
 
   ctx.redirect('/admin/orders');
@@ -2097,6 +2097,7 @@ router.post('/admin/orders/edit/:id', async ctx => {
 router.get('/addToCart', async ctx => {
   // Currently working only for registered users
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
+    // todo: check for qty !!!
     console.log(ctx.cookies.get('products'));
     if (!ctx.cookies.get('products'))
       ctx.cookies.set('products', `{${ctx.query.id}: ${ctx.query.quantity}}`, {httpOnly: false, expires: new Date(2147483647e3)});
@@ -2166,6 +2167,12 @@ router.get('/addToCart', async ctx => {
       quantity: ctx.query.quantity,
     }
   });
+
+  if (!await utilsEcom.hasMoreQtyOfProduct(ctx.query.id, orderitem.quantity)) 
+  {
+    ctx.status = 400;
+    return;
+  }
 
   if (createdorderitem)
     await order.addOrderitem(orderitem);
@@ -2282,7 +2289,7 @@ router.get('/checkout', async ctx => {
     where: {
       username: ctx.session.dataValues.username
     }
-  });
+  }).catch(function err(e) {console.log(e);});
 
   const order = await Order.findOne({
     where: {
@@ -2295,10 +2302,19 @@ router.get('/checkout', async ctx => {
         'username': ctx.session.dataValues.username
       }
     }],
-  });
+  }).catch(function err(e) {console.log(e);});
 
   if (order == null) {
     ctx.redirect('/');
+    return;
+  }
+
+  let qty = await utilsEcom.hasEnoughQtyOfProductsOfOrder(order);
+
+  if (qty !== true) 
+  {
+    ctx.session.messages = {"notEnoughQty": "There are not enough quantities of the selected product: " + qty}
+    ctx.redirect("/cart");
     return;
   }
 
@@ -2344,7 +2360,7 @@ router.post('/captureOrder', async ctx => {
         'username': ctx.session.dataValues.username
       }
     }],
-  });
+  }).catch(function err(e) {console.log(e);});
 
   if (!order) {
     ctx.redirect('/');

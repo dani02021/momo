@@ -762,3 +762,7 @@ input[type=number] {
 th.clickable {
   cursor: pointer;
 }
+
+div.alert > div {
+  display: inline-block
+}

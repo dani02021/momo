@@ -110,7 +110,7 @@
         <% for(i in session.dataValues.messages) { %>
         <% if(session.dataValues.messages.hasOwnProperty(i)) { %>
         <% if(i == 'loginErrorPass') { %>
-            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+            <div class="alert alert-danger alert-dismissible fade show align-items-center" role="alert">
                 <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
                 <div>
                     <%= session.dataValues.messages[i] %>
@@ -118,7 +118,7 @@
             </div>
         <% } %>
         <% if(i == 'loginErrorUser') { %>
-            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+            <div class="alert alert-danger alert-dismissible fade show align-items-center" role="alert">
                 <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
                 <div>
                     <%= session.dataValues.messages[i] %>
@@ -126,15 +126,15 @@
             </div>
         <% } %>
         <% if(i == 'noPermission') { %>
-            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
-                <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
+            <div class="alert alert-danger alert-dismissible fade show align-items-center" role="alert">
+                <i class="fas fa-exclamation-triangle" style="margin-right: 10px; display: inline-flex;"></i>
                 <div>
                     <%= session.dataValues.messages[i] %>
                 </div>
             </div>
         <% } %>
         <% if(i == 'loginSuccess') { %>
-            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+            <div class="alert alert-success alert-dismissible fade show align-items-center" role="alert">
                 <i class="fas fa-check" style="margin-right: 10px;"></i>
                 <div>
                     Successful login!
@@ -142,7 +142,7 @@
             </div>
         <% } %>
         <% if(i == 'logout') { %>
-            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+            <div class="alert alert-success alert-dismissible fade show align-items-center" role="alert">
                 <i class="fas fa-check-triangle" style="margin-right: 10px;"></i>
                 <div>
                     <%= session.dataValues.messages[i] %>

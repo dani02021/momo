@@ -174,7 +174,7 @@
     <% for(i in session.dataValues.messages) { %>
     <% if(session.dataValues.messages.hasOwnProperty(i)) { %>
     <% if(i == 'registerSuccess' || i == 'loginSuccess') { %>
-        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+        <div class="alert alert-success alert-dismissible fade show align-items-center" role="alert">
             <i class="fas fa-check" style="margin-right: 10px;"></i>
             <div>
                 <%= session.dataValues.messages[i] %>
@@ -182,7 +182,7 @@
         </div>
     <% } %>
     <% if(i == 'userExists' || i == 'loginErrorUser' || i == 'loginErrorPass' || i == 'noPermission') { %>
-        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+        <div class="alert alert-danger alert-dismissible fade show align-items-center" role="alert">
             <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
             <div>
                 <%= session.dataValues.messages[i] %>
@@ -191,7 +191,7 @@
     </div>
     <% } %>
     <% if(i == 'logout') { %>
-        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+        <div class="alert alert-success alert-dismissible fade show align-items-center" role="alert">
             <i class="fas fa-check-circle" style="margin-right: 10px;"></i>
             <div>
                 <%= session.dataValues.messages[i] %>
@@ -199,15 +199,15 @@
         </div>
     <% } %>
     <% if(i == 'verfError') { %>
-        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+        <div class="alert alert-danger alert-dismissible fade show align-items-center" role="alert">
             <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
             <div>
                 <%= session.dataValues.messages[i] %>
             </div>
         </div>
     <% } %>
-    <% if(i == 'validationError') { %>
-        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+    <% if(i == 'validationError' || i == 'notEnoughQty') { %>
+        <div class="alert alert-danger alert-dismissible fade show align-items-center" role="alert">
             <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
             <div>
                 <%= session.dataValues.messages[i] %>
@@ -217,6 +217,10 @@
     <% } %>
     <% } %>
     <% } %>
+    <div id="hidden-alert" class="alert-dismissible fade align-items-center" role="alert" style="display: none;">
+        <i id="hidden-alert-icon" class="fas" style="margin-right: 10px;"></i>
+        <div id="hidden-alert-msg"></div>
+    </div>
 
     <%- body %>
 

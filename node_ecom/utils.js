@@ -292,6 +292,29 @@ async function captureOrder(orderId, debug=false) {
     return null;
 }
 
+async function hasMoreQtyOfProduct(productid, qty) 
+{
+    let product = await Product.findOne({where: {id: productid}});
+
+    if (!product)
+        return false;
+    
+    return product.quantity > qty; 
+}
+async function hasEnoughQtyOfProductsOfOrder(cart) 
+{
+    let cartOrderItems = await cart.getOrderitems();
+    for(i = 0; i < cartOrderItems.length; i++ ) 
+    {
+        let cartProduct = await cartOrderItems[i].getProduct();
+
+        if (cartOrderItems[i].quantity > cartProduct.quantity)
+            return cartProduct.name;
+    }
+
+    return true;
+}
+
 async function addProductQtyFromOrder(cart) 
 {
     let cartOrderItems = await cart.getOrderitems();
@@ -799,6 +822,8 @@ module.exports = {
     hasPermission,
     captureOrder,
     validateStatus,
+    hasMoreQtyOfProduct,
+    hasEnoughQtyOfProductsOfOrder,
     addProductQtyFromOrder,
     removeProductQtyFromOrder,
     getReportResponce,

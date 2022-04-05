@@ -362,14 +362,14 @@ const Order = db.define("order", {
   }
 },
 {
-  paranoid: false,
-  timestamp: false
+  paranoid: true,
+  timestamp: true
 });
 
 Order.belongsToMany(User, { through: 'user_orders' });
 User.belongsToMany(Order, { through: 'user_orders' });
 
-Order.hasMany(OrderItem, { foreignKey: 'orderId', allowNull: false });
+Order.hasMany(OrderItem, { foreignKey: 'orderId' });
 OrderItem.belongsTo(Order);
 
 Order.prototype.getItems = function () {
