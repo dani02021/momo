@@ -139,6 +139,10 @@ const Staff = db.define("staff", {
   lastLogin: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  lastActivity: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 },
   {

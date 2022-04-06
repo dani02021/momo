@@ -202,7 +202,7 @@
 
     // Quantity
     // TODO: Move it to ajax function
-    $('.qty button').on('click', function () {
+    /*$('.qty button').on('click', function () {
         var $button = $(this);
         var oldValue = $( "#qtyNum" ).val();
         if ($button.hasClass('btn-plus')) {
@@ -219,7 +219,7 @@
             }
         }
         $button.parent().find('input').val(newVal);
-    });
+    });*/
 
 
     // Shipping address show hide
@@ -396,12 +396,41 @@ function buyProduct(id, qty, variation = '') {
     return true
 }
 
-function addToCart(id, qty, isCart) {
+function recalculateTotals() {
+    let table = document.getElementById("table");
+
+    let subtotal = 0;
+    for (i=1;i<table.rows.length;i++) {
+        let qty = parseInt(table.rows[i].getElementsByClassName("qty"),getElementsByTagName("input")[0].value);
+        let price = parseFloat(table.rows[i].getElementsByClassName("price").innerHTML.replaceAll("$", ""));
+
+        let total = (qty*price).toFixed(2);
+
+        subtotal += parseFloat(total);
+
+        table.rows[i].getElementsByClassName("total").innerHTML = total + "$";
+    }
+
+    document.getElementById("subtotal").innerHTML = subtotal.toFixed(2) + "$";
+    document.getElementById("grandtotal").innerHTML = subtotal.toFixed(2) + "$";
+}
+
+function addToCart(elem, id, qty, isCart) {
     $.ajax({
         url: "/addToCart",
         data: { 'id': id, 'quantity': qty, 'cart': isCart },
         success: function (obj) {
             // alert(obj);
+
+            let $button = $(elem);
+
+            var oldValue = $button.parent().find('input').val();
+
+            var newVal = parseFloat(oldValue) + qty;
+
+            $button.parent().find('input').val(newVal);
+
+            recalculateTotals();
         },
         error: function (obj) {
             // alert(JSON.stringify(obj));
@@ -409,11 +438,21 @@ function addToCart(id, qty, isCart) {
     });
 }
 
-function removeFromCart(id, qty) {
+function removeFromCart(elem, id, qty) {
     $.ajax({
         url: "/removeFromCart",
         data: { 'id': id, 'quantity': qty },
-        success: function (obj) { }
+        success: function (obj) {
+            let $button = $(elem);
+
+            var oldValue = $button.parent().find('input').val();
+
+            var newVal = parseFloat(oldValue) - qty;
+
+            $button.parent().find('input').val(newVal);
+
+            recalculateTotals();
+        }
     });
 }
 

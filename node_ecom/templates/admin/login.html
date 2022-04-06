@@ -13,6 +13,20 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     <link href="/css/templatemo-style.css" rel="stylesheet">
 </head>
+<% if (session.dataValues) { %>
+  <% for(i in session.dataValues.messages) { %>
+  <% if(session.dataValues.messages.hasOwnProperty(i)) { %>
+  <% if(i == 'sessionExpired') { %>
+      <div class="alert alert-danger alert-dismissible fade show align-items-center" role="alert">
+          <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
+          <div>
+              <%= session.dataValues.messages[i] %>
+          </div>
+      </div>
+  <% } %>
+  <% } %>
+  <% } %>
+  <% } %>
 <div class="container tm-mt-big tm-mb-big">
   <div class="row">
     <div class="col-12 mx-auto tm-login-col">
@@ -59,5 +73,12 @@
       </p>
   </div>
 </footer>
+<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+<script>
+  // Alert fade auto
+  $( ".alert" ).delay(3000).slideUp(200, function() {
+    $(this).alert('close')
+  })
+</script>
 </body>
 </html>

@@ -97,8 +97,6 @@ async function getProducts(ctx) {
     filters['search'] = ''
   }
 
-  ctx.cookies.set('foo', 'bar', {httpOnly: false});
-
   let categories, page = 1;
   await Category.findAll().then((categoriesv) => categories = categoriesv);
 
@@ -124,13 +122,19 @@ async function getProducts(ctx) {
     page: page,
     pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / utilsEcom.PRODUCTS_PER_PAGE))
   });
+
+  // Clear the messages
+  ctx.session.messages = null;
 }
 
 async function getAdminProducts(ctx) {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     await ctx.redirect('/admin/login');
+    return;
   }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   if (!await utilsEcom.hasPermission(ctx, 'products.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see products' };
@@ -141,8 +145,22 @@ async function getAdminProducts(ctx) {
     return;
   }
 
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+    console.log(ctx.session.messages);
+
+    await ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
   // Get filters
-  let filters = {}, filtersToReturn = {}, permFound = false;
+  let filters = {}, filtersToReturn = {};
 
   if (ctx.query.category) {
     filters['category'] = ctx.query.category;
@@ -210,7 +228,10 @@ async function getAdminAccounts(ctx) {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     await ctx.redirect('/admin/login');
+    return;
   }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   if (!await utilsEcom.hasPermission(ctx, 'accounts.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see accounts' };
@@ -219,6 +240,20 @@ async function getAdminAccounts(ctx) {
       { user: ctx.session.dataValues.staffUsername });
     await ctx.redirect('/admin');
     return;
+  }
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+    console.log(ctx.session.messages);
+
+    await ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   // Get filters
@@ -300,6 +335,8 @@ async function getAdminStaffs(ctx) {
     return;
   }
 
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
   if (!await utilsEcom.hasPermission(ctx, 'staff.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see staff' };
     utilsEcom.logger.log('info',
@@ -307,6 +344,20 @@ async function getAdminStaffs(ctx) {
       { user: ctx.session.dataValues.staffUsername });
     await ctx.redirect('/admin');
     return;
+  }
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+    console.log(ctx.session.messages);
+
+    await ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   // Get filters
@@ -377,7 +428,10 @@ async function getAdminRoles(ctx) {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     await ctx.redirect('/admin/login');
+    return;
   }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   if (!await utilsEcom.hasPermission(ctx, 'roles.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see roles' };
@@ -386,6 +440,20 @@ async function getAdminRoles(ctx) {
       { user: ctx.session.dataValues.staffUsername });
     await ctx.redirect('/admin');
     return;
+  }
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+    console.log(ctx.session.messages);
+
+    await ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   let page = 1;
@@ -426,7 +494,10 @@ async function getAdminOrders(ctx) {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     await ctx.redirect('/admin/login');
+    return;
   }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   if (!await utilsEcom.hasPermission(ctx, 'orders.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see orders' };
@@ -435,6 +506,20 @@ async function getAdminOrders(ctx) {
       { user: ctx.session.dataValues.staffUsername });
     await ctx.redirect('/admin');
     return;
+  }
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+    console.log(ctx.session.messages);
+
+    await ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   // Get filters
@@ -524,7 +609,10 @@ async function getAdminReport(ctx) {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   if (!await utilsEcom.hasPermission(ctx, 'report.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see reports' };
@@ -534,6 +622,20 @@ async function getAdminReport(ctx) {
 
     ctx.redirect('/admin');
     return;
+  }
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+    console.log(ctx.session.messages);
+
+    await ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   // Get filters
@@ -609,7 +711,10 @@ async function getAdminAudit(ctx) {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     await ctx.redirect('/admin/login');
+    return;
   }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   if (!await utilsEcom.hasPermission(ctx, 'audit.read')) {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to see audit' };
@@ -618,6 +723,20 @@ async function getAdminAudit(ctx) {
       { user: ctx.session.dataValues.staffUsername });
     await ctx.redirect('/admin');
     return;
+  }
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+    console.log(ctx.session.messages);
+
+    await ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   // Get filters
@@ -881,6 +1000,23 @@ router.get('/logout', async ctx => {
 
 router.get('/admin', async ctx => {
   if (await utilsEcom.isAuthenticatedStaff(ctx)) {
+
+    let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+    // Auto session expire
+    if (utilsEcom.isSessionExpired(staff)) {
+      ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+      ctx.session.staffUsername = null;
+      console.log(ctx.session.messages);
+
+      ctx.redirect('/admin/login');
+      return; 
+    } else {
+      await staff.update({
+        lastActivity: Sequelize.fn("NOW")
+      });
+    }
+
     const orders = await Order.findAll({
       where: {
         status: { [Op.gte]: 1 }
@@ -920,15 +1056,16 @@ router.get('/admin', async ctx => {
 });
 
 router.get('/admin/login', async ctx => {
-  // Clear old messages
-  ctx.session.messages = null;
-
+  console.log(ctx.session);
   if (await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin');
-  }
-  else {
+  } else {
+    console.log(ctx.session.dataValues.messages);
     await ctx.render('/admin/login', { layout: false, selected: 'login', session: ctx.session });
   }
+
+  // Clear old messages
+  ctx.session.messages = null;
 });
 
 router.post('/admin/login', async ctx => {
@@ -960,7 +1097,8 @@ router.post('/admin/login', async ctx => {
       { user: ctx.request.fields.username });
 
     await user.update({
-      lastLogin: Sequelize.fn('NOW')
+      lastLogin: Sequelize.fn('NOW'),
+      lastActivity: Sequelize.fn('NOW')
     });
   }
   else {
@@ -993,6 +1131,7 @@ router.post('/admin/products/add', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'product.create')) {
@@ -1082,6 +1221,7 @@ router.get('/admin/products/edit/:id', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'products.update')) {
@@ -1119,6 +1259,7 @@ router.post('/admin/products/edit/:id', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'products.update')) {
@@ -1189,6 +1330,7 @@ router.post('/admin/products/delete', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'products.delete')) {
@@ -1240,6 +1382,7 @@ router.post('/admin/accounts/delete', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'accounts.delete')) {
@@ -1271,6 +1414,7 @@ router.get('/admin/accounts/edit/:id', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'accounts.update')) {
@@ -1296,6 +1440,7 @@ router.post('/admin/accounts/edit/:id', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'accounts.update')) {
@@ -1341,6 +1486,7 @@ router.post('/admin/accounts/add', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'accounts.create')) {
@@ -1413,6 +1559,7 @@ router.post('/admin/staff/add', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'staff.create')) {
@@ -1458,8 +1605,6 @@ router.post('/admin/staff/add', async ctx => {
     }
   }
 
-  console.log(created);
-
   if (!created) {
     if (!user.deletedAt) {
       ctx.session.messages = { 'staffExist': `The Staff ${ctx.session.dataValues.staffUsername} already exists!` };
@@ -1483,6 +1628,7 @@ router.post('/admin/staff/delete', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'staff.delete')) {
@@ -1513,6 +1659,7 @@ router.get('/admin/staff/edit/:id', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'staff.update')) {
@@ -1541,6 +1688,7 @@ router.post('/admin/staff/edit/:id', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'staff.update')) {
@@ -1585,6 +1733,7 @@ router.post('/admin/categories/add', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'categories.create')) {
@@ -1620,6 +1769,7 @@ router.post('/admin/categories/delete', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'categories.delete')) {
@@ -1648,6 +1798,7 @@ router.post('/admin/roles/add', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'roles.create')) {
@@ -1693,6 +1844,7 @@ router.post('/admin/roles/delete', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'roles.delete')) {
@@ -1721,6 +1873,7 @@ router.get('/admin/roles/edit/:id', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'roles.update')) {
@@ -1751,6 +1904,7 @@ router.post('/admin/roles/edit/:id', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'roles.update')) {
@@ -1878,6 +2032,7 @@ router.post('/admin/orders/add', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'orders.create')) {
@@ -1938,6 +2093,7 @@ router.post('/admin/orders/delete', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'orders.delete')) {
@@ -1978,6 +2134,7 @@ router.get('/admin/orders/edit/:id', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'orders.update')) {
@@ -2025,6 +2182,7 @@ router.post('/admin/orders/edit/:id', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'orders.update')) {
@@ -2097,8 +2255,18 @@ router.post('/admin/orders/edit/:id', async ctx => {
 router.get('/addToCart', async ctx => {
   // Currently working only for registered users
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    // todo: check for qty !!!
-    console.log(ctx.cookies.get('products'));
+    let qty = JSON.parse(ctx.cookies.get('products'))[ctx.query.id];
+
+    if (!qty)
+      qty = ctx.query.quantity
+
+    if (!await utilsEcom.hasMoreQtyOfProduct(ctx.query.id, qty)) 
+    {
+      ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
+      ctx.redirect('/products');
+      return;
+    }
+
     if (!ctx.cookies.get('products'))
       ctx.cookies.set('products', `{${ctx.query.id}: ${ctx.query.quantity}}`, {httpOnly: false, expires: new Date(2147483647e3)});
     else 
@@ -2170,7 +2338,14 @@ router.get('/addToCart', async ctx => {
 
   if (!await utilsEcom.hasMoreQtyOfProduct(ctx.query.id, orderitem.quantity)) 
   {
-    ctx.status = 400;
+    if (ctx.query.cart) 
+    {
+      ctx.status = 400;
+    } else 
+    {
+      ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
+      ctx.redirect('/products');
+    }
     return;
   }
 
@@ -2236,12 +2411,12 @@ router.get('/removeFromCart', async ctx => {
   });
 
   if (quantity > 0) {
-    if (orderitem.quantity < 1) 
+    if (orderitem.quantity <= 1) 
     {
       ctx.status = 400;
       return;
     }
-    
+
     await orderitem.update({
       quantity: parseInt(orderitem.quantity) - parseInt(quantity)
     });
@@ -2472,6 +2647,7 @@ router.get('/admin/export/report/excel', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'report.read')) {
@@ -2543,6 +2719,7 @@ router.get('/admin/export/report/csv', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
+    return;
   }
 
   if (!await utilsEcom.hasPermission(ctx, 'report.read')) {

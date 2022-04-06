@@ -207,8 +207,6 @@ sorttable = {
 
     hasInputs = (typeof node.getElementsByTagName == 'function') &&
                  node.getElementsByTagName('input').length;
-    
-    console.log(node.nodeType);
 
     if (node.getAttribute("sorttable_customkey") != null) {
       return node.getAttribute("sorttable_customkey");

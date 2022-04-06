@@ -32,6 +32,7 @@ const excelJS = require("exceljs");
 
 const PRODUCTS_PER_PAGE = 12;
 const SESSION_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000; // 2 weeks
+const SESSION_BACK_OFFICE_EXPIRE = 10 * 1000;
 const STATUS_DISPLAY = [
     "Not Ordered",
     "Pending",
@@ -170,6 +171,23 @@ async function sendEmail(email, token) {
     EmailTransport.sendMail(message);
 }
 
+async function sendOrderEmail(email, cart) {
+    let text = `Thank you for your order:`;
+
+    for (i=0;i<cart.length;i++) {
+
+    }
+
+    var message = {
+        from: "danielgudjenev@gmail.com",
+        to: email,
+        subject: "Successful order",
+        text: text,
+    };
+
+    EmailTransport.sendMail(message);
+}
+
 function configPostgreSessions() {
     return {
       // Get session object by key. 
@@ -198,8 +216,6 @@ async function isAuthenticatedUser(ctx)
     if (ctx.session.dataValues.username) {
         const user = await User.findOne({ where: { username: ctx.session.dataValues.username }});
 
-        console.log(user);
-
         return user != null;
     }
 
@@ -222,6 +238,7 @@ async function isAuthenticatedStaff(ctx)
 // Staff only function !
 async function hasPermission(ctx, permission) 
 {
+    console.log(ctx.session);
     const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername }, include: Role });
 
     if (staff == null) {
@@ -633,6 +650,14 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
             ];
 }
 
+function isSessionExpired(staff) 
+{
+    if (!staff.lastActivity)
+        return false;
+    
+    return new Date() - new Date(staff.lastActivity) > SESSION_BACK_OFFICE_EXPIRE;
+}
+
 // Generate
 async function generateOrders(x = 100) 
 {
@@ -817,6 +842,7 @@ module.exports = {
     generateSessionKey,
     configPostgreSessions,
     sendEmail,
+    isSessionExpired,
     isAuthenticatedStaff,
     isAuthenticatedUser,
     hasPermission,

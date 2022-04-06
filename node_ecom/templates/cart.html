@@ -5,7 +5,7 @@
             <div class="col-lg-8">
                 <div class="cart-page-inner">
                     <div class="table-responsive">
-                        <table class="table table-bordered">
+                        <table id="table" class="table table-bordered">
                             <thead class="thead-dark">
                                 <tr>
                                     <th>Product</th>
@@ -24,22 +24,24 @@
                                             <p><%= products[i].name %></p>
                                         </div>
                                     </td>
+                                    <td class="price">
                                     <% if (products[i].discountPrice != products[i].price) { %>
-                                    <td><%= products[i].discountPrice %>$</td>
+                                    <%= products[i].discountPrice %>
                                     <% } else { %>
-                                    <td><%= products[i].price %>$</td>
-                                    <% } %>
+                                    <%= products[i].price %>
+                                    <% } %>$
+                                    </td>
                                     <td>
                                         <div class="qty">
-                                            <button class="btn-minus" onclick="javascript:removeFromCart(<%= products[i].id %>, 1)"><i class="fa fa-minus"></i></button>
-                                            <input id="qtyNum" data-max="<%= items[i].quantity %>" type="text" value="<%= items[i].quantity %>" disabled>
-                                            <button class="btn-plus" onclick="javascript:addToCart(<%= products[i].id %>, 1, true)"><i class="fa fa-plus"></i></button>
+                                            <button class="btn-minus" onclick="javascript:removeFromCart(this, <%= products[i].id %>, 1)"><i class="fa fa-minus"></i></button>
+                                            <input type="text" value="<%= items[i].quantity %>" disabled>
+                                            <button class="btn-plus" onclick="javascript:addToCart(this, <%= products[i].id %>, 1, true)"><i class="fa fa-plus"></i></button>
                                         </div>
                                     </td>
-                                    <td><%= totals[i] %>$</td>
-                                    <td><form id="removeCart" action="/removeFromCart" style="display: inline;" method="get">
+                                    <td class="total"><%= totals[i] %> $</td>
+                                    <td><form action="/removeFromCart" style="display: inline;" method="get">
                                         <input type="hidden" value="<%= items[i].id %>" name="orderid" style="display: inline;">
-                                        <input id="removeCartQty" type="hidden" value="-1" name="quantity" style="display: inline;">
+                                        <input type="hidden" value="-1" name="quantity" style="display: inline;">
                                         <button type="submit" style="display: inline;"><i class="fa fa-trash"></i></button>
                                     </form></td>
                                 </tr>
@@ -62,9 +64,9 @@
                             <div class="cart-summary">
                                 <div class="cart-content">
                                     <h1>Cart Summary</h1>
-                                    <p>Sub Total<span><%= orderTotal %>$</span></p>
+                                    <p>Sub Total<span id="subtotal"><%= orderTotal %>$</span></p>
                                     <p>Shipping Cost<span>0$</span></p>
-                                    <h2>Grand Total<span><%= orderTotal %>$</span></h2>
+                                    <h2>Grand Total<span id="grandtotal"><%= orderTotal %>$</span></h2>
                                 </div>
                                 <div class="cart-btn">
                                     <button onclick="javascript:window.location.href = '/checkout';">Checkout</button>
