@@ -38,6 +38,7 @@
     "nodemailer": "^6.7.2",
     "nodemon": "^2.0.15",
     "paypal-rest-sdk": "^2.0.0-rc.1",
+    "pdfkit-table": "^0.1.86",
     "pg": "^8.7.1",
     "pg-hstore": "^2.3.4",
     "rangen": "^1.0.0",

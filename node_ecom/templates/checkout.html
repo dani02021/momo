@@ -124,9 +124,18 @@
                     })
                 }).then(function (res) {
                     if (!res.ok) {
-                        document.getElementById("hidden-alert").classList.add("alert-danger")
-                        document.getElementById("hidden-alert-icon").classList.add("fa-exclamation-triangle")
-                        document.getElementById("hidden-alert-msg").innerHTML = "Can\'t connect to the server!"
+                        document.getElementById("hidden-alert").classList.add("alert");
+                        document.getElementById("hidden-alert").classList.add("alert-danger");
+                        document.getElementById("hidden-alert-icon").classList.add("fa-exclamation-triangle");
+
+                        document.getElementById("hidden-alert-msg").innerHTML = "There was an error while trying to process your request!";
+                        document.getElementById("hidden-alert").style = null;
+
+                        setTimeout(() => {
+                        $( "#hidden-alert" ).delay(3000).slideUp(200, function() {
+                            $(this).alert('close')
+                        });
+                    });
                     }
                     return res.json();
                 }).then(function (details) {
@@ -160,21 +169,28 @@
             fetch('/captureOrder', {
                 method: 'POST',
                 headers: {
-                    Accept: 'application/json'
+                    'content-type': 'application/json'
                 },
                 body: JSON.stringify({
                     type: "cod"
                 })
             }).then(function (res) {
-                alert(res.ok);
                 if (!res.ok) {
-                    document.getElementById("hidden-alert").classList.add("alert-danger")
-                    document.getElementById("hidden-alert-icon").classList.add("fa-exclamation-triangle")
-                    document.getElementById("hidden-alert-msg").innerHTML = "Can\'t connect to the server!"
+                    document.getElementById("hidden-alert").classList.add("alert");
+                    document.getElementById("hidden-alert").classList.add("alert-danger");
+                    document.getElementById("hidden-alert-icon").classList.add("fa-exclamation-triangle");
+
+                    document.getElementById("hidden-alert-msg").innerHTML = "There was an error while trying to process your request!";
+                    document.getElementById("hidden-alert").style = null;
+
+                    setTimeout(() => {
+                        $( "#hidden-alert" ).delay(3000).slideUp(200, function() {
+                            $(this).alert('close')
+                        });
+                    });
                 }
                 return res.json();
             }).then(function (details) {
-                alert(details.status);
                 // alert('Transaction funds captured from ' + details.payer_given_name);
 
                 if (details.status == 'ok') {

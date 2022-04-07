@@ -111,7 +111,7 @@ async function getProducts(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
-  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval);
+  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval, ctx.query.sort).catch(function err(e){console.log(e)});
 
   await ctx.render('product-list', {
     selected: 'products',
@@ -149,7 +149,6 @@ async function getAdminProducts(ctx) {
   if (utilsEcom.isSessionExpired(staff)) {
     ctx.session.messages = { 'sessionExpired': 'Session expired!' };
     ctx.session.staffUsername = null;
-    console.log(ctx.session.messages);
 
     await ctx.redirect('/admin/login');
     return; 
@@ -246,7 +245,6 @@ async function getAdminAccounts(ctx) {
   if (utilsEcom.isSessionExpired(staff)) {
     ctx.session.messages = { 'sessionExpired': 'Session expired!' };
     ctx.session.staffUsername = null;
-    console.log(ctx.session.messages);
 
     await ctx.redirect('/admin/login');
     return; 
@@ -350,7 +348,6 @@ async function getAdminStaffs(ctx) {
   if (utilsEcom.isSessionExpired(staff)) {
     ctx.session.messages = { 'sessionExpired': 'Session expired!' };
     ctx.session.staffUsername = null;
-    console.log(ctx.session.messages);
 
     await ctx.redirect('/admin/login');
     return; 
@@ -446,7 +443,6 @@ async function getAdminRoles(ctx) {
   if (utilsEcom.isSessionExpired(staff)) {
     ctx.session.messages = { 'sessionExpired': 'Session expired!' };
     ctx.session.staffUsername = null;
-    console.log(ctx.session.messages);
 
     await ctx.redirect('/admin/login');
     return; 
@@ -512,7 +508,6 @@ async function getAdminOrders(ctx) {
   if (utilsEcom.isSessionExpired(staff)) {
     ctx.session.messages = { 'sessionExpired': 'Session expired!' };
     ctx.session.staffUsername = null;
-    console.log(ctx.session.messages);
 
     await ctx.redirect('/admin/login');
     return; 
@@ -628,7 +623,6 @@ async function getAdminReport(ctx) {
   if (utilsEcom.isSessionExpired(staff)) {
     ctx.session.messages = { 'sessionExpired': 'Session expired!' };
     ctx.session.staffUsername = null;
-    console.log(ctx.session.messages);
 
     await ctx.redirect('/admin/login');
     return; 
@@ -729,7 +723,6 @@ async function getAdminAudit(ctx) {
   if (utilsEcom.isSessionExpired(staff)) {
     ctx.session.messages = { 'sessionExpired': 'Session expired!' };
     ctx.session.staffUsername = null;
-    console.log(ctx.session.messages);
 
     await ctx.redirect('/admin/login');
     return; 
@@ -962,6 +955,47 @@ router.post("/login", async ctx => {
   }
 
   if (user.authenticate(ctx.request.fields.password)) {
+    if (!user.emailConfirmed) {
+      ctx.session.messages = {'emailNotConfirmed': 'Your email is not confirmed!'};
+      ctx.redirect("/");
+      return;
+    }
+
+    // Transfer cookies to db
+    if (ctx.cookies.get("products")) 
+    {
+      let cookieProducts = JSON.parse(ctx.cookies.get("products"));
+
+      for (i in cookieProducts) 
+      {
+        const product = await Product.findOne({where: {id: i}});
+
+        if (product) 
+        {
+          const [order, createdorder] = await Order.findOrCreate({
+            where: {
+              status: 0
+            },
+            include: [{
+              model: User,
+              required: true,
+              where: {
+                'username': ctx.request.fields.username
+              }
+            }],
+            paranoid: false,
+            defaults: {}
+          });
+          const orderitem = await OrderItem.create({ quantity: parseInt(cookieProducts[i]) });
+          await orderitem.setProduct(product);
+          await order.addOrderitem(orderitem);
+          await user.addOrder(order);
+        }
+      }
+
+      ctx.cookies.set("products", null);
+    }
+
     let messages = { 'loginSuccess': 'Successful login!' };
     ctx.session.messages = messages;
     ctx.session.username = ctx.request.fields.username;
@@ -1007,7 +1041,6 @@ router.get('/admin', async ctx => {
     if (utilsEcom.isSessionExpired(staff)) {
       ctx.session.messages = { 'sessionExpired': 'Session expired!' };
       ctx.session.staffUsername = null;
-      console.log(ctx.session.messages);
 
       ctx.redirect('/admin/login');
       return; 
@@ -1056,11 +1089,9 @@ router.get('/admin', async ctx => {
 });
 
 router.get('/admin/login', async ctx => {
-  console.log(ctx.session);
   if (await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin');
   } else {
-    console.log(ctx.session.dataValues.messages);
     await ctx.render('/admin/login', { layout: false, selected: 'login', session: ctx.session });
   }
 
@@ -1108,6 +1139,9 @@ router.post('/admin/login', async ctx => {
     utilsEcom.logger.log('info',
       `Staff ${ctx.request.fields.username} tried to log in with invalid password!`,
       { user: ctx.request.fields.username });
+
+      ctx.redirect('/admin/login');
+      return;
   }
 
   ctx.redirect('/admin');
@@ -1141,6 +1175,21 @@ router.post('/admin/products/add', async ctx => {
       { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/products');
     return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   let price = parseFloat(parseFloat(ctx.request.fields.price).toFixed(2));
@@ -1233,6 +1282,21 @@ router.get('/admin/products/edit/:id', async ctx => {
     return;
   }
 
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
   let categories = {};
 
   await Category.findAll().then((categoriesv) => categories = categoriesv);
@@ -1269,6 +1333,21 @@ router.post('/admin/products/edit/:id', async ctx => {
       { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/products');
     return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   // Check the values
@@ -1342,6 +1421,21 @@ router.post('/admin/products/delete', async ctx => {
     return;
   }
 
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
   ids = ctx.request.fields.id;
 
   await Product.destroy({
@@ -1394,6 +1488,21 @@ router.post('/admin/accounts/delete', async ctx => {
     return;
   }
 
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
   ids = ctx.request.fields.id;
 
   await User.destroy({
@@ -1426,6 +1535,21 @@ router.get('/admin/accounts/edit/:id', async ctx => {
     return;
   }
 
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
   const user = await User.findOne({ where: { id: ctx.params.id } });
 
   await ctx.render('admin/edit-account', {
@@ -1450,6 +1574,21 @@ router.post('/admin/accounts/edit/:id', async ctx => {
       { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/accounts');
     return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   let updateParams = {
@@ -1496,6 +1635,21 @@ router.post('/admin/accounts/add', async ctx => {
       { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/accounts');
     return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   let defaultParams = {
@@ -1571,6 +1725,21 @@ router.post('/admin/staff/add', async ctx => {
     return;
   }
 
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
   let defaultParams = {
     username: ctx.request.fields.username,
     email: ctx.request.fields.email,
@@ -1639,6 +1808,22 @@ router.post('/admin/staff/delete', async ctx => {
     ctx.redirect('/admin/staff');
     return;
   }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
   ids = ctx.request.fields.id;
 
   await Staff.destroy({
@@ -1670,6 +1855,22 @@ router.get('/admin/staff/edit/:id', async ctx => {
     ctx.redirect('/admin/staff');
     return;
   }
+
+  let staffc = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staffc)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staffc.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
   const staff = await Staff.findOne({ where: { id: ctx.params.id } });
   const roles = await Role.findAll();
   const uroles = await staff.getRoles();
@@ -1698,6 +1899,21 @@ router.post('/admin/staff/edit/:id', async ctx => {
       { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/staff');
     return;
+  }
+
+  let staffc = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staffc)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staffc.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   let updateParams = {
@@ -1745,6 +1961,21 @@ router.post('/admin/categories/add', async ctx => {
     return;
   }
 
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
   const [category, created] = await Category.findOrCreate({
     where: {
       name: ctx.request.fields.name,
@@ -1781,6 +2012,21 @@ router.post('/admin/categories/delete', async ctx => {
     return;
   }
 
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
   await Category.destroy({
     where: {
       id: ctx.request.fields.id
@@ -1808,6 +2054,21 @@ router.post('/admin/roles/add', async ctx => {
       { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/roles');
     return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   const [role, created] = await Role.findOrCreate({
@@ -1856,6 +2117,21 @@ router.post('/admin/roles/delete', async ctx => {
     return;
   }
 
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
   await Role.destroy({
     where: {
       id: ctx.request.fields.id
@@ -1883,6 +2159,21 @@ router.get('/admin/roles/edit/:id', async ctx => {
       { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/roles');
     return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   const role = await Role.findOne({ where: { id: ctx.params.id } });
@@ -1914,6 +2205,21 @@ router.post('/admin/roles/edit/:id', async ctx => {
       { user: ctx.session.dataValues.staffUsername });
     ctx.redirect('/admin/roles');
     return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   const role = await Role.findOne({
@@ -2045,6 +2351,21 @@ router.post('/admin/orders/add', async ctx => {
     return;
   }
 
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
   let items = ctx.request.fields.items;
 
   let order = await Order.create({
@@ -2106,6 +2427,21 @@ router.post('/admin/orders/delete', async ctx => {
     return;
   }
 
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
   ids = ctx.request.fields.id;
 
   if (ids instanceof Array) {
@@ -2145,6 +2481,21 @@ router.get('/admin/orders/edit/:id', async ctx => {
 
     ctx.redirect('/admin/orders');
     return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   const order = await Order.findOne({
@@ -2193,6 +2544,21 @@ router.post('/admin/orders/edit/:id', async ctx => {
 
     ctx.redirect('/admin/orders');
     return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   const order = await Order.findOne({
@@ -2255,10 +2621,15 @@ router.post('/admin/orders/edit/:id', async ctx => {
 router.get('/addToCart', async ctx => {
   // Currently working only for registered users
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    let qty = JSON.parse(ctx.cookies.get('products'))[ctx.query.id];
+    let qty = ctx.query.quantity;
 
-    if (!qty)
-      qty = ctx.query.quantity
+    if (ctx.cookies.get('products')) 
+    {
+      const json = JSON.parse(ctx.cookies.get('products'));
+
+      if (json[ctx.query.id])
+        qty = json[ctx.query.id];
+    }
 
     if (!await utilsEcom.hasMoreQtyOfProduct(ctx.query.id, qty)) 
     {
@@ -2268,7 +2639,7 @@ router.get('/addToCart', async ctx => {
     }
 
     if (!ctx.cookies.get('products'))
-      ctx.cookies.set('products', `{${ctx.query.id}: ${ctx.query.quantity}}`, {httpOnly: false, expires: new Date(2147483647e3)});
+      ctx.cookies.set('products', `{"${ctx.query.id}": ${ctx.query.quantity}}`, {httpOnly: true, expires: new Date(2147483647e3)});
     else 
     {
       try 
@@ -2285,17 +2656,17 @@ router.get('/addToCart', async ctx => {
       {
         try 
         {
-          cooks[ctx.query.id] = parseInt(cooks[ctx.query.id]) + parseInt(cooks[ctx.query.id]);
+          cooks[ctx.query.id] = parseInt(cooks[ctx.query.id]) + parseInt(ctx.query.quantity);
         } catch (e) 
         {
           cooks[ctx.query.id] = ctx.query.quantity;
         }
       }
 
-      ctx.cookies.set('products', JSON.stringify(cooks), {httpOnly: false, expires: new Date(2147483647e3)});
+      ctx.cookies.set('products', JSON.stringify(cooks), {httpOnly: true, expires: new Date(2147483647e3)});
     }
     
-    ctx.session.messages = { 'productAdded': 'Product added to cart!' };
+    ctx.session.messages = { 'productAdded': 'Product added to the cart!' };
     ctx.redirect('/products');
     // ctx.session.messages = { 'noPermission': 'You are not registered!' };
     // ctx.redirect('/');
@@ -2359,24 +2730,40 @@ router.get('/addToCart', async ctx => {
   if (createdorder)
     await user.addOrder(order);
 
-  if (ctx.query.isCart) {
-    ctx.session.messages = { 'productAdded': 'Product added to cart!' };
-    ctx.redirect('/products');
-  }
-  else {
-    ctx.redirect('/cart');
-  }
+  ctx.session.messages = { 'productAdded': 'Product added to cart!' };
+  ctx.redirect('/products');
 });
 
 router.get('/removeFromCart', async ctx => {
-  // Currently working only for registered users
+  const quantity = ctx.query.quantity;
+
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    ctx.session.messages = { 'noPermission': 'You are not registered!' };
-    ctx.redirect('/');
+    let products = JSON.parse(ctx.cookies.get('products'));
+
+    if (products[ctx.query.id]) 
+    {
+      if (quantity > 0) 
+      {
+        if (products[ctx.query.id] > quantity)
+          products[ctx.query.id] -= quantity;
+        else {
+          ctx.status = 400;
+          return;
+        }
+      } else 
+      {
+        delete products[ctx.query.id];
+      }
+    }
+
+    ctx.cookies.set('products', JSON.stringify(products), {httpOnly: true, expires: new Date(2147483647e3)});
+
+    ctx.session.messages = { 'cartRemoved': 'Removed selected items from the cart' };
+
+    // ctx.session.messages = { 'noPermission': 'You are not registered!' };
+    ctx.redirect('/cart');
     return;
   }
-
-  const quantity = ctx.query.quantity;
 
   const order = await Order.findOne({
     where: {
@@ -2433,10 +2820,42 @@ router.get('/removeFromCart', async ctx => {
 router.get('/cart', async ctx => {
   // Currently working only for registered users
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    ctx.session.messages = { 'noPermission': 'You are not registered!' };
-    ctx.redirect('/');
+    let orderitems = [];
+    let products = [];
+    let totals = [];
+    let orderTotal = "0.00";
 
-    // todo
+    if (ctx.cookies.get("products")) 
+    {
+      let cookieProducts = JSON.parse(ctx.cookies.get("products"));
+
+      for (i in cookieProducts) 
+      {
+        let product = await Product.findOne({where: {id: i}});
+
+        if (product) 
+        {
+          orderitems.push({'id': i, 'productId': i, 'quantity': cookieProducts[i]});
+          products.push(product);
+          totals.push((parseFloat(cookieProducts[i])* parseFloat(product.discountPrice)).toFixed(2));
+        }
+      }
+
+      orderTotal = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a), 0).toFixed(2);
+    }
+
+    await ctx.render('cart', {
+      session: ctx.session,
+      selected: 'cart',
+      items: orderitems,
+      products: products,
+      totals: totals,
+      orderTotal: orderTotal,
+    });
+  
+    // Clear the messages
+    ctx.session.messages = null;
+
     return;
   }
 
@@ -2592,7 +3011,7 @@ router.post('/captureOrder', async ctx => {
 
     await transaction.createPaypaltransacion({
       transactionId: responce.result.id,
-      orderId: ctx.request.fields.orderID /*responce.result.purchase_units[0].payments.captures[0].id*/,
+      orderId: ctx.request.fields.orderID,
       status: responce.result.status,
       emailAddress: responce.result.payer.email_address,
       firstName: responce.result.payer.name.given_name,
@@ -2624,17 +3043,17 @@ router.post('/captureOrder', async ctx => {
       }],
     });
 
-    if (!cart) {
+    /*if (!cart) {
       ctx.redirect('/');
       return;
-    }
+    }*/
 
     await cart.update({ status: 1, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal() });
 
     await utilsEcom.removeProductQtyFromOrder(cart);
 
-    // ctx.body = {'msg': 'Your order is completed!', 'status': 'ok'};
-    ctx.redirect('/');
+    ctx.body = {'msg': 'Your order is completed!', 'status': 'ok'};
+    // ctx.redirect('/');
   }
 
   await order.setTransacion(transaction);
@@ -2658,6 +3077,19 @@ router.get('/admin/export/report/excel', async ctx => {
 
     ctx.redirect('/admin');
     return;
+  }
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   // Get filters
@@ -2730,6 +3162,21 @@ router.get('/admin/export/report/csv', async ctx => {
 
     ctx.redirect('/admin');
     return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
   }
 
   // Get filters

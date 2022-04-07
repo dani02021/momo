@@ -168,7 +168,7 @@
     <% if(session.dataValues) { %>
     <% for(i in session.dataValues.messages) { %>
     <% if(session.dataValues.messages.hasOwnProperty(i)) { %>
-    <% if(i == 'registerSuccess' || i == 'loginSuccess') { %>
+    <% if(i == 'registerSuccess' || i == 'loginSuccess' || i == 'productAdded') { %>
         <div class="alert alert-success alert-dismissible fade show align-items-center" role="alert">
             <i class="fas fa-check" style="margin-right: 10px;"></i>
             <div>
@@ -193,7 +193,7 @@
             </div>
         </div>
     <% } %>
-    <% if(i == 'verfError') { %>
+    <% if(i == 'verfError' || i == 'emailNotConfirmed') { %>
         <div class="alert alert-danger alert-dismissible fade show align-items-center" role="alert">
             <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
             <div>
@@ -212,7 +212,7 @@
     <% } %>
     <% } %>
     <% } %>
-    <div id="hidden-alert" class="alert-dismissible fade align-items-center" role="alert" style="display: none;">
+    <div id="hidden-alert" class="alert-dismissible align-items-center" role="alert" style="display: none;">
         <i id="hidden-alert-icon" class="fas" style="margin-right: 10px;"></i>
         <div id="hidden-alert-msg"></div>
     </div>
@@ -231,17 +231,6 @@
                             <p><i class="fa fa-envelope"></i>daniel.g@telebid-intern.com</p>
                             <p><i class="fa fa-phone"></i>+359 893 217 630</p>
                         </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6">
-                    <div class="footer-widget">
-                        <h2>Company Info</h2>
-                        <ul>
-                            <li><a href="#">About Us</a></li>
-                            <li><a href="#">Privacy Policy</a></li>
-                            <li><a href="#">Terms & Condition</a></li>
-                        </ul>
                     </div>
                 </div>
             </div>

@@ -401,18 +401,18 @@ function recalculateTotals() {
 
     let subtotal = 0;
     for (i=1;i<table.rows.length;i++) {
-        let qty = parseInt(table.rows[i].getElementsByClassName("qty"),getElementsByTagName("input")[0].value);
-        let price = parseFloat(table.rows[i].getElementsByClassName("price").innerHTML.replaceAll("$", ""));
+        let qty = parseInt(table.rows[i].getElementsByClassName("qty")[0].getElementsByTagName("input")[0].value);
+        let price = parseFloat(table.rows[i].getElementsByClassName("price")[0].innerHTML.replaceAll("$", ""));
 
         let total = (qty*price).toFixed(2);
 
         subtotal += parseFloat(total);
 
-        table.rows[i].getElementsByClassName("total").innerHTML = total + "$";
+        table.rows[i].getElementsByClassName("total")[0].innerHTML = total + " $";
     }
 
-    document.getElementById("subtotal").innerHTML = subtotal.toFixed(2) + "$";
-    document.getElementById("grandtotal").innerHTML = subtotal.toFixed(2) + "$";
+    document.getElementById("subtotal").innerHTML = subtotal.toFixed(2) + " $";
+    document.getElementById("grandtotal").innerHTML = subtotal.toFixed(2) + " $";
 }
 
 function addToCart(elem, id, qty, isCart) {

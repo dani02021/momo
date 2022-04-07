@@ -40,7 +40,7 @@
                                     </td>
                                     <td class="total"><%= totals[i] %> $</td>
                                     <td><form action="/removeFromCart" style="display: inline;" method="get">
-                                        <input type="hidden" value="<%= items[i].id %>" name="orderid" style="display: inline;">
+                                        <input type="hidden" value="<%= products[i].id %>" name="id" style="display: inline;">
                                         <input type="hidden" value="-1" name="quantity" style="display: inline;">
                                         <button type="submit" style="display: inline;"><i class="fa fa-trash"></i></button>
                                     </form></td>

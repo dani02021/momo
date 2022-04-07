@@ -16,7 +16,7 @@
 <% if (session.dataValues) { %>
   <% for(i in session.dataValues.messages) { %>
   <% if(session.dataValues.messages.hasOwnProperty(i)) { %>
-  <% if(i == 'sessionExpired') { %>
+  <% if(i == 'sessionExpired' || i == 'loginErrorPass' || i == 'loginErrorUser') { %>
       <div class="alert alert-danger alert-dismissible fade show align-items-center" role="alert">
           <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
           <div>

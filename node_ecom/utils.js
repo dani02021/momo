@@ -32,7 +32,7 @@ const excelJS = require("exceljs");
 
 const PRODUCTS_PER_PAGE = 12;
 const SESSION_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000; // 2 weeks
-const SESSION_BACK_OFFICE_EXPIRE = 10 * 1000;
+const SESSION_BACK_OFFICE_EXPIRE = 5 * 60 * 1000; // 5 minutes
 const STATUS_DISPLAY = [
     "Not Ordered",
     "Pending",
@@ -482,8 +482,11 @@ function createTempFile (name = 'temp_file', data = '', encoding = 'utf8') {
     })
 }
 
-async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval) {
+async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, sort) {
     let text = `SELECT * FROM products 
+    LEFT JOIN (SELECT "productId", sum(quantity) FROM orderitems 
+    GROUP BY "productId") foo 
+    ON "productId" = products.id 
     WHERE ("deletedAt" IS NULL) 
     AND (hide = false) \n`;
     
@@ -514,8 +517,12 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval) 
     let countText = text.replace("*", "count(*)");
     if (countText.indexOf("OFFSET") != -1)
         countText = countText.substring(0, countText.indexOf("OFFSET"));
-    
-    text += ` ORDER BY "createdAt"`;
+
+    if (sort) {
+        if (sort == "sales") {
+            text += ` ORDER BY (sum IS NULL),sum desc`;
+        } else text += ` ORDER BY "createdAt" DESC`;
+    } else text += ` ORDER BY "createdAt" DESC`;
 
     if (offset > 0) 
     {
