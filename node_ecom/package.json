@@ -11,15 +11,10 @@
     "url": "git+https://github.com/dani02021/training-projects.git"
   },
   "keywords": [
-    "nodejs",
     "e-commerce"
   ],
   "author": "daniel",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/dani02021/training-projects/issues"
-  },
-  "homepage": "https://github.com/dani02021/training-projects#readme",
   "dependencies": {
     "@paypal/checkout-server-sdk": "^1.0.3",
     "babel-cli": "^6.26.0",

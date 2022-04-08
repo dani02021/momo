@@ -127,7 +127,7 @@ async function getProducts(ctx) {
   ctx.session.messages = null;
 }
 
-async function getAdminProducts(ctx) {
+async function getAdminProducts(ctx) { //
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     await ctx.redirect('/admin/login');
@@ -687,7 +687,7 @@ async function getAdminReport(ctx) {
   const [reportRes, count] = await utilsEcom.getReportResponce(filters, limit, offset, time);
 
   utilsEcom.logger.log('info',
-    `Staff ${ctx.session.dataValues.staffUsername} generated orders report from ${filters.ordAfter} to ${filters.ordBefore} trunced by ${time} `,
+    `Staff ${ctx.session.dataValues.staffUsername} generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} `,
     { user: ctx.session.dataValues.staffUsername });
 
   await ctx.render('/admin/report', {
@@ -3062,7 +3062,7 @@ router.post('/captureOrder', async ctx => {
 router.get('/admin/report', async ctx => getAdminReport(ctx));
 router.get('/admin/report/:page', async ctx => getAdminReport(ctx));
 
-router.get('/admin/export/report/excel', async ctx => {
+router.get('/admin/export/report/pdf', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     ctx.redirect('/admin/login');
@@ -3078,6 +3078,8 @@ router.get('/admin/export/report/excel', async ctx => {
     ctx.redirect('/admin');
     return;
   }
+
+  let staff = await Staff.findOne({where: {username: ctx.session.dataValues.staffUsername}});
 
   // Auto session expire
   if (utilsEcom.isSessionExpired(staff)) {
@@ -3133,12 +3135,99 @@ router.get('/admin/export/report/excel', async ctx => {
 
   const reportRes = await utilsEcom.getReportResponce(filters, -1, 0, time);
 
-  const path = await utilsEcom.saveReportExcel((await reportRes[0]));
+  const path = await utilsEcom.saveReportPdf((await reportRes[0]), filters, time);
 
   ctx.body = fs.createReadStream(path);
 
   utilsEcom.logger.log('info',
-    `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${filters.ordAfter} to ${filters.ordBefore} trunced by ${time} in .xlsx format`,
+    `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .pdf format`,
+    { user: ctx.session.dataValues.staffUsername });
+
+  ctx.res.writeHead(200, {
+    'Content-Type': 'application/pdf',
+    "Content-Disposition": "attachment; filename=reportExcel.pdf",
+  });
+});
+
+router.get('/admin/export/report/excel', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    ctx.redirect('/admin/login');
+    return;
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'report.read')) {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see reports' };
+    utilsEcom.logger.log('info',
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see report without rights`,
+      { user: ctx.session.dataValues.staffUsername });
+
+    ctx.redirect('/admin');
+    return;
+  }
+
+  let staff = await Staff.findOne({where: {username: ctx.session.dataValues.staffUsername}});
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
+  // Get filters
+  let filters = {}, filtersToReturn = {};
+
+  if (ctx.query.timegroup) {
+    filters['timegroup'] = ctx.query.timegroup
+    filtersToReturn['timegroup'] = ctx.query.timegroup
+  } else {
+    filtersToReturn['timegroup'] = '2';
+  }
+  if (ctx.query.ordBefore) {
+    filters['ordBefore'] = ctx.query.ordBefore;
+    filtersToReturn['ordBefore'] = ctx.query.ordBefore;
+  } else {
+    filters['ordBefore'] = new Date().toISOString();
+  }
+  if (ctx.query.ordAfter) {
+    filters['ordAfter'] = ctx.query.ordAfter;
+    filtersToReturn['ordAfter'] = ctx.query.ordAfter;
+  } else {
+    filters['ordAfter'] = new Date(0).toISOString();
+  }
+
+  const time = 'month';
+
+  switch (filters.timegroup) {
+    case 0:
+      time = 'day';
+      break;
+    case 1:
+      time = 'week';
+      break;
+    case 2:
+      time = 'month';
+      break;
+    case 3:
+      time = 'year';
+      break;
+  }
+
+  const reportRes = await utilsEcom.getReportResponce(filters, -1, 0, time);
+
+  const path = await utilsEcom.saveReportExcel((await reportRes[0]), filters, time);
+
+  ctx.body = fs.createReadStream(path);
+
+  utilsEcom.logger.log('info',
+    `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .xlsx format`,
     { user: ctx.session.dataValues.staffUsername });
 
   ctx.res.writeHead(200, {
@@ -3220,12 +3309,12 @@ router.get('/admin/export/report/csv', async ctx => {
 
   const reportRes = await utilsEcom.getReportResponce(filters, -1, 0, time);
 
-  const path = await utilsEcom.saveReportCsv((await reportRes[0]));
+  const path = await utilsEcom.saveReportCsv((await reportRes[0]), filters, time);
 
   ctx.body = fs.createReadStream(path);
 
   utilsEcom.logger.log('info',
-    `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${filters.ordAfter} to ${filters.ordBefore} trunced by ${time} in .csv format`,
+    `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .csv format`,
     { user: ctx.session.dataValues.staffUsername });
 
   ctx.res.writeHead(200, {
@@ -3266,4 +3355,4 @@ app.use(router.routes()).use(router.allowedMethods());
 
 // app.listen(3210);
 
-app.listen(process.env.PORT || 3210);
+app.listen(process.env.PORT || 3210, '10.20.1.159');

@@ -157,13 +157,17 @@
         <%- body %>
 
         <footer class="tm-footer row tm-mt-small">
-            <div class="col-12 font-weight-light">
+            <div class="col-3 font-weight-light"></div>
+            <div class="col-6 font-weight-light">
                 <p class="text-center text-white mb-0 px-4 small">
                     Copyright &copy; <b>2018</b> All rights reserved.
 
                     Design: <a rel="nofollow noopener" href="https://templatemo.com" class="tm-footer-link">Template
                         Mo</a>
                 </p>
+            </div>
+            <div class="col-3 font-weight-light">
+                <p id="server-time" style="font-weight: bold;" class="text-end text-white mb-0 px-4 small">Server time: <%= new Date().toLocaleString('en-GB') %></p>
             </div>
         </footer>
 
@@ -172,6 +176,15 @@
             $( ".alert" ).delay(3000).slideUp(200, function() {
                 $(this).alert('close')
             })
+
+            // Server clock
+            const timezone = "<%= Intl.DateTimeFormat().resolvedOptions().timeZone %>";
+
+            setInterval(() => {
+                let server = new Date();
+
+                document.getElementById("server-time").innerHTML = "Server time: " + server.toLocaleString('en-GB', {timeZone: timezone});
+            }, 1000);
         </script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.2/dist/js/bootstrap.bundle.js"></script>
         <script src="/js/tooplate-scripts.js"></script>

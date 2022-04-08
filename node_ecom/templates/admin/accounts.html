@@ -78,7 +78,7 @@
               <% for (i = 0; i < users.length; i++) { %>
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b><%= users[i].createdAt.toISOString() %></b></td>
+                <td><b><%= users[i].createdAt.toLocaleString('en-GB') %></b></td>
                 <td data-id="<%= users[i].id %>"><b>#<%= users[i].id %></b></td>
                 <td><b><%= users[i].username %></b></td>
                 <td><b><%= users[i].firstName + ' ' + users[i].lastName %></b></td>
