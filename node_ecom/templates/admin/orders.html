@@ -90,7 +90,7 @@
               <% for(i = 0; i < orders.length; i++) { %>
               <tr>
                 <th scope="row"><input type="checkbox" /></th>
-                <td><b><%= orders[i].orderedAt.toISOString() %></b></td>
+                <td><b><%= orders[i].orderedAt.toLocaleString('en-GB') %></b></td>
                 <td>
                   <% if (orders[i].status == 1) { %>
                   <div class="tm-status-circle pending"></div>
@@ -107,7 +107,7 @@
                 </td>
                 <td data-id="<%= orders[i].id %>"><b>#<%= orders[i].id %></b></td>
                 <td><b><%= orders[i].firstName + " " + orders[i].lastName %></b></td>
-                <td><b>#<%= orders[i].username %></b></td>
+                <td><b><%= orders[i].username %></b></td>
                 <td><b><%= orders[i].country %></b></td>
                 <td><b><%= orders[i].address %></b></td>
                 <td style="text-align: right;"><b>$<%= orders[i].price %></b></td>

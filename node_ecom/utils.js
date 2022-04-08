@@ -23,6 +23,7 @@ const Log = models.log();
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const PDFDocument = require("pdfkit-table");
 
 const { id, user } = require('rangen');
 
@@ -465,7 +466,7 @@ async function getReportResponce(filters, limit, offset, time) {
 
 function createTempFile (name = 'temp_file', data = '', encoding = 'utf8') {
     return new Promise((resolve, reject) => {
-        const tempPath = path.join(os.tmpdir(), 'foobar-');
+        const tempPath = path.join(os.tmpdir(), 'nodejs-');
         fs.mkdtemp(tempPath, (err, folder) => {
             if (err) 
                 return reject(err)
@@ -548,24 +549,69 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
     ];
 }
 
-async function saveReportCsv(reportRes) {
-    var dataToWrite = "startDate, orders, products, total\n";
+function escapeCSVParam(param) 
+{
+    let escapedParam = param.replace(/"/g, `""`);
+
+    return `"${escapedParam}"`;
+}
+
+async function saveReportCsv(reportRes, filters, time) 
+{
+    var dataToWrite = `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}\n`;
+
+    dataToWrite += "Start Date, Orders, Products, Total\n";
 
     for(i = 0; i < reportRes.length; i++) 
     {
-        dataToWrite += reportRes[i].dataValues.startDate.toISOString() + ", " + 
-            reportRes[i].dataValues.orders + ", " +  reportRes[i].dataValues.products + ", " +
-            reportRes[i].dataValues.total + "\n";
+        dataToWrite += escapeCSVParam(reportRes[i].dataValues.startDate.toISOString()) + ", " + 
+            escapeCSVParam(reportRes[i].dataValues.orders) + ", " +  escapeCSVParam(reportRes[i].dataValues.products) + ", " +
+            escapeCSVParam(reportRes[i].dataValues.total) + "\n";
     }
 
     return createTempFile('excelReport.csv', dataToWrite);
 }
 
-async function saveReportExcel(reportRes) 
+async function saveReportPdf(reportRes, filters, time) 
+{
+    let doc = new PDFDocument({ margin: 30, size: 'A4' });
+    let temp = await createTempFile('excelReport.pdf');
+    let rows = [];
+
+    for(i = 0; i < reportRes.length; i++) 
+    {
+        rows.push([reportRes[i].dataValues.startDate.toLocaleDateString('en-GB'), 
+            reportRes[i].dataValues.orders,
+            reportRes[i].dataValues.products,
+            reportRes[i].dataValues.total]);
+    }
+
+    let subtitle = `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`
+
+    doc.pipe(fs.createWriteStream(temp));
+
+    const table = {
+        title: "Report Orders",
+        subtitle: subtitle,
+        headers: ["Start Date", "Orders", "Products", "Total"],
+        rows: rows
+    };
+    doc.table( table, {
+        //columnsSize: [ 200, 100, 100 ],
+    });
+
+    doc.end();
+
+    return temp;
+}
+
+async function saveReportExcel(reportRes, filters, time) 
 {
     const workbook = new excelJS.Workbook();
     const worksheet = workbook.addWorksheet("Report Orders");
     const path = "./files";  // Path to download excel
+
+    worksheet.getRow(3).values = ['Start Date', 'Orders', 'Products', 'Total'];
 
     // Column for data in excel. key must match data key
     worksheet.columns = [
@@ -577,7 +623,7 @@ async function saveReportExcel(reportRes)
 
     reportRes.forEach(report => {
         let data = [
-            report.dataValues.startDate,
+            report.dataValues.startDate.toLocaleDateString('en-GB'),
             parseInt(report.dataValues.orders),
             parseInt(report.dataValues.products),
             parseFloat(report.dataValues.total)];
@@ -585,8 +631,19 @@ async function saveReportExcel(reportRes)
         worksheet.addRow(data);
     });
 
+    /*TITLE*/
+    worksheet.mergeCells('A1', 'D1');
+    worksheet.getCell('B1').value = '';
+    worksheet.getCell('A1').value =
+        `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`;
+
     // Make first row bold
     worksheet.getRow(1).eachCell((cell) => {
+        cell.font = { bold: true };
+    });
+
+    // Make third row bold
+    worksheet.getRow(3).eachCell((cell) => {
         cell.font = { bold: true };
     });
 
@@ -864,5 +921,6 @@ module.exports = {
     getProductsAndOrderCount,
     saveReportCsv,
     saveReportExcel,
+    saveReportPdf,
     createTempFile,
 };
