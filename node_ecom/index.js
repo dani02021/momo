@@ -127,7 +127,7 @@ async function getProducts(ctx) {
   ctx.session.messages = null;
 }
 
-async function getAdminProducts(ctx) {
+async function getAdminProducts(ctx) { //
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     await ctx.redirect('/admin/login');
