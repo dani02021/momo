@@ -117,6 +117,40 @@ const logger = winston.createLogger({
     ]
 });
 
+/**
+ * 
+ * @param {import('sequelize/dist').Order} cart 
+ */
+function getOrderAsTableHTML(cart) 
+{
+    let orderitems = await cart.getOrderitems();
+
+    let html =
+    `<table>
+    <tr>
+    <th>Name</th>
+    <th>Price</th>
+    <th>Quantity</th>
+    <th>Total</th>
+    </tr>`;
+
+    for (i = 0; i < orderitems.length; i++) 
+    {
+        let orderitem = orderitems[i];
+        let product = await orderitems[i].getProduct();
+
+        html +=
+        `<tr>
+        <td>${product.name}</td>
+        <td>${product.discountPrice}</td>
+        <td>${orderitem.quantity}</td>
+        <td>${await orderitem.getTotal()}</td>
+        </tr>`;
+    }
+
+    html += `</table>`;
+}
+
 function givePages(page, lastPage) {
     var delta = 1,
         left = page - delta,
@@ -161,12 +195,12 @@ function generateEmailVerfToken() {
 }
 
 // Email functions
-async function sendEmail(email, token) {
+async function sendEmail(email, subject, text) {
     var message = {
         from: "danielgudjenev@gmail.com",
         to: email,
-        subject: "Email Verification NodeJS",
-        text: `Here is your link: https://` + ( process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : 'localhost:3210') + `/verify_account/${token}`,
+        subject: subject,
+        text: text,
     };
 
     EmailTransport.sendMail(message);
@@ -600,16 +634,20 @@ function escapeCSVParam(param)
 
 async function saveReportCsv(reportRes, filters, time) 
 {
-    var dataToWrite = `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}\n`;
+    var dataToWrite = escapeCSVParam(`From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}\n`);
 
-    dataToWrite += "Start Date, Orders, Products, Total\n";
+    dataToWrite += "Start Date, Orders, Products, Total, Currency\n";
 
     for(i = 0; i < reportRes.length; i++) 
     {
         dataToWrite += escapeCSVParam(reportRes[i].dataValues.startDate.toISOString()) + ", " + 
             escapeCSVParam(reportRes[i].dataValues.orders) + ", " +  escapeCSVParam(reportRes[i].dataValues.products) + ", " +
-            escapeCSVParam(reportRes[i].dataValues.total) + "\n";
+            escapeCSVParam(reportRes[i].dataValues.total) + ", " + "USD" + "\n";
     }
+
+    // Total
+    let absTotal = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a), 0).toFixed(2);
+    dataToWrite += ",,,," + absTotal;
 
     return createTempFile('excelReport.csv', dataToWrite);
 }
@@ -625,8 +663,13 @@ async function saveReportPdf(reportRes, filters, time)
         rows.push([reportRes[i].dataValues.startDate.toLocaleDateString('en-GB'), 
             reportRes[i].dataValues.orders,
             reportRes[i].dataValues.products,
-            reportRes[i].dataValues.total]);
+            reportRes[i].dataValues.total,
+            "USD"]);
     }
+
+    // Total
+    let absTotal = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a), 0).toFixed(2);
+    rows.push("","","",absTotal);
 
     let subtitle = `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`
 
@@ -635,7 +678,7 @@ async function saveReportPdf(reportRes, filters, time)
     const table = {
         title: "Report Orders",
         subtitle: subtitle,
-        headers: ["Start Date", "Orders", "Products", "Total"],
+        headers: ["Start Date", "Orders", "Products", "Total", "Currency"],
         rows: rows
     };
     doc.table( table, {
@@ -653,7 +696,7 @@ async function saveReportExcel(reportRes, filters, time)
     const worksheet = workbook.addWorksheet("Report Orders");
     const path = "./files";  // Path to download excel
 
-    worksheet.getRow(3).values = ['Start Date', 'Orders', 'Products', 'Total'];
+    worksheet.getRow(3).values = ['Start Date', 'Orders', 'Products', 'Total', 'Currency'];
 
     // Column for data in excel. key must match data key
     worksheet.columns = [
@@ -661,6 +704,7 @@ async function saveReportExcel(reportRes, filters, time)
         { header: "Orders", key: "orders", width: 10 },
         { header: "Products", key: "products", width: 10 },
         { header: "Total", key: "total", width: 10 },
+        { header: "Currency", key: "currency", width: 10 },
     ];
 
     reportRes.forEach(report => {
@@ -668,7 +712,8 @@ async function saveReportExcel(reportRes, filters, time)
             report.dataValues.startDate.toLocaleDateString('en-GB'),
             parseInt(report.dataValues.orders),
             parseInt(report.dataValues.products),
-            parseFloat(report.dataValues.total)];
+            parseFloat(report.dataValues.total),
+            "USD"];
         
         worksheet.addRow(data);
     });
@@ -764,6 +809,47 @@ function isSessionExpired(staff)
     return new Date() - new Date(staff.lastActivity) > SESSION_BACK_OFFICE_EXPIRE;
 }
 
+// Other
+/**
+ * 
+ * @param {object} obj1 
+ * @param {object} obj2 
+ * 
+ * @return Combined values of the same keys.
+ * If key exists only in one object, it will be
+ * added to the combined object.
+ * If values are strings they will be appended,
+ * if values are numbers they will be sumed.
+ * If parseNum is true, then all values are parsed as int
+ */
+function combineTwoObjects(obj1, obj2, parseNum) 
+{
+    let obj3 = obj1;
+
+    for (key in obj1) 
+    {
+        let keytwo = obj2[key];
+
+        if (keytwo) 
+        {
+            if (parseNum)
+                obj3[key] = (parseInt(obj3[key]) + parseInt(obj2[key])).toString();
+            else obj3[key] += obj2[key];
+        }
+    }
+
+    for (key in obj2) 
+    {
+        let keyone = obj3[key];
+
+        if (!keyone) 
+        {
+            obj3[key] = obj2[key];
+        }
+    }
+
+    return obj3;
+}
 // Generate
 async function generateOrders(x = 100) 
 {
@@ -966,4 +1052,5 @@ module.exports = {
     saveReportExcel,
     saveReportPdf,
     createTempFile,
+    combineTwoObjects,
 };

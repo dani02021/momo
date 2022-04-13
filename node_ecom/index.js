@@ -874,7 +874,7 @@ router.post("/register", async ctx => {
         message: 'Passwords does not match!'
       };
 
-      return; 
+      return;
     }
     // Send email
     let token = utilsEcom.generateEmailVerfToken();
@@ -904,7 +904,10 @@ router.post("/register", async ctx => {
       }
     }
 
-    utilsEcom.sendEmail(ctx.request.fields.email, token);
+    let msg = `Here is your link: https://` + ( process.env.HEROKU_DB_URI ?
+      `telebidpro-nodejs-ecommerce.herokuapp.com` : '10.20.1.159') + `/verify_account/${token}`
+
+    utilsEcom.sendEmail(ctx.request.fields.email, `Email Verification NodeJS`, msg);
 
     let message = { 'registerSuccess': 'Please validate your e-mail!' };
     ctx.session.messages = message;
@@ -1014,7 +1017,10 @@ router.post("/login", async ctx => {
         }
       }
 
-      ctx.cookies.set("products", null);
+      // if (ctx.cookies.get("productsOld"))
+      //   ctx.cookies.set("productsOld", utilsEcom.combineTwoObjects(ctx.cookies.get("productsOld"), ctx.cookies.get("products")));
+      // else ctx.cookies.set("productsOld", ctx.cookies.get("products"));
+      // ctx.cookies.set("products", null);
     }
 
     let messages = { 'loginSuccess': 'Successful login!' };
@@ -2645,11 +2651,12 @@ router.post('/admin/orders/edit/:id', async ctx => {
 router.get('/addToCart', async ctx => {
   // Currently working only for registered users
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    const json = JSON.parse(ctx.cookies.get('products'));
     let qty = ctx.query.quantity;
 
     if (ctx.cookies.get('products')) 
     {
+      const json = JSON.parse(ctx.cookies.get('products'));
+
       if (json[ctx.query.id])
         qty = parseInt(json[ctx.query.id]) + parseInt(ctx.query.quantity);
     }
@@ -2850,7 +2857,7 @@ router.get('/cart', async ctx => {
 
     if (ctx.cookies.get("products")) 
     {
-      let cookieProducts = JSON.parse(ctx.cookies.get("products"));
+      var cookieProducts = JSON.parse(ctx.cookies.get("products"));
 
       for (i in cookieProducts) 
       {
@@ -3386,4 +3393,4 @@ app.use(router.routes()).use(router.allowedMethods());
 
 // app.listen(3210);
 
-app.listen(process.env.PORT || 3210, '10.20.1.159');
+app.listen(process.env.PORT || 3210);
