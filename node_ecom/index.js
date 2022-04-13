@@ -54,8 +54,11 @@ async function getIndex(ctx) {
   }
   ).then((productsv) => { products = productsv });
 
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
+
   await ctx.render('index', {
     selected: 'home',
+    cartQty: cartQty,
     categories: categories,
     products: products,
     session: ctx.session,
@@ -113,9 +116,12 @@ async function getProducts(ctx) {
 
   let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval, ctx.query.sort).catch(function err(e){console.log(e)});
 
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
+
   await ctx.render('product-list', {
     selected: 'products',
     session: ctx.session,
+    cartQty: cartQty,
     categories: categories,
     products: await products,
     filters: filtersToReturn,
@@ -207,10 +213,13 @@ async function getAdminProducts(ctx) { //
 
   let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.name, filters.category, filters.minprice, filters.maxprice);
 
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
+
   await ctx.render('/admin/products', {
     layout: '/admin/base',
     selected: 'products',
     session: ctx.session,
+    cartQty: cartQty,
     products: await products,
     categories: categories,
     categoriesNames: categoriesNames, // Find better way
@@ -817,9 +826,12 @@ router.get("/products", async ctx => getProducts(ctx));
 router.get("/products/:page", async ctx => getProducts(ctx));
 
 router.get("/register", async ctx => {
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
+
   await ctx.render('register', {
     selected: 'register',
     session: ctx.session,
+    cartQty: cartQty
   });
 
   // Clear the messages
@@ -855,6 +867,15 @@ router.post("/register", async ctx => {
     return;
   }
   else {
+    // Password correct?
+    if ( ctx.request.fields.password1 !== ctx.request.fields.password1 ) 
+    {
+      ctx.body = {
+        message: 'Passwords does not match!'
+      };
+
+      return; 
+    }
     // Send email
     let token = utilsEcom.generateEmailVerfToken();
 
@@ -1461,8 +1482,11 @@ router.get('/product-detail/:id', async ctx => {
 
   const categories = await Category.findAll();
 
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
+
   await ctx.render('product-detail', {
     session: ctx.session,
+    cartQty: cartQty,
     selected: 'product-detail',
     product: product,
     categories: categories,
@@ -2621,17 +2645,16 @@ router.post('/admin/orders/edit/:id', async ctx => {
 router.get('/addToCart', async ctx => {
   // Currently working only for registered users
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
+    const json = JSON.parse(ctx.cookies.get('products'));
     let qty = ctx.query.quantity;
 
     if (ctx.cookies.get('products')) 
     {
-      const json = JSON.parse(ctx.cookies.get('products'));
-
       if (json[ctx.query.id])
-        qty = json[ctx.query.id];
+        qty = parseInt(json[ctx.query.id]) + parseInt(ctx.query.quantity);
     }
 
-    if (!await utilsEcom.hasMoreQtyOfProduct(ctx.query.id, qty)) 
+    if (!await utilsEcom.compareQtyAndProductQty(ctx.query.id, qty) == 1) 
     {
       ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
       ctx.redirect('/products');
@@ -2707,7 +2730,7 @@ router.get('/addToCart', async ctx => {
     }
   });
 
-  if (!await utilsEcom.hasMoreQtyOfProduct(ctx.query.id, orderitem.quantity)) 
+  if (!await utilsEcom.compareQtyAndProductQty(ctx.query.id, orderitem.quantity) == 1) 
   {
     if (ctx.query.cart) 
     {
@@ -2844,9 +2867,12 @@ router.get('/cart', async ctx => {
       orderTotal = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a), 0).toFixed(2);
     }
 
+    let cartQty = await utilsEcom.getCartQuantity(ctx);
+
     await ctx.render('cart', {
       session: ctx.session,
       selected: 'cart',
+      cartQty: cartQty,
       items: orderitems,
       products: products,
       totals: totals,
@@ -2889,10 +2915,12 @@ router.get('/cart', async ctx => {
   }
 
   let orderTotal = (totals.reduce((partialSum, a) => partialSum + a, 0)).toFixed(2);
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
 
   await ctx.render('cart', {
     session: ctx.session,
     selected: 'cart',
+    cartQty: cartQty,
     items: orderitems,
     products: products,
     totals: totals,
@@ -2960,9 +2988,12 @@ router.get('/checkout', async ctx => {
 
   let orderTotal = (totals.reduce((partialSum, a) => partialSum + a, 0)).toFixed(2);
 
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
+
   await ctx.render('checkout', {
     session: ctx.session,
     selected: 'checkout',
+    cartQty: cartQty,
     user: user,
     items: orderitems,
     products: products,

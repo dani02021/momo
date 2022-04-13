@@ -268,6 +268,32 @@ async function hasPermission(ctx, permission)
     }
 }
 
+async function getCartQuantity(ctx) 
+{
+    if (await isAuthenticatedUser(ctx)) 
+    {
+        let order = await Order.findOne({
+            where: { status: 0 },
+            include: [{
+                model: User,
+                required: true,
+                where: {
+                  'username': ctx.session.dataValues.username
+                }
+            }]
+        });
+
+        return (await order.getOrderitems()).length;
+    }
+    else 
+    {
+        if (ctx.cookies.get("products"))
+            return Object.keys(JSON.parse(ctx.cookies.get("products"))).length;
+        
+        return 0;
+    }
+}
+
 // PayPal
 async function captureOrder(orderId, debug=false) {
     try {
@@ -310,14 +336,30 @@ async function captureOrder(orderId, debug=false) {
     return null;
 }
 
-async function hasMoreQtyOfProduct(productid, qty) 
+/**
+ * 
+ * @param {number|string} productid 
+ * @param {number|string} qty 
+ * @returns 1 if product's qty is bigger, 2 if they are equal, 0 otherwise
+ */
+async function compareQtyAndProductQty(productid, qty) 
 {
     let product = await Product.findOne({where: {id: productid}});
 
     if (!product)
         return false;
     
-    return product.quantity > qty; 
+    comp = 0;
+
+    if (product.quantity > qty) 
+    {
+        comp = 1;
+    }
+    else if (product.quantity == qty)
+    {
+        comp = 2;
+    }
+    return comp;
 }
 async function hasEnoughQtyOfProductsOfOrder(cart) 
 {
@@ -912,7 +954,8 @@ module.exports = {
     hasPermission,
     captureOrder,
     validateStatus,
-    hasMoreQtyOfProduct,
+    getCartQuantity,
+    compareQtyAndProductQty,
     hasEnoughQtyOfProductsOfOrder,
     addProductQtyFromOrder,
     removeProductQtyFromOrder,

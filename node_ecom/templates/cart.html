@@ -65,11 +65,15 @@
                                 <div class="cart-content">
                                     <h1>Cart Summary</h1>
                                     <p>Sub Total<span id="subtotal"><%= orderTotal %>$</span></p>
-                                    <p>Shipping Cost<span>0$</span></p>
+                                    <p>Shipping Cost<span>0.00$</span></p>
                                     <h2>Grand Total<span id="grandtotal"><%= orderTotal %>$</span></h2>
                                 </div>
                                 <div class="cart-btn">
+                                    <% if (session.dataValues.username) { %>
                                     <button onclick="javascript:window.location.href = '/checkout';">Checkout</button>
+                                    <% } else { %>
+                                    <button data-bs-toggle="modal" data-bs-target="#loginModal" href="">Checkout</button>
+                                    <% } %>
                                 </div>
                             </div>
                         </div>
