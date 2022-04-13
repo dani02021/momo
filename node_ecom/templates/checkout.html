@@ -185,7 +185,8 @@
 
                     setTimeout(() => {
                         $( "#hidden-alert" ).delay(3000).slideUp(200, function() {
-                            $(this).alert('close')
+                            // $(this).alert('close')
+                            $(this).hide();
                         });
                     });
                 }
