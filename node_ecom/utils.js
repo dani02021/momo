@@ -101,9 +101,7 @@ class SequelizeTransport extends WinstonTransport {
       if (info.user)
         user = info.user;
     
-      Log.create({ timestamp: new Date().toISOString(), user: user,
-        level: info.level, message: info.message,
-        longMessage: info.longMessage, isStaff: info.isStaff });
+      Log.create({ timestamp: new Date().toISOString(), user: user, level: info.level, message: info.message });
   
       // Perform the writing to the remote service
       callback();
@@ -153,11 +151,6 @@ function givePages(page, lastPage) {
     return rangeWithDots;
 }
 
-function getHost() 
-{
-    return ( process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : '10.20.1.159');
-}
-
 function generateSessionKey() {
     return crypto.randomBytes(20).toString('hex');
 }
@@ -168,12 +161,12 @@ function generateEmailVerfToken() {
 }
 
 // Email functions
-async function sendEmail(email, subject, text) {
+async function sendEmail(email, token) {
     var message = {
         from: "danielgudjenev@gmail.com",
         to: email,
-        subject: subject,
-        text: text,
+        subject: "Email Verification NodeJS",
+        text: `Here is your link: https://` + ( process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : 'localhost:3210') + `/verify_account/${token}`,
     };
 
     EmailTransport.sendMail(message);
@@ -405,8 +398,6 @@ async function validateStatus(ctx, orderId, responce)
         await removeProductQtyFromOrder(cart);
 
         ctx.body = {'msg': 'Your order is completed!', 'status': 'ok'};
-
-        onPaymentComplete(user, cart);
     }
     else if(responce.result.status == "VOIDED") 
     {
@@ -826,46 +817,33 @@ async function generateLogs(x = 100) {
                 let date2 = new Date(+(date1) - Math.floor(Math.random()*10000000000));
 
                 logger.log('info',
-                    `Staff ${staff.username} downloaded generated orders report`,
-                    {user: staff.username,
-                    longMessage: `Staff ${staff.username} downloaded \
-                    generated orders report from ${date1.toLocaleString('en_GB')} \
-                    to ${date2.toLocaleString('en_GB')} trunced by month in .csv format`,
-                    isStaff: true});
+                    `Staff ${staff.username} downloaded generated orders report from ${date1.toISOString()} to ${date2.toISOString()} trunced by month in .csv format`,
+                    {user: staff.username});
                 break;
             case 1:
                 logger.log('info',
                     `Staff ${staff.username} tried to see report without rights`,
-                    {user: staff.username,
-                    isStaff: true});
+                    {user: staff.username});
                 break;
             case 2:
                 logger.log('info',
-                    `Staff ${staff.username} updated status of order #${order.id}`,
-                    {user: staff.username,
-                    longMessage: `Staff ${staff.username} \
-                    updated status of order #${order.id} \
-                    from ${STATUS_DISPLAY[1]} to \
-                    ${STATUS_DISPLAY[Math.floor(Math.random() * 5)]}`,
-                    isStaff: true});
+                    `Staff ${staff.username} updated status of order #${order.id} from ${STATUS_DISPLAY[1]} to ${STATUS_DISPLAY[Math.floor(Math.random() * 5)]}`,
+                    {user: staff.username});
                 break;
             case 3:
                 logger.log('info',
                     `Staff ${staff.username} tried to log in with invalid password!`,
-                    {user: staff.username,
-                    isStaff: true});
+                    {user: staff.username});
                 break;
             case 4:
                 logger.log('info',
                     `User ${user.username} logged in!`,
-                    {user: user.username,
-                    isStaff: true});
+                    {user: user.username});
                 break;
             case 5:
                 logger.log('info',
                     `User ${user.username} logged out!`,
-                    {user: user.username,
-                    isStaff: true});
+                    {user: user.username});
                 break;
             case 6:
                 logger.log('alert',
@@ -917,16 +895,6 @@ def validate_status(request, uid, order_id, order):
             return JsonResponse({'msg': 'There was an error while processing your order! Please contact support! Transaction ID: ' + order_id, 'status': 'error'})
 */
 
-// Events
-function onPaymentComplete(user, cart) {
-    let text = `Hello ${user.firstName},
-        Thank you for paying for order #${cart.id}!
-        Your order will soon be processed by our staff!
-        Have a nice day!`;
-
-    sendEmail(user.email, "NodeJS - Your order is complete!", text);
-}
-
 module.exports = {
     PRODUCTS_PER_PAGE,
     SESSION_MAX_AGE,
@@ -937,7 +905,6 @@ module.exports = {
     generateEmailVerfToken,
     generateSessionKey,
     configPostgreSessions,
-    getHost,
     sendEmail,
     isSessionExpired,
     isAuthenticatedStaff,
@@ -956,5 +923,4 @@ module.exports = {
     saveReportExcel,
     saveReportPdf,
     createTempFile,
-    onPaymentComplete
 };
