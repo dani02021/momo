@@ -101,7 +101,9 @@ class SequelizeTransport extends WinstonTransport {
       if (info.user)
         user = info.user;
     
-      Log.create({ timestamp: new Date().toISOString(), user: user, level: info.level, message: info.message });
+      Log.create({ timestamp: new Date().toISOString(), user: user,
+        level: info.level, message: info.message,
+        longMessage: info.longMessage, isStaff: info.isStaff });
   
       // Perform the writing to the remote service
       callback();
@@ -117,22 +119,32 @@ const logger = winston.createLogger({
     ]
 });
 
+function getHost() 
+{
+    return ( process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : '10.20.1.159');
+}
+
 /**
  * 
  * @param {import('sequelize/dist').Order} cart 
  */
-function getOrderAsTableHTML(cart) 
+async function getOrderAsTableHTML(cart) 
 {
+    if (!cart) 
+    {
+        return "";
+    }
+
     let orderitems = await cart.getOrderitems();
 
     let html =
-    `<table>
+    `<table style="width: 100%">
     <tr>
     <th>Name</th>
     <th>Price</th>
     <th>Quantity</th>
     <th>Total</th>
-    </tr>`;
+    </tr>\n`;
 
     for (i = 0; i < orderitems.length; i++) 
     {
@@ -142,13 +154,15 @@ function getOrderAsTableHTML(cart)
         html +=
         `<tr>
         <td>${product.name}</td>
-        <td>${product.discountPrice}</td>
-        <td>${orderitem.quantity}</td>
-        <td>${await orderitem.getTotal()}</td>
-        </tr>`;
+        <td style="text-align: right">$${product.discountPrice}</td>
+        <td style="text-align: right">${orderitem.quantity}</td>
+        <td style="text-align: right">$${await orderitem.getTotal()}</td>
+        </tr>\n`;
     }
 
     html += `</table>`;
+
+    return html;
 }
 
 function givePages(page, lastPage) {
@@ -195,14 +209,18 @@ function generateEmailVerfToken() {
 }
 
 // Email functions
-async function sendEmail(email, subject, text) {
+async function sendEmail(email, subject, text, html) {
     var message = {
         from: "danielgudjenev@gmail.com",
         to: email,
         subject: subject,
-        text: text,
     };
 
+    if (text)
+        message["text"] = text;
+    if (html)
+        message["html"] = html;
+    
     EmailTransport.sendMail(message);
 }
 
@@ -248,6 +266,9 @@ function configPostgreSessions() {
 
 async function isAuthenticatedUser(ctx) 
 {
+    if (!ctx.session.dataValues)
+        return false;
+    
     if (ctx.session.dataValues.username) {
         const user = await User.findOne({ where: { username: ctx.session.dataValues.username }});
 
@@ -317,7 +338,9 @@ async function getCartQuantity(ctx)
             }]
         });
 
-        return (await order.getOrderitems()).length;
+        if (order)
+            return (await order.getOrderitems()).length;
+        else return 0;
     }
     else 
     {
@@ -634,20 +657,20 @@ function escapeCSVParam(param)
 
 async function saveReportCsv(reportRes, filters, time) 
 {
-    var dataToWrite = escapeCSVParam(`From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}\n`);
+    var dataToWrite = escapeCSVParam(`From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`);
 
-    dataToWrite += "Start Date, Orders, Products, Total, Currency\n";
+    dataToWrite += "\nStart Date, Orders, Products, Total, Currency\n";
 
     for(i = 0; i < reportRes.length; i++) 
     {
-        dataToWrite += escapeCSVParam(reportRes[i].dataValues.startDate.toISOString()) + ", " + 
-            escapeCSVParam(reportRes[i].dataValues.orders) + ", " +  escapeCSVParam(reportRes[i].dataValues.products) + ", " +
-            escapeCSVParam(reportRes[i].dataValues.total) + ", " + "USD" + "\n";
+        dataToWrite += escapeCSVParam(reportRes[i].dataValues.startDate.toISOString()) + "," + 
+            escapeCSVParam(reportRes[i].dataValues.orders) + "," +  escapeCSVParam(reportRes[i].dataValues.products) + "," +
+            escapeCSVParam(reportRes[i].dataValues.total) + "," + "USD" + "\n";
     }
 
     // Total
-    let absTotal = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a), 0).toFixed(2);
-    dataToWrite += ",,,," + absTotal;
+    let absTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.total), 0).toFixed(2);
+    dataToWrite += ",,," + escapeCSVParam(absTotal) + ",USD";
 
     return createTempFile('excelReport.csv', dataToWrite);
 }
@@ -668,8 +691,8 @@ async function saveReportPdf(reportRes, filters, time)
     }
 
     // Total
-    let absTotal = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a), 0).toFixed(2);
-    rows.push("","","",absTotal);
+    let absTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.total), 0).toFixed(2);
+    rows.push(["","","",absTotal, "USD"]);
 
     let subtitle = `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`
 
@@ -696,7 +719,7 @@ async function saveReportExcel(reportRes, filters, time)
     const worksheet = workbook.addWorksheet("Report Orders");
     const path = "./files";  // Path to download excel
 
-    worksheet.getRow(3).values = ['Start Date', 'Orders', 'Products', 'Total', 'Currency'];
+    worksheet.getRow(2).values = ['Start Date', 'Orders', 'Products', 'Total', 'Currency'];
 
     // Column for data in excel. key must match data key
     worksheet.columns = [
@@ -718,9 +741,20 @@ async function saveReportExcel(reportRes, filters, time)
         worksheet.addRow(data);
     });
 
+    worksheet.addRow([
+        "",
+        "",
+        "",
+        parseFloat(
+            reportRes.reduce(
+                (partialSum, a) =>
+                parseFloat(partialSum) +
+                parseFloat(a.dataValues.total), 0)
+                .toFixed(2)),
+        "USD"]);
+
     /*TITLE*/
-    worksheet.mergeCells('A1', 'D1');
-    worksheet.getCell('B1').value = '';
+    worksheet.mergeCells('A1', 'E1');
     worksheet.getCell('A1').value =
         `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`;
 
@@ -729,8 +763,8 @@ async function saveReportExcel(reportRes, filters, time)
         cell.font = { bold: true };
     });
 
-    // Make third row bold
-    worksheet.getRow(3).eachCell((cell) => {
+    // Make second row bold
+    worksheet.getRow(2).eachCell((cell) => {
         cell.font = { bold: true };
     });
 
@@ -1029,11 +1063,13 @@ module.exports = {
     STATUS_DISPLAY,
     LOG_LEVELS,
     logger,
+    getHost,
     givePages,
     generateEmailVerfToken,
     generateSessionKey,
     configPostgreSessions,
     sendEmail,
+    getOrderAsTableHTML,
     isSessionExpired,
     isAuthenticatedStaff,
     isAuthenticatedUser,

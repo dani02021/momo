@@ -21,6 +21,14 @@ const Log = db.define("log", {
     type: DataTypes.STRING,
     allowNull: true
   },
+  longMessage: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  isStaff: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true
+  },
 },
 {
   paranoid: true,

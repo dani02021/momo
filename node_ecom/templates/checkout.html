@@ -42,16 +42,16 @@
                         <% for(i=0; i < items.length; i++) { %>
                             <p>
                                 <%= products[i].name %><span>
-                                        <%= products[i].discountPrice %>$
+                                        $<%= products[i].discountPrice %>
                                     </span>
                             </p>
                             <% } %>
                                 <p>Sub Total<span>
-                                        <%= orderTotal %>$
+                                        $<%= orderTotal %>
                                     </span></p>
-                                <p>Shipping Cost<span>0$</span></p>
+                                <p>Shipping Cost<span>$0</span></p>
                                 <h2>Grand Total<span>
-                                        <%= orderTotal %>$
+                                        $<%= orderTotal %>
                                     </span></h2>
                     </div>
 
