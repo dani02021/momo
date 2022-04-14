@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Sum two nums PWA</title>
+    <link rel="manifest" href="/manifest.json">
+</head>
+
+<body>
+    <input type="number" id="a">
+    <input type="number" id="b">
+    <button onclick="sumtwonums();">Sum</button>
+    <input type="number" disabled id="c">
+</body>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(function (registration) {
+                console.log('[Service Worker] Registered');
+            }).catch(() => console.log("fail"));
+
+        Notification.requestPermission(function (status) {
+            console.log('Notification permission status:', status);
+        });
+
+        if (!("Notification" in window)) {
+            alert("This browser does not support desktop notification");
+        }
+        
+        alert(Notification.permission);
+
+        setInterval(() => {
+            Notification.requestPermission(function (result) {
+                if (result === 'granted') {
+                    navigator.serviceWorker.ready.then(function (registration) {
+                        registration.showNotification('Vibration Sample', {
+                            body: 'Buzz! Buzz!',
+                            vibrate: [200, 100, 200, 100, 200, 100, 200],
+                            tag: 'vibration-sample'
+                        });
+                    });
+                }
+            });
+        }, 5000);
+    }
+
+    function sumtwonums() {
+        var a = document.getElementById("a").value;
+        var b = document.getElementById("b").value;
+        var c = parseInt(a) + parseInt(b);
+        document.getElementById("c").value = c;
+    }
+</script>
+
+</html>
