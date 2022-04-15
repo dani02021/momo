@@ -73,10 +73,10 @@ const EmailTransport = nodemailer.createTransport({
 
 EmailTransport.verify(function (error, success) {
     if (error) {
-      console.log(error);
+      handleError(error);
       logger.log('alert',
         `Email transport cannot be verified!
-        ${err.message}`);
+        ${error.message}`);
     }
 });
 
@@ -92,21 +92,21 @@ class SequelizeTransport extends WinstonTransport {
     }
   
     log(info, callback) {
-      setImmediate(() => {
-        this.emit('logged', info);
-      });
+        setImmediate(() => {
+            this.emit('logged', info);
+        });
 
-      let user = "";
+        let user = "";
       
-      if (info.user)
-        user = info.user;
+        if (info.user)
+            user = info.user;
     
-      Log.create({ timestamp: new Date().toISOString(), user: user,
-        level: info.level, message: info.message,
-        longMessage: info.longMessage, isStaff: info.isStaff });
+        Log.create({ timestamp: new Date().toISOString(), user: user,
+            level: info.level, message: info.message,
+            longMessage: info.longMessage, isStaff: info.isStaff });
   
-      // Perform the writing to the remote service
-      callback();
+        // Perform the writing to the remote service
+        callback();
     }
 };
 
@@ -115,7 +115,13 @@ const logger = winston.createLogger({
     transports: [
       new SequelizeTransport({
           level: "debug"
-      })
+        }),
+      new winston.transports.File({
+        level: "error",
+        // Create the log directory if it does not exist
+        filename: 'logs/error.log',
+        format: winston.format.printf(log => `[${new Date().toString()}] ` + log.message),
+        })
     ]
 });
 
@@ -143,7 +149,7 @@ async function getOrderAsTableHTML(cart)
     <th>Name</th>
     <th>Price</th>
     <th>Quantity</th>
-    <th>Total</th>
+    <th>Total Price</th>
     </tr>\n`;
 
     for (i = 0; i < orderitems.length; i++) 
@@ -221,23 +227,6 @@ async function sendEmail(email, subject, text, html) {
     if (html)
         message["html"] = html;
     
-    EmailTransport.sendMail(message);
-}
-
-async function sendOrderEmail(email, cart) {
-    let text = `Thank you for your order:`;
-
-    for (i=0;i<cart.length;i++) {
-
-    }
-
-    var message = {
-        from: "danielgudjenev@gmail.com",
-        to: email,
-        subject: "Successful order",
-        text: text,
-    };
-
     EmailTransport.sendMail(message);
 }
 
@@ -659,7 +648,7 @@ async function saveReportCsv(reportRes, filters, time)
 {
     var dataToWrite = escapeCSVParam(`From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`);
 
-    dataToWrite += "\nStart Date, Orders, Products, Total, Currency\n";
+    dataToWrite += "\nStart Date, Orders, Products, Total Price, Currency\n";
 
     for(i = 0; i < reportRes.length; i++) 
     {
@@ -701,7 +690,7 @@ async function saveReportPdf(reportRes, filters, time)
     const table = {
         title: "Report Orders",
         subtitle: subtitle,
-        headers: ["Start Date", "Orders", "Products", "Total", "Currency"],
+        headers: ["Start Date", "Orders", "Products", "Total Price", "Currency"],
         rows: rows
     };
     doc.table( table, {
@@ -719,14 +708,14 @@ async function saveReportExcel(reportRes, filters, time)
     const worksheet = workbook.addWorksheet("Report Orders");
     const path = "./files";  // Path to download excel
 
-    worksheet.getRow(2).values = ['Start Date', 'Orders', 'Products', 'Total', 'Currency'];
+    worksheet.getRow(2).values = ['Start Date', 'Orders', 'Products', 'Total Price', 'Currency'];
 
     // Column for data in excel. key must match data key
     worksheet.columns = [
         { header: "Start Date", key: "startDate", width: 10 }, 
         { header: "Orders", key: "orders", width: 10 },
         { header: "Products", key: "products", width: 10 },
-        { header: "Total", key: "total", width: 10 },
+        { header: "Total Price", key: "total", width: 10 },
         { header: "Currency", key: "currency", width: 10 },
     ];
 
@@ -1022,6 +1011,30 @@ async function generateLogs(x = 100) {
 
 // generateOrders(80000);
 
+// Error Handler function
+async function handleError(err, ctx) 
+{
+    let username;
+    let staffUsername;
+    let session;
+
+    if (ctx && ctx.session) 
+    {
+        username = ctx.session.dataValues.username;
+        staffUsername = ctx.session.dataValues.staffUsername;
+        session = JSON.stringify(ctx.session.dataValues);
+    }
+
+    logger.error(
+        `Error message: ${err.message}, User: ${username}, Staff User: ${staffUsername}`, 
+        {
+            longMessage: `Unhandled exception: ${err}, Session: ${session}`
+        }
+    );
+
+    console.log(err);
+}
+
 /*
 def validate_status(request, uid, order_id, order):
     elif order.result.status == 'PAYER_ACTION_REQUIRED':
@@ -1089,4 +1102,5 @@ module.exports = {
     saveReportPdf,
     createTempFile,
     combineTwoObjects,
+    handleError,
 };

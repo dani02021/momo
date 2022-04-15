@@ -42,8 +42,6 @@ app.keys = [process.env.COOKIE_SECRET];
 async function getIndex(ctx) {
   let categories, products;
 
-  throw Error("i hate my life");
-
   await Category.findAll().then((categoriesv) => categories = categoriesv);
 
   await Product.findAll({
@@ -116,7 +114,7 @@ async function getProducts(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
-  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval, ctx.query.sort).catch(function err(e){console.log(e)});
+  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval, ctx.query.sort);
 
   let cartQty = await utilsEcom.getCartQuantity(ctx);
 
@@ -1640,8 +1638,6 @@ router.post('/admin/accounts/edit/:id', async ctx => {
       where: {
         id: ctx.params.id
       }
-    }).catch(function (err) {
-      console.log(err);
     });
 
   ctx.session.messages = { 'accountEdited': `User with id ${ctx.params.id} was edited!` }
@@ -1954,9 +1950,7 @@ router.post('/admin/staff/edit/:id', async ctx => {
 
   const staff = await Staff.findOne({ where: { id: ctx.params.id } });
 
-  staff.update(updateParams).catch(function (err) {
-    console.log(err);
-  });
+  staff.update(updateParams);
 
   await staff.removeRoles(await staff.getRoles());
 
@@ -2951,7 +2945,7 @@ router.get('/checkout', async ctx => {
     where: {
       username: ctx.session.dataValues.username
     }
-  }).catch(function err(e) {console.log(e);});
+  });
 
   const order = await Order.findOne({
     where: {
@@ -2964,7 +2958,7 @@ router.get('/checkout', async ctx => {
         'username': ctx.session.dataValues.username
       }
     }],
-  }).catch(function err(e) {console.log(e);});
+  });
 
   if (order == null) {
     ctx.redirect('/');
@@ -3025,7 +3019,7 @@ router.post('/captureOrder', async ctx => {
         'username': ctx.session.dataValues.username
       }
     }],
-  }).catch(function err(e) {console.log(e);});
+  });
 
   if (!order) {
     ctx.redirect('/');
@@ -3170,19 +3164,19 @@ router.get('/admin/export/report/pdf', async ctx => {
     filters['ordAfter'] = new Date(0).toISOString();
   }
 
-  const time = 'month';
+  let time = 'month';
 
   switch (filters.timegroup) {
-    case 0:
+    case '0':
       time = 'day';
       break;
-    case 1:
+    case '1':
       time = 'week';
       break;
-    case 2:
+    case '2':
       time = 'month';
       break;
-    case 3:
+    case '3':
       time = 'year';
       break;
   }
@@ -3257,19 +3251,19 @@ router.get('/admin/export/report/excel', async ctx => {
     filters['ordAfter'] = new Date(0).toISOString();
   }
 
-  const time = 'month';
+  let time = 'month';
 
   switch (filters.timegroup) {
-    case 0:
+    case '0':
       time = 'day';
       break;
-    case 1:
+    case '1':
       time = 'week';
       break;
-    case 2:
+    case '2':
       time = 'month';
       break;
-    case 3:
+    case '3':
       time = 'year';
       break;
   }
@@ -3344,19 +3338,19 @@ router.get('/admin/export/report/csv', async ctx => {
     filters['ordAfter'] = new Date(0).toISOString();
   }
 
-  const time = 'month';
+  let time = 'month';
 
   switch (filters.timegroup) {
-    case 0:
+    case '0':
       time = 'day';
       break;
-    case 1:
+    case '1':
       time = 'week';
       break;
-    case 2:
+    case '2':
       time = 'month';
       break;
-    case 3:
+    case '3':
       time = 'year';
       break;
   }
@@ -3409,7 +3403,7 @@ app.use(router.routes()).use(router.allowedMethods());
 
 // Global Unhandled Error Handler
 app.on("error", (err, ctx) => {
-  console.log(err.message);
+  utilsEcom.handleError(err, ctx);
 });
 
 // app.listen(3210);

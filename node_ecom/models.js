@@ -22,7 +22,7 @@ const Log = db.define("log", {
     allowNull: true
   },
   longMessage: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(3096),
     allowNull: true
   },
   isStaff: {
