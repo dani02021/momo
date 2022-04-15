@@ -62,7 +62,11 @@
                 <td><%= report[i].dataValues.user %></td>
                 <td><%= report[i].dataValues.isStaff %></td>
                 <td><%= report[i].dataValues.message %></td>
+                <% if (longmsg) { %>
                 <td><%= report[i].dataValues.longMessage %></td>
+                <% } else { %>
+                <td></td>
+                <% } %>
               </tr>
               <% } %>
             </tbody>

@@ -10,6 +10,7 @@ const serve = require('koa-static');
 const render = require("koa-ejs");
 const utilsEcom = require("./utils.js");
 const session = require('koa-session');
+const assert = require('assert/strict');
 
 const fs = require('fs');
 const db = require("./db.js");
@@ -133,7 +134,7 @@ async function getProducts(ctx) {
   ctx.session.messages = null;
 }
 
-async function getAdminProducts(ctx) { //
+async function getAdminProducts(ctx) {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
     await ctx.redirect('/admin/login');
@@ -768,6 +769,12 @@ async function getAdminAudit(ctx) {
   } else {
     filters['ordAfter'] = new Date(0).toISOString();
   }
+  if (ctx.query.longmsg) {
+    filters['longmsg'] = true;
+  }
+  else {
+    filters['longmsg'] = false;
+  }
 
   let page = 1;
 
@@ -804,11 +811,14 @@ async function getAdminAudit(ctx) {
         bind: [filters.user, filters.level]
   });
 
+  console.log(ctx.query.longmsg == true);
+
   await ctx.render("/admin/audit", {
     layout: "/admin/base",
     session: ctx.session,
     selected: "audit",
     report: result,
+    longmsg: filters.longmsg,
     filters: filtersToReturn,
     levels: utilsEcom.LOG_LEVELS,
     page: page,
@@ -2622,9 +2632,12 @@ router.post('/admin/orders/edit/:id', async ctx => {
   await utilsEcom.removeProductQtyFromOrder(order);
 
   if (order.status != ctx.request.fields.status) {
-    utilsEcom.logger.log('info', // longmsg
-      `Staff ${ctx.session.dataValues.staffUsername} updated status of order #${ctx.params.id} from ${utilsEcom.STATUS_DISPLAY[order.status]} to ${utilsEcom.STATUS_DISPLAY[ctx.request.fields.status]}`,
-      { user: ctx.session.dataValues.staffUsername, isStaff: true });
+    utilsEcom.logger.log('info',
+      `Staff ${ctx.session.dataValues.staffUsername} updated status of order #${ctx.params.id}`,
+      { user: ctx.session.dataValues.staffUsername,
+        isStaff: true,
+        longMessage:
+          `Staff ${ctx.session.dataValues.staffUsername} updated status of order #${ctx.params.id} from ${utilsEcom.STATUS_DISPLAY[order.status]} to ${utilsEcom.STATUS_DISPLAY[ctx.request.fields.status]}`});
   }
 
   // Update status, price and orderedAt
@@ -3187,9 +3200,12 @@ router.get('/admin/export/report/pdf', async ctx => {
 
   ctx.body = fs.createReadStream(path);
 
-  utilsEcom.logger.log('info', // longmsg
-    `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .pdf format`,
-    { user: ctx.session.dataValues.staffUsername, isStaff: true });
+  utilsEcom.logger.log('info',
+    `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report`,
+    { user: ctx.session.dataValues.staffUsername,
+      isStaff: true,
+      longMessage:
+        `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .pdf format`});
 
   ctx.res.writeHead(200, {
     'Content-Type': 'application/pdf',
@@ -3274,9 +3290,13 @@ router.get('/admin/export/report/excel', async ctx => {
 
   ctx.body = fs.createReadStream(path);
 
-  utilsEcom.logger.log('info', // longmsg
-    `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .xlsx format`,
-    { user: ctx.session.dataValues.staffUsername, isStaff: true });
+  utilsEcom.logger.log('info',
+    `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report`,
+    { user: ctx.session.dataValues.staffUsername,
+      isStaff: true,
+      longMessage:
+        `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .xlsx format`
+    });
 
   ctx.res.writeHead(200, {
     'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -3361,9 +3381,12 @@ router.get('/admin/export/report/csv', async ctx => {
 
   ctx.body = fs.createReadStream(path);
 
-  utilsEcom.logger.log('info', // longmsg
-    `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .csv format`,
-    { user: ctx.session.dataValues.staffUsername, isStaff: true });
+  utilsEcom.logger.log('info',
+    `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report`,
+    { user: ctx.session.dataValues.staffUsername,
+      isStaff: true,
+      longMessage: 
+      `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .csv format`});
 
   ctx.res.writeHead(200, {
     'Content-Type': 'text/csv',

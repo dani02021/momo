@@ -23,7 +23,8 @@ const Log = models.log();
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const PDFDocument = require("pdfkit-table");
+const PDFDocument = require('pdfkit-table');
+const assert = require('assert/strict');
 
 const { id, user } = require('rangen');
 
@@ -92,6 +93,9 @@ class SequelizeTransport extends WinstonTransport {
     }
   
     log(info, callback) {
+        if (info.fileOnly)
+            return;
+        
         setImmediate(() => {
             this.emit('logged', info);
         });
@@ -136,10 +140,7 @@ function getHost()
  */
 async function getOrderAsTableHTML(cart) 
 {
-    if (!cart) 
-    {
-        return "";
-    }
+    assert(cart);
 
     let orderitems = await cart.getOrderitems();
 
@@ -172,6 +173,10 @@ async function getOrderAsTableHTML(cart)
 }
 
 function givePages(page, lastPage) {
+
+    assert(typeof page === "number");
+    assert(typeof lastPage === "number");
+
     var delta = 1,
         left = page - delta,
         right = page + delta + 1,
@@ -216,6 +221,8 @@ function generateEmailVerfToken() {
 
 // Email functions
 async function sendEmail(email, subject, text, html) {
+    assert(email && subject && text && html);
+
     var message = {
         from: "danielgudjenev@gmail.com",
         to: email,
@@ -255,7 +262,7 @@ function configPostgreSessions() {
 
 async function isAuthenticatedUser(ctx) 
 {
-    if (!ctx.session.dataValues)
+    if (!ctx || !ctx.session.dataValues)
         return false;
     
     if (ctx.session.dataValues.username) {
@@ -268,6 +275,9 @@ async function isAuthenticatedUser(ctx)
 }
 async function isAuthenticatedStaff(ctx) 
 {
+    if (!ctx || !ctx.session.dataValues)
+        return false;
+    
     if (ctx.session.dataValues) 
     {
         if (ctx.session.dataValues.staffUsername) {
@@ -280,10 +290,16 @@ async function isAuthenticatedStaff(ctx)
     return false;
 }
 
-// Staff only function !
+/**
+ * 
+ * @param {*} ctx 
+ * @param {string} permission 
+ * @returns true if the staff has the permission
+ */
 async function hasPermission(ctx, permission) 
 {
-    console.log(ctx.session);
+    assert(ctx);
+
     const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername }, include: Role });
 
     if (staff == null) {
@@ -341,8 +357,10 @@ async function getCartQuantity(ctx)
 }
 
 // PayPal
-async function captureOrder(orderId, debug=false) {
+async function captureOrder(orderId, debug) {
     try {
+        assert(orderId);
+
         const request = new paypal.orders.OrdersCaptureRequest(orderId);
         request.requestBody({});
 
@@ -372,7 +390,7 @@ async function captureOrder(orderId, debug=false) {
         return response;
     }
     catch (e) {
-        console.log(e);
+        handleError(e, null, true);
 
         logger.log('alert',
                 `There was an error while trying to capture order #${orderId}!
@@ -390,6 +408,8 @@ async function captureOrder(orderId, debug=false) {
  */
 async function compareQtyAndProductQty(productid, qty) 
 {
+    assert(productid);
+
     let product = await Product.findOne({where: {id: productid}});
 
     if (!product)
@@ -409,6 +429,7 @@ async function compareQtyAndProductQty(productid, qty)
 }
 async function hasEnoughQtyOfProductsOfOrder(cart) 
 {
+    assert(cart);
     let cartOrderItems = await cart.getOrderitems();
     for(i = 0; i < cartOrderItems.length; i++ ) 
     {
@@ -423,6 +444,7 @@ async function hasEnoughQtyOfProductsOfOrder(cart)
 
 async function addProductQtyFromOrder(cart) 
 {
+    assert(cart);
     let cartOrderItems = await cart.getOrderitems();
     for(i = 0; i < cartOrderItems.length; i++ ) 
     {
@@ -434,6 +456,7 @@ async function addProductQtyFromOrder(cart)
 
 async function removeProductQtyFromOrder(cart) 
 {
+    assert(cart);
     let cartOrderItems = await cart.getOrderitems();
     for(i = 0; i < cartOrderItems.length; i++ ) 
     {
@@ -456,6 +479,8 @@ async function removeProductQtyFromOrder(cart)
 
 async function validateStatus(ctx, orderId, responce) 
 {
+    assert(ctx);
+    assert(responce);
     if (responce.result.status == "COMPLETED") 
     {
         // Order is completed
@@ -639,6 +664,8 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
 
 function escapeCSVParam(param) 
 {
+    assert(param);
+
     let escapedParam = param.replace(/"/g, `""`);
 
     return `"${escapedParam}"`;
@@ -826,6 +853,8 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
 
 function isSessionExpired(staff) 
 {
+    assert(staff);
+
     if (!staff.lastActivity)
         return false;
     
@@ -833,6 +862,7 @@ function isSessionExpired(staff)
 }
 
 // Other
+
 /**
  * 
  * @param {object} obj1 
@@ -847,6 +877,9 @@ function isSessionExpired(staff)
  */
 function combineTwoObjects(obj1, obj2, parseNum) 
 {
+    assert(obj1);
+    assert(obj2);
+
     let obj3 = obj1;
 
     for (key in obj1) 
@@ -1012,7 +1045,7 @@ async function generateLogs(x = 100) {
 // generateOrders(80000);
 
 // Error Handler function
-async function handleError(err, ctx) 
+async function handleError(err, ctx, fileOnly = false) 
 {
     let username;
     let staffUsername;
@@ -1028,7 +1061,8 @@ async function handleError(err, ctx)
     logger.error(
         `Error message: ${err.message}, User: ${username}, Staff User: ${staffUsername}`, 
         {
-            longMessage: `Unhandled exception: ${err}, Session: ${session}`
+            longMessage: `Unhandled exception: ${err}, Session: ${session}`,
+            fileOnly: fileOnly
         }
     );
 
