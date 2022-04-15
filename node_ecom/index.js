@@ -54,8 +54,11 @@ async function getIndex(ctx) {
   }
   ).then((productsv) => { products = productsv });
 
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
+
   await ctx.render('index', {
     selected: 'home',
+    cartQty: cartQty,
     categories: categories,
     products: products,
     session: ctx.session,
@@ -111,11 +114,14 @@ async function getProducts(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
-  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval, ctx.query.sort).catch(function err(e){console.log(e)});
+  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval, ctx.query.sort);
+
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
 
   await ctx.render('product-list', {
     selected: 'products',
     session: ctx.session,
+    cartQty: cartQty,
     categories: categories,
     products: await products,
     filters: filtersToReturn,
@@ -207,10 +213,13 @@ async function getAdminProducts(ctx) { //
 
   let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.name, filters.category, filters.minprice, filters.maxprice);
 
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
+
   await ctx.render('/admin/products', {
     layout: '/admin/base',
     selected: 'products',
     session: ctx.session,
+    cartQty: cartQty,
     products: await products,
     categories: categories,
     categoriesNames: categoriesNames, // Find better way
@@ -688,7 +697,7 @@ async function getAdminReport(ctx) {
 
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} `,
-    { user: ctx.session.dataValues.staffUsername });
+    { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
   await ctx.render('/admin/report', {
     layout: '/admin/base',
@@ -817,9 +826,12 @@ router.get("/products", async ctx => getProducts(ctx));
 router.get("/products/:page", async ctx => getProducts(ctx));
 
 router.get("/register", async ctx => {
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
+
   await ctx.render('register', {
     selected: 'register',
     session: ctx.session,
+    cartQty: cartQty
   });
 
   // Clear the messages
@@ -855,6 +867,15 @@ router.post("/register", async ctx => {
     return;
   }
   else {
+    // Password correct?
+    if ( ctx.request.fields.password1 !== ctx.request.fields.password1 ) 
+    {
+      ctx.body = {
+        message: 'Passwords does not match!'
+      };
+
+      return;
+    }
     // Send email
     let token = utilsEcom.generateEmailVerfToken();
 
@@ -883,7 +904,9 @@ router.post("/register", async ctx => {
       }
     }
 
-    utilsEcom.sendEmail(ctx.request.fields.email, token);
+    let msg = `Here is your link: https://` + utilsEcom.getHost() + `/verify_account/${token}`
+
+    utilsEcom.sendEmail(ctx.request.fields.email, `Email Verification NodeJS`, msg);
 
     let message = { 'registerSuccess': 'Please validate your e-mail!' };
     ctx.session.messages = message;
@@ -993,7 +1016,10 @@ router.post("/login", async ctx => {
         }
       }
 
-      ctx.cookies.set("products", null);
+      // if (ctx.cookies.get("productsOld"))
+      //   ctx.cookies.set("productsOld", utilsEcom.combineTwoObjects(ctx.cookies.get("productsOld"), ctx.cookies.get("products")));
+      // else ctx.cookies.set("productsOld", ctx.cookies.get("products"));
+      // ctx.cookies.set("products", null);
     }
 
     let messages = { 'loginSuccess': 'Successful login!' };
@@ -1277,7 +1303,7 @@ router.get('/admin/products/edit/:id', async ctx => {
     ctx.session.messages = { 'noPermission': 'You don\'t have permission to update a product' };
     utilsEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} tried to update product #${ctx.params.id} without rights`,
-      { user: ctx.session.dataValues.staffUsername });
+      { user: ctx.session.dataValues.staffUsername, isStaff: true });
     ctx.redirect('/admin/products');
     return;
   }
@@ -1461,8 +1487,11 @@ router.get('/product-detail/:id', async ctx => {
 
   const categories = await Category.findAll();
 
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
+
   await ctx.render('product-detail', {
     session: ctx.session,
+    cartQty: cartQty,
     selected: 'product-detail',
     product: product,
     categories: categories,
@@ -1609,8 +1638,6 @@ router.post('/admin/accounts/edit/:id', async ctx => {
       where: {
         id: ctx.params.id
       }
-    }).catch(function (err) {
-      console.log(err);
     });
 
   ctx.session.messages = { 'accountEdited': `User with id ${ctx.params.id} was edited!` }
@@ -1923,9 +1950,7 @@ router.post('/admin/staff/edit/:id', async ctx => {
 
   const staff = await Staff.findOne({ where: { id: ctx.params.id } });
 
-  staff.update(updateParams).catch(function (err) {
-    console.log(err);
-  });
+  staff.update(updateParams);
 
   await staff.removeRoles(await staff.getRoles());
 
@@ -2597,9 +2622,9 @@ router.post('/admin/orders/edit/:id', async ctx => {
   await utilsEcom.removeProductQtyFromOrder(order);
 
   if (order.status != ctx.request.fields.status) {
-    utilsEcom.logger.log('info',
+    utilsEcom.logger.log('info', // longmsg
       `Staff ${ctx.session.dataValues.staffUsername} updated status of order #${ctx.params.id} from ${utilsEcom.STATUS_DISPLAY[order.status]} to ${utilsEcom.STATUS_DISPLAY[ctx.request.fields.status]}`,
-      { user: ctx.session.dataValues.staffUsername });
+      { user: ctx.session.dataValues.staffUsername, isStaff: true });
   }
 
   // Update status, price and orderedAt
@@ -2628,10 +2653,10 @@ router.get('/addToCart', async ctx => {
       const json = JSON.parse(ctx.cookies.get('products'));
 
       if (json[ctx.query.id])
-        qty = json[ctx.query.id];
+        qty = parseInt(json[ctx.query.id]) + parseInt(ctx.query.quantity);
     }
 
-    if (!await utilsEcom.hasMoreQtyOfProduct(ctx.query.id, qty)) 
+    if (!await utilsEcom.compareQtyAndProductQty(ctx.query.id, qty) == 1) 
     {
       ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
       ctx.redirect('/products');
@@ -2707,7 +2732,7 @@ router.get('/addToCart', async ctx => {
     }
   });
 
-  if (!await utilsEcom.hasMoreQtyOfProduct(ctx.query.id, orderitem.quantity)) 
+  if (!await utilsEcom.compareQtyAndProductQty(ctx.query.id, orderitem.quantity) == 1) 
   {
     if (ctx.query.cart) 
     {
@@ -2827,7 +2852,7 @@ router.get('/cart', async ctx => {
 
     if (ctx.cookies.get("products")) 
     {
-      let cookieProducts = JSON.parse(ctx.cookies.get("products"));
+      var cookieProducts = JSON.parse(ctx.cookies.get("products"));
 
       for (i in cookieProducts) 
       {
@@ -2844,9 +2869,12 @@ router.get('/cart', async ctx => {
       orderTotal = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a), 0).toFixed(2);
     }
 
+    let cartQty = await utilsEcom.getCartQuantity(ctx);
+
     await ctx.render('cart', {
       session: ctx.session,
       selected: 'cart',
+      cartQty: cartQty,
       items: orderitems,
       products: products,
       totals: totals,
@@ -2889,10 +2917,12 @@ router.get('/cart', async ctx => {
   }
 
   let orderTotal = (totals.reduce((partialSum, a) => partialSum + a, 0)).toFixed(2);
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
 
   await ctx.render('cart', {
     session: ctx.session,
     selected: 'cart',
+    cartQty: cartQty,
     items: orderitems,
     products: products,
     totals: totals,
@@ -2915,7 +2945,7 @@ router.get('/checkout', async ctx => {
     where: {
       username: ctx.session.dataValues.username
     }
-  }).catch(function err(e) {console.log(e);});
+  });
 
   const order = await Order.findOne({
     where: {
@@ -2928,7 +2958,7 @@ router.get('/checkout', async ctx => {
         'username': ctx.session.dataValues.username
       }
     }],
-  }).catch(function err(e) {console.log(e);});
+  });
 
   if (order == null) {
     ctx.redirect('/');
@@ -2960,9 +2990,12 @@ router.get('/checkout', async ctx => {
 
   let orderTotal = (totals.reduce((partialSum, a) => partialSum + a, 0)).toFixed(2);
 
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
+
   await ctx.render('checkout', {
     session: ctx.session,
     selected: 'checkout',
+    cartQty: cartQty,
     user: user,
     items: orderitems,
     products: products,
@@ -2986,7 +3019,7 @@ router.post('/captureOrder', async ctx => {
         'username': ctx.session.dataValues.username
       }
     }],
-  }).catch(function err(e) {console.log(e);});
+  });
 
   if (!order) {
     ctx.redirect('/');
@@ -3004,7 +3037,15 @@ router.post('/captureOrder', async ctx => {
     }
   }
 
+  const user = (await order.getUsers())[0];
   const transaction = await Transaction.create({ type: ctx.request.fields.type });
+
+  // Order complete
+  utilsEcom.sendEmail(user.dataValues.email, `Регистрирана поръчка #${order.id}`,null,
+    "<html>" + `<p>Thank you for your order ${user.dataValues.firstName}!</p>` +
+    (await utilsEcom.getOrderAsTableHTML(order)) +
+    `<p>Have a nice day!</p>` +
+    "</html>");
 
   if (ctx.request.fields.type == "paypal") {
     let responce = await utilsEcom.captureOrder(ctx.request.fields.orderID);
@@ -3051,6 +3092,13 @@ router.post('/captureOrder', async ctx => {
     await cart.update({ status: 1, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal() });
 
     await utilsEcom.removeProductQtyFromOrder(cart);
+
+      // Order payed
+      utilsEcom.sendEmail(user.dataValues.email, `Платена поръчка #${order.id}`,null,
+        "<html>" + `<p>Thank you for your payment ${user.dataValues.firstName}!</p>` +
+        (await utilsEcom.getOrderAsTableHTML(order)) +
+        `<p>Have a nice day and shop again :)</p>` +
+        "</html>");
 
     ctx.body = {'msg': 'Your order is completed!', 'status': 'ok'};
     // ctx.redirect('/');
@@ -3116,19 +3164,19 @@ router.get('/admin/export/report/pdf', async ctx => {
     filters['ordAfter'] = new Date(0).toISOString();
   }
 
-  const time = 'month';
+  let time = 'month';
 
   switch (filters.timegroup) {
-    case 0:
+    case '0':
       time = 'day';
       break;
-    case 1:
+    case '1':
       time = 'week';
       break;
-    case 2:
+    case '2':
       time = 'month';
       break;
-    case 3:
+    case '3':
       time = 'year';
       break;
   }
@@ -3139,9 +3187,9 @@ router.get('/admin/export/report/pdf', async ctx => {
 
   ctx.body = fs.createReadStream(path);
 
-  utilsEcom.logger.log('info',
+  utilsEcom.logger.log('info', // longmsg
     `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .pdf format`,
-    { user: ctx.session.dataValues.staffUsername });
+    { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
   ctx.res.writeHead(200, {
     'Content-Type': 'application/pdf',
@@ -3203,19 +3251,19 @@ router.get('/admin/export/report/excel', async ctx => {
     filters['ordAfter'] = new Date(0).toISOString();
   }
 
-  const time = 'month';
+  let time = 'month';
 
   switch (filters.timegroup) {
-    case 0:
+    case '0':
       time = 'day';
       break;
-    case 1:
+    case '1':
       time = 'week';
       break;
-    case 2:
+    case '2':
       time = 'month';
       break;
-    case 3:
+    case '3':
       time = 'year';
       break;
   }
@@ -3226,9 +3274,9 @@ router.get('/admin/export/report/excel', async ctx => {
 
   ctx.body = fs.createReadStream(path);
 
-  utilsEcom.logger.log('info',
+  utilsEcom.logger.log('info', // longmsg
     `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .xlsx format`,
-    { user: ctx.session.dataValues.staffUsername });
+    { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
   ctx.res.writeHead(200, {
     'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -3290,19 +3338,19 @@ router.get('/admin/export/report/csv', async ctx => {
     filters['ordAfter'] = new Date(0).toISOString();
   }
 
-  const time = 'month';
+  let time = 'month';
 
   switch (filters.timegroup) {
-    case 0:
+    case '0':
       time = 'day';
       break;
-    case 1:
+    case '1':
       time = 'week';
       break;
-    case 2:
+    case '2':
       time = 'month';
       break;
-    case 3:
+    case '3':
       time = 'year';
       break;
   }
@@ -3313,9 +3361,9 @@ router.get('/admin/export/report/csv', async ctx => {
 
   ctx.body = fs.createReadStream(path);
 
-  utilsEcom.logger.log('info',
+  utilsEcom.logger.log('info', // longmsg
     `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .csv format`,
-    { user: ctx.session.dataValues.staffUsername });
+    { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
   ctx.res.writeHead(200, {
     'Content-Type': 'text/csv',
@@ -3353,6 +3401,11 @@ render(app, {
 
 app.use(router.routes()).use(router.allowedMethods());
 
+// Global Unhandled Error Handler
+app.on("error", (err, ctx) => {
+  utilsEcom.handleError(err, ctx);
+});
+
 // app.listen(3210);
 
-app.listen(process.env.PORT || 3210, '10.20.1.159');
+app.listen(process.env.PORT || 3210);

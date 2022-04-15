@@ -21,6 +21,14 @@ const Log = db.define("log", {
     type: DataTypes.STRING,
     allowNull: true
   },
+  longMessage: {
+    type: DataTypes.STRING(3096),
+    allowNull: true
+  },
+  isStaff: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true
+  },
 },
 {
   paranoid: true,
@@ -42,7 +50,7 @@ const User = db.define("user", {
   email: {
     type: DataTypes.STRING(50),
     unique: true,
-    allowNull: true,
+    allowNull: false,
     validate: {
       isEmail: true
     }
@@ -59,9 +67,9 @@ const User = db.define("user", {
     type: DataTypes.STRING(100),
     allowNull: false,
     set(pass) {
-      if (/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{7,32}$/i.exec(pass) == null) 
+      if (/^(?=.*[0-9])(?=.*[a-zA-Z])(?!.*\s).{8,32}$/i.exec(pass) == null) 
       {
-        throw new ValidationError("Password must contain at least 1 digit, 1 uppercase and 1 lowercase character, with size 7-32");
+        throw new ValidationError("Password must contain a digit and a character, with size 8-32");
       }
 
       const salt = bcrypt.genSaltSync(5);

@@ -200,18 +200,20 @@
     });
 
 
-    // Quantity
-    // TODO: Move it to ajax function
-    /*$('.qty button').on('click', function () {
+    // Quantity - Product detail page
+    $('.qty button').on('click', function () {
         var $button = $(this);
         var oldValue = $( "#qtyNum" ).val();
+        if (!$button.hasClass('btn-pr'))
+            return;
+        
         if ($button.hasClass('btn-plus')) {
             console.log("add");
             var newVal = parseFloat(oldValue) + 1;
             if (newVal > parseFloat($( "#qtyNum" ).data( "max" ))) {
                 newVal = oldValue
             }
-        } else {
+        } else if ($button.hasClass('btn-minus')) {
             if (oldValue > 1) {
                 var newVal = parseFloat(oldValue) - 1;
             } else {
@@ -219,7 +221,7 @@
             }
         }
         $button.parent().find('input').val(newVal);
-    });*/
+    });
 
 
     // Shipping address show hide

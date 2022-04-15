@@ -37,10 +37,10 @@
                                     </div>
                                     <% } else { %>
                                     <div class="qty">
-                                        <button class="btn-minus"><i class="fa fa-minus"></i></button>
-                                        <input data-max="<%= product.quantity %>" id="qtyNum" type="text" value="1"
+                                        <button class="btn-minus btn-pr"><i class="fa fa-minus"></i></button>
+                                        <input id="qtyNum" type="text" value="1"
                                             disabled>
-                                        <button class="btn-plus"><i class="fa fa-plus"></i></button>
+                                        <button class="btn-plus btn-pr"><i class="fa fa-plus"></i></button>
                                     </div>
                                     <% } %>
                                 </div>
@@ -55,8 +55,6 @@
                                         <a class="btn" id="addCartBtn" href="#"
                                             onclick="return validateAddToCartBtn(<%= product.id %>, 'qtyNum');"><i
                                                 class="fa fa-shopping-cart"></i>Add to Cart</a>
-                                        <a class="btn" id="buyBtn" href="#"><i class="fa fa-shopping-bag"></i>Buy
-                                            Now</a>
                                     </div>
                             </div>
                         </div>
@@ -113,30 +111,6 @@
                                         Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium
                                         doloremque laudantium, totam rem aperiam.
                                     </p>
-                                </div>
-                                <div class="reviews-submit">
-                                    <h4>Give your Review:</h4>
-                                    <div class="ratting">
-                                        <i class="far fa-star"></i>
-                                        <i class="far fa-star"></i>
-                                        <i class="far fa-star"></i>
-                                        <i class="far fa-star"></i>
-                                        <i class="far fa-star"></i>
-                                    </div>
-                                    <div class="row form">
-                                        <div class="col-sm-6">
-                                            <input type="text" placeholder="Name">
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <input type="email" placeholder="Email">
-                                        </div>
-                                        <div class="col-sm-12">
-                                            <textarea placeholder="Review"></textarea>
-                                        </div>
-                                        <div class="col-sm-12">
-                                            <button>Submit</button>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
