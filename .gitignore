@@ -8,3 +8,4 @@ oldgit.tar.gz
 square/__pycache__/
 node_ecom/.env
 node_ecom_test/
+node_ecom/logs/
