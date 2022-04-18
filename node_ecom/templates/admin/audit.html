@@ -29,13 +29,8 @@
             <div class="row" style="margin-bottom: 12px;">
               <div class="col-sm-3">
                 <select name="longmsg" id="longmsg" class="form-select">
-<<<<<<< HEAD
-                  <option value="0">Show</option>
-                  <option value="1">Hide</option>
-=======
                   <option value="1" <% if (filters.longmsg) { %> selected <% } %>>Show</option>
                   <option value="0" <% if (!filters.longmsg) { %> selected <% } %>>Hide</option>
->>>>>>> dev
                 </select>
               </div>
             </div>
@@ -64,14 +59,11 @@
                 <td><%= report[i].dataValues.level %></td>
                 <td><%= report[i].dataValues.user %></td>
                 <td><%= report[i].dataValues.message %></td>
-<<<<<<< HEAD
-=======
                 <% if (filters.longmsg) { %>
                 <td><%= report[i].dataValues.longMessage %></td>
                 <% } else { %>
                 <td></td>
                 <% } %>
->>>>>>> dev
               </tr>
               <% } %>
             </tbody>
