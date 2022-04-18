@@ -73,10 +73,10 @@ const EmailTransport = nodemailer.createTransport({
 
 EmailTransport.verify(function (error, success) {
     if (error) {
-      console.log(error);
+      handleError(error);
       logger.log('alert',
         `Email transport cannot be verified!
-        ${err.message}`);
+        ${error.message}`);
     }
 });
 
@@ -92,21 +92,21 @@ class SequelizeTransport extends WinstonTransport {
     }
   
     log(info, callback) {
-      setImmediate(() => {
-        this.emit('logged', info);
-      });
+        setImmediate(() => {
+            this.emit('logged', info);
+        });
 
-      let user = "";
+        let user = "";
       
-      if (info.user)
-        user = info.user;
+        if (info.user)
+            user = info.user;
     
-      Log.create({ timestamp: new Date().toISOString(), user: user,
-        level: info.level, message: info.message,
-        longMessage: info.longMessage, isStaff: info.isStaff });
+        Log.create({ timestamp: new Date().toISOString(), user: user,
+            level: info.level, message: info.message,
+            longMessage: info.longMessage, isStaff: info.isStaff });
   
-      // Perform the writing to the remote service
-      callback();
+        // Perform the writing to the remote service
+        callback();
     }
 };
 
@@ -115,9 +115,61 @@ const logger = winston.createLogger({
     transports: [
       new SequelizeTransport({
           level: "debug"
-      })
+        }),
+      new winston.transports.File({
+        level: "error",
+        // Create the log directory if it does not exist
+        filename: 'logs/error.log',
+        format: winston.format.printf(log => `[${new Date().toString()}] ` + log.message),
+        })
     ]
 });
+
+function getHost() 
+{
+    return ( process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : '10.20.1.159');
+}
+
+/**
+ * 
+ * @param {import('sequelize/dist').Order} cart 
+ */
+async function getOrderAsTableHTML(cart) 
+{
+    if (!cart) 
+    {
+        return "";
+    }
+
+    let orderitems = await cart.getOrderitems();
+
+    let html =
+    `<table style="width: 100%">
+    <tr>
+    <th>Name</th>
+    <th>Price</th>
+    <th>Quantity</th>
+    <th>Total Price</th>
+    </tr>\n`;
+
+    for (i = 0; i < orderitems.length; i++) 
+    {
+        let orderitem = orderitems[i];
+        let product = await orderitems[i].getProduct();
+
+        html +=
+        `<tr>
+        <td>${product.name}</td>
+        <td style="text-align: right">$${product.discountPrice}</td>
+        <td style="text-align: right">${orderitem.quantity}</td>
+        <td style="text-align: right">$${await orderitem.getTotal()}</td>
+        </tr>\n`;
+    }
+
+    html += `</table>`;
+
+    return html;
+}
 
 function givePages(page, lastPage) {
     var delta = 1,
@@ -153,11 +205,6 @@ function givePages(page, lastPage) {
     return rangeWithDots;
 }
 
-function getHost() 
-{
-    return ( process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : '10.20.1.159');
-}
-
 function generateSessionKey() {
     return crypto.randomBytes(20).toString('hex');
 }
@@ -168,31 +215,18 @@ function generateEmailVerfToken() {
 }
 
 // Email functions
-async function sendEmail(email, subject, text) {
+async function sendEmail(email, subject, text, html) {
     var message = {
         from: "danielgudjenev@gmail.com",
         to: email,
         subject: subject,
-        text: text,
     };
 
-    EmailTransport.sendMail(message);
-}
-
-async function sendOrderEmail(email, cart) {
-    let text = `Thank you for your order:`;
-
-    for (i=0;i<cart.length;i++) {
-
-    }
-
-    var message = {
-        from: "danielgudjenev@gmail.com",
-        to: email,
-        subject: "Successful order",
-        text: text,
-    };
-
+    if (text)
+        message["text"] = text;
+    if (html)
+        message["html"] = html;
+    
     EmailTransport.sendMail(message);
 }
 
@@ -221,6 +255,9 @@ function configPostgreSessions() {
 
 async function isAuthenticatedUser(ctx) 
 {
+    if (!ctx.session.dataValues)
+        return false;
+    
     if (ctx.session.dataValues.username) {
         const user = await User.findOne({ where: { username: ctx.session.dataValues.username }});
 
@@ -275,6 +312,34 @@ async function hasPermission(ctx, permission)
     }
 }
 
+async function getCartQuantity(ctx) 
+{
+    if (await isAuthenticatedUser(ctx)) 
+    {
+        let order = await Order.findOne({
+            where: { status: 0 },
+            include: [{
+                model: User,
+                required: true,
+                where: {
+                  'username': ctx.session.dataValues.username
+                }
+            }]
+        });
+
+        if (order)
+            return (await order.getOrderitems()).length;
+        else return 0;
+    }
+    else 
+    {
+        if (ctx.cookies.get("products"))
+            return Object.keys(JSON.parse(ctx.cookies.get("products"))).length;
+        
+        return 0;
+    }
+}
+
 // PayPal
 async function captureOrder(orderId, debug=false) {
     try {
@@ -317,14 +382,30 @@ async function captureOrder(orderId, debug=false) {
     return null;
 }
 
-async function hasMoreQtyOfProduct(productid, qty) 
+/**
+ * 
+ * @param {number|string} productid 
+ * @param {number|string} qty 
+ * @returns 1 if product's qty is bigger, 2 if they are equal, 0 otherwise
+ */
+async function compareQtyAndProductQty(productid, qty) 
 {
     let product = await Product.findOne({where: {id: productid}});
 
     if (!product)
         return false;
     
-    return product.quantity > qty; 
+    comp = 0;
+
+    if (product.quantity > qty) 
+    {
+        comp = 1;
+    }
+    else if (product.quantity == qty)
+    {
+        comp = 2;
+    }
+    return comp;
 }
 async function hasEnoughQtyOfProductsOfOrder(cart) 
 {
@@ -405,8 +486,6 @@ async function validateStatus(ctx, orderId, responce)
         await removeProductQtyFromOrder(cart);
 
         ctx.body = {'msg': 'Your order is completed!', 'status': 'ok'};
-
-        onPaymentComplete(user, cart);
     }
     else if(responce.result.status == "VOIDED") 
     {
@@ -567,16 +646,20 @@ function escapeCSVParam(param)
 
 async function saveReportCsv(reportRes, filters, time) 
 {
-    var dataToWrite = `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}\n`;
+    var dataToWrite = escapeCSVParam(`From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`);
 
-    dataToWrite += "Start Date, Orders, Products, Total\n";
+    dataToWrite += "\nStart Date, Orders, Products, Total Price, Currency\n";
 
     for(i = 0; i < reportRes.length; i++) 
     {
-        dataToWrite += escapeCSVParam(reportRes[i].dataValues.startDate.toISOString()) + ", " + 
-            escapeCSVParam(reportRes[i].dataValues.orders) + ", " +  escapeCSVParam(reportRes[i].dataValues.products) + ", " +
-            escapeCSVParam(reportRes[i].dataValues.total) + "\n";
+        dataToWrite += escapeCSVParam(reportRes[i].dataValues.startDate.toISOString()) + "," + 
+            escapeCSVParam(reportRes[i].dataValues.orders) + "," +  escapeCSVParam(reportRes[i].dataValues.products) + "," +
+            escapeCSVParam(reportRes[i].dataValues.total) + "," + "USD" + "\n";
     }
+
+    // Total
+    let absTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.total), 0).toFixed(2);
+    dataToWrite += ",,," + escapeCSVParam(absTotal) + ",USD";
 
     return createTempFile('excelReport.csv', dataToWrite);
 }
@@ -592,8 +675,13 @@ async function saveReportPdf(reportRes, filters, time)
         rows.push([reportRes[i].dataValues.startDate.toLocaleDateString('en-GB'), 
             reportRes[i].dataValues.orders,
             reportRes[i].dataValues.products,
-            reportRes[i].dataValues.total]);
+            reportRes[i].dataValues.total,
+            "USD"]);
     }
+
+    // Total
+    let absTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.total), 0).toFixed(2);
+    rows.push(["","","",absTotal, "USD"]);
 
     let subtitle = `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`
 
@@ -602,7 +690,7 @@ async function saveReportPdf(reportRes, filters, time)
     const table = {
         title: "Report Orders",
         subtitle: subtitle,
-        headers: ["Start Date", "Orders", "Products", "Total"],
+        headers: ["Start Date", "Orders", "Products", "Total Price", "Currency"],
         rows: rows
     };
     doc.table( table, {
@@ -620,14 +708,15 @@ async function saveReportExcel(reportRes, filters, time)
     const worksheet = workbook.addWorksheet("Report Orders");
     const path = "./files";  // Path to download excel
 
-    worksheet.getRow(3).values = ['Start Date', 'Orders', 'Products', 'Total'];
+    worksheet.getRow(2).values = ['Start Date', 'Orders', 'Products', 'Total Price', 'Currency'];
 
     // Column for data in excel. key must match data key
     worksheet.columns = [
         { header: "Start Date", key: "startDate", width: 10 }, 
         { header: "Orders", key: "orders", width: 10 },
         { header: "Products", key: "products", width: 10 },
-        { header: "Total", key: "total", width: 10 },
+        { header: "Total Price", key: "total", width: 10 },
+        { header: "Currency", key: "currency", width: 10 },
     ];
 
     reportRes.forEach(report => {
@@ -635,14 +724,26 @@ async function saveReportExcel(reportRes, filters, time)
             report.dataValues.startDate.toLocaleDateString('en-GB'),
             parseInt(report.dataValues.orders),
             parseInt(report.dataValues.products),
-            parseFloat(report.dataValues.total)];
+            parseFloat(report.dataValues.total),
+            "USD"];
         
         worksheet.addRow(data);
     });
 
+    worksheet.addRow([
+        "",
+        "",
+        "",
+        parseFloat(
+            reportRes.reduce(
+                (partialSum, a) =>
+                parseFloat(partialSum) +
+                parseFloat(a.dataValues.total), 0)
+                .toFixed(2)),
+        "USD"]);
+
     /*TITLE*/
-    worksheet.mergeCells('A1', 'D1');
-    worksheet.getCell('B1').value = '';
+    worksheet.mergeCells('A1', 'E1');
     worksheet.getCell('A1').value =
         `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`;
 
@@ -651,8 +752,8 @@ async function saveReportExcel(reportRes, filters, time)
         cell.font = { bold: true };
     });
 
-    // Make third row bold
-    worksheet.getRow(3).eachCell((cell) => {
+    // Make second row bold
+    worksheet.getRow(2).eachCell((cell) => {
         cell.font = { bold: true };
     });
 
@@ -731,6 +832,47 @@ function isSessionExpired(staff)
     return new Date() - new Date(staff.lastActivity) > SESSION_BACK_OFFICE_EXPIRE;
 }
 
+// Other
+/**
+ * 
+ * @param {object} obj1 
+ * @param {object} obj2 
+ * 
+ * @return Combined values of the same keys.
+ * If key exists only in one object, it will be
+ * added to the combined object.
+ * If values are strings they will be appended,
+ * if values are numbers they will be sumed.
+ * If parseNum is true, then all values are parsed as int
+ */
+function combineTwoObjects(obj1, obj2, parseNum) 
+{
+    let obj3 = obj1;
+
+    for (key in obj1) 
+    {
+        let keytwo = obj2[key];
+
+        if (keytwo) 
+        {
+            if (parseNum)
+                obj3[key] = (parseInt(obj3[key]) + parseInt(obj2[key])).toString();
+            else obj3[key] += obj2[key];
+        }
+    }
+
+    for (key in obj2) 
+    {
+        let keyone = obj3[key];
+
+        if (!keyone) 
+        {
+            obj3[key] = obj2[key];
+        }
+    }
+
+    return obj3;
+}
 // Generate
 async function generateOrders(x = 100) 
 {
@@ -826,46 +968,33 @@ async function generateLogs(x = 100) {
                 let date2 = new Date(+(date1) - Math.floor(Math.random()*10000000000));
 
                 logger.log('info',
-                    `Staff ${staff.username} downloaded generated orders report`,
-                    {user: staff.username,
-                    longMessage: `Staff ${staff.username} downloaded \
-                    generated orders report from ${date1.toLocaleString('en_GB')} \
-                    to ${date2.toLocaleString('en_GB')} trunced by month in .csv format`,
-                    isStaff: true});
+                    `Staff ${staff.username} downloaded generated orders report from ${date1.toISOString()} to ${date2.toISOString()} trunced by month in .csv format`,
+                    {user: staff.username});
                 break;
             case 1:
                 logger.log('info',
                     `Staff ${staff.username} tried to see report without rights`,
-                    {user: staff.username,
-                    isStaff: true});
+                    {user: staff.username});
                 break;
             case 2:
                 logger.log('info',
-                    `Staff ${staff.username} updated status of order #${order.id}`,
-                    {user: staff.username,
-                    longMessage: `Staff ${staff.username} \
-                    updated status of order #${order.id} \
-                    from ${STATUS_DISPLAY[1]} to \
-                    ${STATUS_DISPLAY[Math.floor(Math.random() * 5)]}`,
-                    isStaff: true});
+                    `Staff ${staff.username} updated status of order #${order.id} from ${STATUS_DISPLAY[1]} to ${STATUS_DISPLAY[Math.floor(Math.random() * 5)]}`,
+                    {user: staff.username});
                 break;
             case 3:
                 logger.log('info',
                     `Staff ${staff.username} tried to log in with invalid password!`,
-                    {user: staff.username,
-                    isStaff: true});
+                    {user: staff.username});
                 break;
             case 4:
                 logger.log('info',
                     `User ${user.username} logged in!`,
-                    {user: user.username,
-                    isStaff: true});
+                    {user: user.username});
                 break;
             case 5:
                 logger.log('info',
                     `User ${user.username} logged out!`,
-                    {user: user.username,
-                    isStaff: true});
+                    {user: user.username});
                 break;
             case 6:
                 logger.log('alert',
@@ -881,6 +1010,30 @@ async function generateLogs(x = 100) {
 // generateUsers(1000);
 
 // generateOrders(80000);
+
+// Error Handler function
+async function handleError(err, ctx) 
+{
+    let username;
+    let staffUsername;
+    let session;
+
+    if (ctx && ctx.session) 
+    {
+        username = ctx.session.dataValues.username;
+        staffUsername = ctx.session.dataValues.staffUsername;
+        session = JSON.stringify(ctx.session.dataValues);
+    }
+
+    logger.error(
+        `Error message: ${err.message}, User: ${username}, Staff User: ${staffUsername}`, 
+        {
+            longMessage: `Unhandled exception: ${err}, Session: ${session}`
+        }
+    );
+
+    console.log(err);
+}
 
 /*
 def validate_status(request, uid, order_id, order):
@@ -917,35 +1070,27 @@ def validate_status(request, uid, order_id, order):
             return JsonResponse({'msg': 'There was an error while processing your order! Please contact support! Transaction ID: ' + order_id, 'status': 'error'})
 */
 
-// Events
-function onPaymentComplete(user, cart) {
-    let text = `Hello ${user.firstName},
-        Thank you for paying for order #${cart.id}!
-        Your order will soon be processed by our staff!
-        Have a nice day!`;
-
-    sendEmail(user.email, "NodeJS - Your order is complete!", text);
-}
-
 module.exports = {
     PRODUCTS_PER_PAGE,
     SESSION_MAX_AGE,
     STATUS_DISPLAY,
     LOG_LEVELS,
     logger,
+    getHost,
     givePages,
     generateEmailVerfToken,
     generateSessionKey,
     configPostgreSessions,
-    getHost,
     sendEmail,
+    getOrderAsTableHTML,
     isSessionExpired,
     isAuthenticatedStaff,
     isAuthenticatedUser,
     hasPermission,
     captureOrder,
     validateStatus,
-    hasMoreQtyOfProduct,
+    getCartQuantity,
+    compareQtyAndProductQty,
     hasEnoughQtyOfProductsOfOrder,
     addProductQtyFromOrder,
     removeProductQtyFromOrder,
@@ -956,5 +1101,6 @@ module.exports = {
     saveReportExcel,
     saveReportPdf,
     createTempFile,
-    onPaymentComplete
+    combineTwoObjects,
+    handleError,
 };

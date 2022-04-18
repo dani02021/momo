@@ -2,4 +2,4 @@
 *
 
 # if the files to be tracked are in subdirectories
-!*/node_ecom/*
+!*/node_ecom
