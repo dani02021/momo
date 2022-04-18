@@ -76,18 +76,31 @@
                         </li>
 
                         <li class="nav-item">
-                            <a class="nav-link <% if (selected == 'roles') { %> active<% } %>"
+                            <a class="nav-link <% if (selected == 'roles') { %> active <% } %>"
                                 href="/admin/roles">
                                 <i class="fas fa-user-lock"></i>
                                 Roles
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link <% if (selected == 'audit') { %> active<% } %>"
+                            <a class="nav-link <% if (selected == 'audit') { %> active <% } %>"
                                 href="/admin/audit">
                                 <i class="fas fa-gavel"></i>
                                 Audit
                             </a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle <% if (selected == 'settings') { %> active <% } %>" href="#" id="navbarDropdown" role="button"
+                                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-cog"></i>
+                                <span>
+                                    Settings <i class="fas fa-angle-down"></i>
+                                </span>
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                <a class="dropdown-item" href="/admin/settings/email">E-Mail Templates</a>
+                                <a class="dropdown-item" href="#">Other settings</a>
+                            </div>
                         </li>
                     </ul>
                     <% if(session.dataValues && session.dataValues.staffUsername) { %>

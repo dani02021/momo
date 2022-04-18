@@ -1014,7 +1014,12 @@ async function generateLogs(x = 100) {
 
 // generateOrders(80000);
 
-// Error Handler function
+/**
+ * 
+ * @param {Error} err 
+ * @param {import('koa').Context} ctx 
+ * @param {boolean} fileOnly 
+ */
 async function handleError(err, ctx, fileOnly = false) {
     let username;
     let staffUsername;
@@ -1027,11 +1032,11 @@ async function handleError(err, ctx, fileOnly = false) {
     }
 
     logger.error(
-        `Error message: ${err.message}, User: ${username}, Staff User: ${staffUsername}`,
+        `User: ${username}, Staff User: ${staffUsername}, URL: ${ctx.url}, Error message: ${err.message}`,
         {
             longMessage: `Unhandled exception: ${err}, Session: ${session}`,
             fileOnly: fileOnly,
-            stacktrace: err
+            stacktrace: err.stack
         }
     );
 

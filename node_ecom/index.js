@@ -3102,7 +3102,7 @@ router.post('/captureOrder', async ctx => {
       return;
     }*/
 
-    await cart.update({ status: 1, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal() });
+    await cart.update({ status: 5, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal() });
 
     await utilsEcom.removeProductQtyFromOrder(cart);
 
@@ -3390,6 +3390,14 @@ router.get('/admin/export/report/csv', async ctx => {
 router.get('/admin/audit', async ctx => getAdminAudit(ctx));
 router.get('/admin/audit/:page', async ctx => getAdminAudit(ctx));
 
+router.get('/admin/settings/email', async ctx => {
+  await ctx.render('admin/settings/email-templates', {
+    layout: 'admin/base',
+    selected: 'settings',
+    session: ctx.session,
+  });
+});
+
 /* WARNING: 
    The session can be null at any request
    I don't fking know why, but check for empty session
@@ -3424,4 +3432,4 @@ app.on("error", (err, ctx) => {
 
 // app.listen(3210);
 
-app.listen(process.env.PORT || 3211);
+app.listen(process.env.PORT);
