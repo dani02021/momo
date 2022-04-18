@@ -769,11 +769,12 @@ async function getAdminAudit(ctx) {
   } else {
     filters['ordAfter'] = new Date(0).toISOString();
   }
-  if (ctx.query.longmsg) {
+  if (ctx.query.longmsg == 1) {
     filters['longmsg'] = true;
-  }
-  else {
+    filtersToReturn['longmsg'] = true;
+  } else {
     filters['longmsg'] = false;
+    filtersToReturn['longmsg'] = false;
   }
 
   let page = 1;
@@ -811,14 +812,11 @@ async function getAdminAudit(ctx) {
         bind: [filters.user, filters.level]
   });
 
-  console.log(ctx.query.longmsg == true);
-
   await ctx.render("/admin/audit", {
     layout: "/admin/base",
     session: ctx.session,
     selected: "audit",
     report: result,
-    longmsg: filters.longmsg,
     filters: filtersToReturn,
     levels: utilsEcom.LOG_LEVELS,
     page: page,

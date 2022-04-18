@@ -29,8 +29,8 @@
             <div class="row" style="margin-bottom: 12px;">
               <div class="col-sm-3">
                 <select name="longmsg" id="longmsg" class="form-select">
-                  <option value="1">Show</option>
-                  <option value="0">Hide</option>
+                  <option value="1" <% if (filters.longmsg) { %> selected <% } %>>Show</option>
+                  <option value="0" <% if (!filters.longmsg) { %> selected <% } %>>Hide</option>
                 </select>
               </div>
             </div>
@@ -62,7 +62,7 @@
                 <td><%= report[i].dataValues.user %></td>
                 <td><%= report[i].dataValues.isStaff %></td>
                 <td><%= report[i].dataValues.message %></td>
-                <% if (longmsg) { %>
+                <% if (filters.longmsg) { %>
                 <td><%= report[i].dataValues.longMessage %></td>
                 <% } else { %>
                 <td></td>
