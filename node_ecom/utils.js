@@ -503,9 +503,9 @@ async function validateStatus(ctx, orderId, responce) {
         }
 
         // Order payed
-        utilsEcom.sendEmail(user.dataValues.email, `Платена поръчка #${order.id}`, null,
+        sendEmail(user.dataValues.email, `Платена поръчка #${cart.id}`, null,
             "<html>" + `<p>Thank you for your payment ${user.dataValues.firstName}!</p>` +
-            (await utilsEcom.getOrderAsTableHTML(order)) +
+            (await getOrderAsTableHTML(cart)) +
             `<p>Have a nice day and shop again :)</p>` +
             "</html>");
 
