@@ -127,6 +127,12 @@ const logger = winston.createLogger({
             // Create the log directory if it does not exist
             filename: 'logs/error.log',
             format: winston.format.printf(log => `[${new Date().toString()}] ` + log.message),
+        }),
+        new winston.transports.File({
+            level: "error",
+            // Create the log directory if it does not exist
+            filename: 'logs/fullerror.log',
+            format: winston.format.printf(log => `[${new Date().toString()}] ` + log.stacktrace),
         })
     ]
 });
@@ -143,30 +149,41 @@ async function getOrderAsTableHTML(cart) {
     assert(cart);
 
     let orderitems = await cart.getOrderitems();
+    let absTotal = 0.0;
 
     let html =
-        `<table style="width: 100%">
+        `<table style="width: 100%; border: 1px solid black">
     <tr>
-    <th>Name</th>
-    <th>Price</th>
-    <th>Quantity</th>
-    <th>Total Price</th>
+    <th style="border: 1px solid black">Name</th>
+    <th style="border: 1px solid black">Price</th>
+    <th style="border: 1px solid black">Quantity</th>
+    <th style="border: 1px solid black">Total Price</th>
     </tr>\n`;
 
     for (i = 0; i < orderitems.length; i++) {
         let orderitem = orderitems[i];
         let product = await orderitems[i].getProduct();
+        let total = await orderitem.getTotal();
+
+        absTotal += total;
 
         html +=
             `<tr>
-        <td>${product.name}</td>
-        <td style="text-align: right">$${product.discountPrice}</td>
-        <td style="text-align: right">${orderitem.quantity}</td>
-        <td style="text-align: right">$${await orderitem.getTotal()}</td>
+        <td style="border: 1px solid black">${product.name}</td>
+        <td style="text-align: right; border: 1px solid black">$${product.discountPrice}</td>
+        <td style="text-align: right; border: 1px solid black">${orderitem.quantity}</td>
+        <td style="text-align: right; border: 1px solid black">$${total.toFixed(2)}</td>
         </tr>\n`;
     }
 
-    html += `</table>`;
+    html +=
+        `<tr>
+        <td style="border: 1px solid black"></td>
+        <td style="border: 1px solid black"></td>
+        <td style="border: 1px solid black"></td>
+        <td style="text-align: right; border: 1px solid black">$${absTotal.toFixed(2)}</td>
+        </tr>\n
+        </table>`;
 
     return html;
 }
@@ -1013,7 +1030,8 @@ async function handleError(err, ctx, fileOnly = false) {
         `Error message: ${err.message}, User: ${username}, Staff User: ${staffUsername}`,
         {
             longMessage: `Unhandled exception: ${err}, Session: ${session}`,
-            fileOnly: fileOnly
+            fileOnly: fileOnly,
+            stacktrace: err
         }
     );
 
