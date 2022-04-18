@@ -2541,6 +2541,8 @@ router.get('/admin/orders/edit/:id', async ctx => {
 
   let products = [];
 
+  // TODO: Add option to edit payment status
+
   for (i = 0; i < orderitems.length; i++) {
     products.push(await (orderitems[i].getProduct()));
   }
@@ -3104,13 +3106,6 @@ router.post('/captureOrder', async ctx => {
 
     await utilsEcom.removeProductQtyFromOrder(cart);
 
-      // Order payed
-      utilsEcom.sendEmail(user.dataValues.email, `Платена поръчка #${order.id}`,null,
-        "<html>" + `<p>Thank you for your payment ${user.dataValues.firstName}!</p>` +
-        (await utilsEcom.getOrderAsTableHTML(order)) +
-        `<p>Have a nice day and shop again :)</p>` +
-        "</html>");
-
     ctx.body = {'msg': 'Your order is completed!', 'status': 'ok'};
     // ctx.redirect('/');
   }
@@ -3429,4 +3424,4 @@ app.on("error", (err, ctx) => {
 
 // app.listen(3210);
 
-app.listen(process.env.PORT || 3211);
+app.listen(process.env.PORT || 3210);

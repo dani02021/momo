@@ -55,11 +55,11 @@ const LOG_LEVELS = {
 
 // Exceptions
 class NotEnoughQuantityException extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "NotEnoughQuantityException";
-    this.code = "NOT_ENOUGH_QUANTITY";
-  }
+    constructor(message) {
+        super(message);
+        this.name = "NotEnoughQuantityException";
+        this.code = "NOT_ENOUGH_QUANTITY";
+    }
 }
 
 const EmailTransport = nodemailer.createTransport({
@@ -67,48 +67,50 @@ const EmailTransport = nodemailer.createTransport({
     service: 'gmail',
     secure: true, // use TLS
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: Buffer.from(process.env.EMAIL_PASS, "base64").toString('ascii'),
+        user: process.env.EMAIL_USER,
+        pass: Buffer.from(process.env.EMAIL_PASS, "base64").toString('ascii'),
     },
 });
 
 EmailTransport.verify(function (error, success) {
     if (error) {
-      handleError(error);
-      logger.log('alert',
-        `Email transport cannot be verified!
+        handleError(error);
+        logger.log('alert',
+            `Email transport cannot be verified!
         ${error.message}`);
     }
 });
 
 class SequelizeTransport extends WinstonTransport {
     constructor(opts) {
-      super(opts);
-      //
-      // Consume any custom options here. e.g.:
-      // - Connection information for databases
-      // - Authentication information for APIs (e.g. loggly, papertrail,
-      //   logentries, etc.).
-      //
+        super(opts);
+        //
+        // Consume any custom options here. e.g.:
+        // - Connection information for databases
+        // - Authentication information for APIs (e.g. loggly, papertrail,
+        //   logentries, etc.).
+        //
     }
-  
+
     log(info, callback) {
         if (info.fileOnly)
             return;
-        
+
         setImmediate(() => {
             this.emit('logged', info);
         });
 
         let user = "";
-      
+
         if (info.user)
             user = info.user;
-    
-        Log.create({ timestamp: new Date().toISOString(), user: user,
+
+        Log.create({
+            timestamp: new Date().toISOString(), user: user,
             level: info.level, message: info.message,
-            longMessage: info.longMessage, isStaff: info.isStaff });
-  
+            longMessage: info.longMessage, isStaff: info.isStaff
+        });
+
         // Perform the writing to the remote service
         callback();
     }
@@ -117,35 +119,33 @@ class SequelizeTransport extends WinstonTransport {
 const logger = winston.createLogger({
     levels: LOG_LEVELS,
     transports: [
-      new SequelizeTransport({
-          level: "debug"
+        new SequelizeTransport({
+            level: "debug"
         }),
-      new winston.transports.File({
-        level: "error",
-        // Create the log directory if it does not exist
-        filename: 'logs/error.log',
-        format: winston.format.printf(log => `[${new Date().toString()}] ` + log.message),
+        new winston.transports.File({
+            level: "error",
+            // Create the log directory if it does not exist
+            filename: 'logs/error.log',
+            format: winston.format.printf(log => `[${new Date().toString()}] ` + log.message),
         })
     ]
 });
 
-function getHost() 
-{
-    return ( process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : '10.20.1.159');
+function getHost() {
+    return (process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : '10.20.1.159');
 }
 
 /**
  * 
  * @param {import('sequelize/dist').Order} cart 
  */
-async function getOrderAsTableHTML(cart) 
-{
+async function getOrderAsTableHTML(cart) {
     assert(cart);
 
     let orderitems = await cart.getOrderitems();
 
     let html =
-    `<table style="width: 100%">
+        `<table style="width: 100%">
     <tr>
     <th>Name</th>
     <th>Price</th>
@@ -153,13 +153,12 @@ async function getOrderAsTableHTML(cart)
     <th>Total Price</th>
     </tr>\n`;
 
-    for (i = 0; i < orderitems.length; i++) 
-    {
+    for (i = 0; i < orderitems.length; i++) {
         let orderitem = orderitems[i];
         let product = await orderitems[i].getProduct();
 
         html +=
-        `<tr>
+            `<tr>
         <td>${product.name}</td>
         <td style="text-align: right">$${product.discountPrice}</td>
         <td style="text-align: right">${orderitem.quantity}</td>
@@ -183,7 +182,7 @@ function givePages(page, lastPage) {
         range = [],
         rangeWithDots = [],
         l;
-    
+
     if (page < 1)
         page = 1;
     if (lastPage < 1)
@@ -221,7 +220,8 @@ function generateEmailVerfToken() {
 
 // Email functions
 async function sendEmail(email, subject, text, html) {
-    // assert(email && subject && text && html);
+    assert(email);
+    assert(subject);
 
     var message = {
         from: "danielgudjenev@gmail.com",
@@ -233,56 +233,53 @@ async function sendEmail(email, subject, text, html) {
         message["text"] = text;
     if (html)
         message["html"] = html;
-    
+
     EmailTransport.sendMail(message);
 }
 
 function configPostgreSessions() {
     return {
-      // Get session object by key. 
-      get: async (key, maxAge, { rolling }) => 
-      {
-        let session;
-        await Session.findOne({where: {key: key}}).then(sessionv => { session = sessionv; })
-        return session;
-      },
-  
-      // Set session object for key, with a maxAge (in ms).
-      set: async (key, session, maxAge, { rolling, changed }) => 
-      {
-        await Session.upsert({key: key, expire: session._expire, maxAge: maxAge,
-            messages: session.messages, username: session.username, staffUsername: session.staffUsername});
-      },
-  
-      // Destroy session for key.
-      destroy: async key => 
-        await Session.findOne({where: {key: key}}).then(session => session.destroy()),
-    }
-  }
+        // Get session object by key. 
+        get: async (key, maxAge, { rolling }) => {
+            let session;
+            await Session.findOne({ where: { key: key } }).then(sessionv => { session = sessionv; })
+            return session;
+        },
 
-async function isAuthenticatedUser(ctx) 
-{
+        // Set session object for key, with a maxAge (in ms).
+        set: async (key, session, maxAge, { rolling, changed }) => {
+            await Session.upsert({
+                key: key, expire: session._expire, maxAge: maxAge,
+                messages: session.messages, username: session.username, staffUsername: session.staffUsername
+            });
+        },
+
+        // Destroy session for key.
+        destroy: async key =>
+            await Session.findOne({ where: { key: key } }).then(session => session.destroy()),
+    }
+}
+
+async function isAuthenticatedUser(ctx) {
     if (!ctx || !ctx.session.dataValues)
         return false;
-    
+
     if (ctx.session.dataValues.username) {
-        const user = await User.findOne({ where: { username: ctx.session.dataValues.username }});
+        const user = await User.findOne({ where: { username: ctx.session.dataValues.username } });
 
         return user != null;
     }
 
     return false;
 }
-async function isAuthenticatedStaff(ctx) 
-{
+async function isAuthenticatedStaff(ctx) {
     if (!ctx || !ctx.session.dataValues)
         return false;
-    
-    if (ctx.session.dataValues) 
-    {
+
+    if (ctx.session.dataValues) {
         if (ctx.session.dataValues.staffUsername) {
-            const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername }});
-    
+            const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
             return staff != null;
         }
     }
@@ -296,8 +293,7 @@ async function isAuthenticatedStaff(ctx)
  * @param {string} permission 
  * @returns true if the staff has the permission
  */
-async function hasPermission(ctx, permission) 
-{
+async function hasPermission(ctx, permission) {
     assert(ctx);
 
     const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername }, include: Role });
@@ -311,14 +307,11 @@ async function hasPermission(ctx, permission)
         */
         const roles = await staff.getRoles();
 
-        for(let role in roles) 
-        {
+        for (let role in roles) {
             const permissions = await roles[role].getPermissions();
-            
-            for(let perm in permissions) 
-            {
-                if (permissions[perm].name == permission) 
-                {
+
+            for (let perm in permissions) {
+                if (permissions[perm].name == permission) {
                     return true;
                 }
             }
@@ -328,17 +321,15 @@ async function hasPermission(ctx, permission)
     }
 }
 
-async function getCartQuantity(ctx) 
-{
-    if (await isAuthenticatedUser(ctx)) 
-    {
+async function getCartQuantity(ctx) {
+    if (await isAuthenticatedUser(ctx)) {
         let order = await Order.findOne({
             where: { status: 0 },
             include: [{
                 model: User,
                 required: true,
                 where: {
-                  'username': ctx.session.dataValues.username
+                    'username': ctx.session.dataValues.username
                 }
             }]
         });
@@ -347,11 +338,10 @@ async function getCartQuantity(ctx)
             return (await order.getOrderitems()).length;
         else return 0;
     }
-    else 
-    {
+    else {
         if (ctx.cookies.get("products"))
             return Object.keys(JSON.parse(ctx.cookies.get("products"))).length;
-        
+
         return 0;
     }
 }
@@ -365,8 +355,7 @@ async function captureOrder(orderId, debug) {
         request.requestBody({});
 
         const response = await paypalClient.execute(request);
-        if (debug) 
-        {
+        if (debug) {
             console.log("Status Code: " + response.statusCode);
             console.log("Status: " + response.result.status);
             console.log("Order ID: " + response.result.id);
@@ -379,9 +368,9 @@ async function captureOrder(orderId, debug) {
                 console.log(message);
             });
             console.log("Capture Ids:");
-            response.result.purchase_units.forEach((item,index)=>{
-            	item.payments.captures.forEach((item, index)=>{
-            		console.log("\t"+item.id);
+            response.result.purchase_units.forEach((item, index) => {
+                item.payments.captures.forEach((item, index) => {
+                    console.log("\t" + item.id);
                 });
             });
             // To toggle print the whole body comment/uncomment the below line
@@ -393,7 +382,7 @@ async function captureOrder(orderId, debug) {
         handleError(e, null, true);
 
         logger.log('alert',
-                `There was an error while trying to capture order #${orderId}!
+            `There was an error while trying to capture order #${orderId}!
                 ${e.message}`);
     }
 
@@ -406,33 +395,28 @@ async function captureOrder(orderId, debug) {
  * @param {number|string} qty 
  * @returns 1 if product's qty is bigger, 2 if they are equal, 0 otherwise
  */
-async function compareQtyAndProductQty(productid, qty) 
-{
+async function compareQtyAndProductQty(productid, qty) {
     assert(productid);
 
-    let product = await Product.findOne({where: {id: productid}});
+    let product = await Product.findOne({ where: { id: productid } });
 
     if (!product)
         return false;
-    
+
     comp = 0;
 
-    if (product.quantity > qty) 
-    {
+    if (product.quantity > qty) {
         comp = 1;
     }
-    else if (product.quantity == qty)
-    {
+    else if (product.quantity == qty) {
         comp = 2;
     }
     return comp;
 }
-async function hasEnoughQtyOfProductsOfOrder(cart) 
-{
+async function hasEnoughQtyOfProductsOfOrder(cart) {
     assert(cart);
     let cartOrderItems = await cart.getOrderitems();
-    for(i = 0; i < cartOrderItems.length; i++ ) 
-    {
+    for (i = 0; i < cartOrderItems.length; i++) {
         let cartProduct = await cartOrderItems[i].getProduct();
 
         if (cartOrderItems[i].quantity > cartProduct.quantity)
@@ -442,99 +426,102 @@ async function hasEnoughQtyOfProductsOfOrder(cart)
     return true;
 }
 
-async function addProductQtyFromOrder(cart) 
-{
+async function addProductQtyFromOrder(cart) {
     assert(cart);
     let cartOrderItems = await cart.getOrderitems();
-    for(i = 0; i < cartOrderItems.length; i++ ) 
-    {
+    for (i = 0; i < cartOrderItems.length; i++) {
         let cartProduct = await cartOrderItems[i].getProduct();
 
-        cartProduct.update({quantity: cartProduct.quantity + cartOrderItems[i].quantity});
+        cartProduct.update({ quantity: cartProduct.quantity + cartOrderItems[i].quantity });
     }
 }
 
-async function removeProductQtyFromOrder(cart) 
-{
+async function removeProductQtyFromOrder(cart) {
     assert(cart);
     let cartOrderItems = await cart.getOrderitems();
-    for(i = 0; i < cartOrderItems.length; i++ ) 
-    {
+    for (i = 0; i < cartOrderItems.length; i++) {
         let cartProduct = await cartOrderItems[i].getProduct();
 
-        if (cartProduct.quantity < cartOrderItems[i].quantity) 
-        {
+        if (cartProduct.quantity < cartOrderItems[i].quantity) {
             const err = new NotEnoughQuantityException(cartProduct.name + " has only " + cartProduct.quantity + " quantity, but order #" + cartOrderItems[i].id + " is trying to order " + cartOrderItems[i].quantity + "!");
-            
+
             logger.log('alert',
                 `Not enough quantity for ${cartProduct.name}!
                 ${err.message}`);
-            
+
             throw err;
         }
 
-        cartProduct.update({quantity: cartProduct.quantity - cartOrderItems[i].quantity});
+        cartProduct.update({ quantity: cartProduct.quantity - cartOrderItems[i].quantity });
     }
 }
 
-async function validateStatus(ctx, orderId, responce) 
-{
+async function validateStatus(ctx, orderId, responce) {
     assert(ctx);
     assert(responce);
-    if (responce.result.status == "COMPLETED") 
-    {
+    if (responce.result.status == "COMPLETED") {
         // Order is completed
-        const user = await User.findOne({where: {
-            username: ctx.session.dataValues.username
-        }});
+        const user = await User.findOne({
+            where: {
+                username: ctx.session.dataValues.username
+            }
+        });
 
         const cart = await Order.findOne({
             where: {
-              status: 0,
+                status: 0,
             },
             include: [{
-              model: User,
-              required: true,
-              where: {
-                'username': ctx.session.dataValues.username
-              }
+                model: User,
+                required: true,
+                where: {
+                    'username': ctx.session.dataValues.username
+                }
             }],
-          });
-        
-        if(!cart) {
+        });
+
+        if (!cart) {
             ctx.redirect('/');
             return;
         }
-        
-        await cart.update({status: 1, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal()});
+
+        // Order payed
+        utilsEcom.sendEmail(user.dataValues.email, `Платена поръчка #${order.id}`, null,
+            "<html>" + `<p>Thank you for your payment ${user.dataValues.firstName}!</p>` +
+            (await utilsEcom.getOrderAsTableHTML(order)) +
+            `<p>Have a nice day and shop again :)</p>` +
+            "</html>");
+
+        await cart.update({ status: 1, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal() });
 
         await removeProductQtyFromOrder(cart);
 
-        ctx.body = {'msg': 'Your order is completed!', 'status': 'ok'};
+        ctx.body = { 'msg': 'Your order is completed!', 'status': 'ok' };
     }
-    else if(responce.result.status == "VOIDED") 
-    {
+    else if (responce.result.status == "VOIDED") {
         // Order is declined
-        const user = await User.findOne({where: {
-            username: ctx.session.dataValues.username
-        }});
+        const user = await User.findOne({
+            where: {
+                username: ctx.session.dataValues.username
+            }
+        });
 
         const cart = await Order.findOne({
             where: {
-              status: 0,
+                status: 0,
             },
             include: [{
-              model: User,
-              required: true,
-              where: {
-                'username': ctx.session.dataValues.username
-              }
+                model: User,
+                required: true,
+                where: {
+                    'username': ctx.session.dataValues.username
+                }
             }],
-          });
-        
-        await cart.update({status: 3, price: await cart.getTotal()});
+        });
 
-        ctx.body = {'msg': 'The payment has been rejected!', 'status': 'error'};
+        await cart.update({ status: 3, price: await cart.getTotal() });
+
+        ctx.body = { 'msg': 'The payment has been rejected!', 'status': 'error' };
     }
 }
 
@@ -556,38 +543,37 @@ async function getReportResponce(filters, limit, offset, time) {
 
     text += `OFFSET ${offset}`;
 
-    if (limit >= 0) 
-    {
+    if (limit >= 0) {
         text += ` LIMIT ${limit}`;
     }
 
     text += ";";
 
     return [
-        db.query(text, { 
-        type: 'SELECT',
-        plain: false,
-        model: OrderItem,
-        mapToModel: true,
+        db.query(text, {
+            type: 'SELECT',
+            plain: false,
+            model: OrderItem,
+            mapToModel: true,
         }),
-        db.query(countText, { 
-        type: 'SELECT',
-        plain: false,
+        db.query(countText, {
+            type: 'SELECT',
+            plain: false,
         })
-        ]
+    ]
 }
 
-function createTempFile (name = 'temp_file', data = '', encoding = 'utf8') {
+function createTempFile(name = 'temp_file', data = '', encoding = 'utf8') {
     return new Promise((resolve, reject) => {
         const tempPath = path.join(os.tmpdir(), 'nodejs-');
         fs.mkdtemp(tempPath, (err, folder) => {
-            if (err) 
+            if (err)
                 return reject(err)
 
             const file_name = path.join(folder, name);
 
             fs.writeFile(file_name, data, encoding, error_file => {
-                if (error_file) 
+                if (error_file)
                     return reject(error_file);
 
                 resolve(file_name)
@@ -603,30 +589,25 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
     ON "productId" = products.id 
     WHERE ("deletedAt" IS NULL) 
     AND (hide = false) \n`;
-    
-    if (name != '' || cat != '' || minval != 0 || maxval != 99999) 
-    {
-        if (name && name != '') 
-        {
+
+    if (name != '' || cat != '' || minval != 0 || maxval != 99999) {
+        if (name && name != '') {
             text += ` AND position(upper($1) in upper(name)) > 0 \n`
         }
 
-        if (cat && cat != '') 
-        {
+        if (cat && cat != '') {
             text += ` AND "categoryId" = ${cat}\n`;
         }
 
-        if (minval && minval != 0) 
-        {
+        if (minval && minval != 0) {
             text += ` AND "discountPrice" >= ${minval}\n`;
         }
 
-        if (maxval && maxval != 99999) 
-        {
+        if (maxval && maxval != 99999) {
             text += ` AND "discountPrice" <= ${maxval}\n`;
         }
     }
-    
+
     // Count
     let countText = text.replace("*", "count(*)");
     if (countText.indexOf("OFFSET") != -1)
@@ -638,32 +619,29 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
         } else text += ` ORDER BY "createdAt" DESC`;
     } else text += ` ORDER BY "createdAt" DESC`;
 
-    if (offset > 0) 
-    {
+    if (offset > 0) {
         text += ` OFFSET ${offset}\n`;
     }
 
     text += ` LIMIT ${limit}`;
-    
+
     let returnParams = {
         type: 'SELECT',
         plain: false,
         model: Product,
     }
 
-    if (name && name != '') 
-    {
+    if (name && name != '') {
         returnParams.bind = [name];
     }
-    
+
     return [
         db.query(text, returnParams),
         db.query(countText, returnParams)
     ];
 }
 
-function escapeCSVParam(param) 
-{
+function escapeCSVParam(param) {
     assert(param);
 
     let escapedParam = param.replace(/"/g, `""`);
@@ -671,16 +649,14 @@ function escapeCSVParam(param)
     return `"${escapedParam}"`;
 }
 
-async function saveReportCsv(reportRes, filters, time) 
-{
+async function saveReportCsv(reportRes, filters, time) {
     var dataToWrite = escapeCSVParam(`From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`);
 
     dataToWrite += "\nStart Date, Orders, Products, Total Price, Currency\n";
 
-    for(i = 0; i < reportRes.length; i++) 
-    {
-        dataToWrite += escapeCSVParam(reportRes[i].dataValues.startDate.toISOString()) + "," + 
-            escapeCSVParam(reportRes[i].dataValues.orders) + "," +  escapeCSVParam(reportRes[i].dataValues.products) + "," +
+    for (i = 0; i < reportRes.length; i++) {
+        dataToWrite += escapeCSVParam(reportRes[i].dataValues.startDate.toISOString()) + "," +
+            escapeCSVParam(reportRes[i].dataValues.orders) + "," + escapeCSVParam(reportRes[i].dataValues.products) + "," +
             escapeCSVParam(reportRes[i].dataValues.total) + "," + "USD" + "\n";
     }
 
@@ -691,24 +667,22 @@ async function saveReportCsv(reportRes, filters, time)
     return createTempFile('excelReport.csv', dataToWrite);
 }
 
-async function saveReportPdf(reportRes, filters, time) 
-{
+async function saveReportPdf(reportRes, filters, time) {
     let doc = new PDFDocument({ margin: 30, size: 'A4' });
     let temp = await createTempFile('excelReport.pdf');
     let rows = [];
 
-    for(i = 0; i < reportRes.length; i++) 
-    {
-        rows.push([reportRes[i].dataValues.startDate.toLocaleDateString('en-GB'), 
-            reportRes[i].dataValues.orders,
-            reportRes[i].dataValues.products,
-            reportRes[i].dataValues.total,
+    for (i = 0; i < reportRes.length; i++) {
+        rows.push([reportRes[i].dataValues.startDate.toLocaleDateString('en-GB'),
+        reportRes[i].dataValues.orders,
+        reportRes[i].dataValues.products,
+        reportRes[i].dataValues.total,
             "USD"]);
     }
 
     // Total
     let absTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.total), 0).toFixed(2);
-    rows.push(["","","",absTotal, "USD"]);
+    rows.push(["", "", "", absTotal, "USD"]);
 
     let subtitle = `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`
 
@@ -720,7 +694,7 @@ async function saveReportPdf(reportRes, filters, time)
         headers: ["Start Date", "Orders", "Products", "Total Price", "Currency"],
         rows: rows
     };
-    doc.table( table, {
+    doc.table(table, {
         //columnsSize: [ 200, 100, 100 ],
     });
 
@@ -729,8 +703,7 @@ async function saveReportPdf(reportRes, filters, time)
     return temp;
 }
 
-async function saveReportExcel(reportRes, filters, time) 
-{
+async function saveReportExcel(reportRes, filters, time) {
     const workbook = new excelJS.Workbook();
     const worksheet = workbook.addWorksheet("Report Orders");
     const path = "./files";  // Path to download excel
@@ -739,7 +712,7 @@ async function saveReportExcel(reportRes, filters, time)
 
     // Column for data in excel. key must match data key
     worksheet.columns = [
-        { header: "Start Date", key: "startDate", width: 10 }, 
+        { header: "Start Date", key: "startDate", width: 10 },
         { header: "Orders", key: "orders", width: 10 },
         { header: "Products", key: "products", width: 10 },
         { header: "Total Price", key: "total", width: 10 },
@@ -753,7 +726,7 @@ async function saveReportExcel(reportRes, filters, time)
             parseInt(report.dataValues.products),
             parseFloat(report.dataValues.total),
             "USD"];
-        
+
         worksheet.addRow(data);
     });
 
@@ -764,8 +737,8 @@ async function saveReportExcel(reportRes, filters, time)
         parseFloat(
             reportRes.reduce(
                 (partialSum, a) =>
-                parseFloat(partialSum) +
-                parseFloat(a.dataValues.total), 0)
+                    parseFloat(partialSum) +
+                    parseFloat(a.dataValues.total), 0)
                 .toFixed(2)),
         "USD"]);
 
@@ -801,63 +774,55 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
     GROUP BY products.name order by count desc)
     as foo on products.name = foo.name
     WHERE products."deletedAt" IS NULL`;
-    
-    if (name != '' || cat != '' || minval != 0 || maxval != 99999) 
-    {
-        if (name && name != '') 
-        {
+
+    if (name != '' || cat != '' || minval != 0 || maxval != 99999) {
+        if (name && name != '') {
             text += ` AND position(upper($1) in upper(name)) > 0 \n`
         }
 
-        if (cat && cat != '') 
-        {
+        if (cat && cat != '') {
             text += ` AND "categoryId" = ${cat}\n`;
         }
 
-        if (minval && minval != 0) 
-        {
+        if (minval && minval != 0) {
             text += ` AND "discountPrice" >= ${minval}\n`;
         }
 
-        if (maxval && maxval != 99999) 
-        {
+        if (maxval && maxval != 99999) {
             text += ` AND "discountPrice" <= ${maxval}\n`;
         }
     }
 
     text += ` ORDER BY count DESC`;
 
-    if (offset > 0) 
-    {
+    if (offset > 0) {
         text += ` OFFSET ${offset}\n`;
     }
 
     text += ` LIMIT ${limit}`;
 
-    if (name && name != '') 
-    {
+    if (name && name != '') {
         returnParams.bind = [name];
     }
     return [db.query(text, {
-                type: 'SELECT',
-                plain: false,
-                model: Product
-                }),
-            db.query(`SELECT count(*) FROM products`, { 
-                type: 'SELECT',
-                plain: false,
-                model: Product
-                })
-            ];
+        type: 'SELECT',
+        plain: false,
+        model: Product
+    }),
+    db.query(`SELECT count(*) FROM products`, {
+        type: 'SELECT',
+        plain: false,
+        model: Product
+    })
+    ];
 }
 
-function isSessionExpired(staff) 
-{
+function isSessionExpired(staff) {
     assert(staff);
 
     if (!staff.lastActivity)
         return false;
-    
+
     return new Date() - new Date(staff.lastActivity) > SESSION_BACK_OFFICE_EXPIRE;
 }
 
@@ -875,31 +840,26 @@ function isSessionExpired(staff)
  * if values are numbers they will be sumed.
  * If parseNum is true, then all values are parsed as int
  */
-function combineTwoObjects(obj1, obj2, parseNum) 
-{
+function combineTwoObjects(obj1, obj2, parseNum) {
     assert(obj1);
     assert(obj2);
 
     let obj3 = obj1;
 
-    for (key in obj1) 
-    {
+    for (key in obj1) {
         let keytwo = obj2[key];
 
-        if (keytwo) 
-        {
+        if (keytwo) {
             if (parseNum)
                 obj3[key] = (parseInt(obj3[key]) + parseInt(obj2[key])).toString();
             else obj3[key] += obj2[key];
         }
     }
 
-    for (key in obj2) 
-    {
+    for (key in obj2) {
         let keyone = obj3[key];
 
-        if (!keyone) 
-        {
+        if (!keyone) {
             obj3[key] = obj2[key];
         }
     }
@@ -907,20 +867,17 @@ function combineTwoObjects(obj1, obj2, parseNum)
     return obj3;
 }
 // Generate
-async function generateOrders(x = 100) 
-{
+async function generateOrders(x = 100) {
     const products = await Product.findAll();
     const users = await User.findAll();
 
-    for (o = 0; o < x; o++) 
-    {
+    for (o = 0; o < x; o++) {
         const order = await Order.create({
             status: 1,
-            orderedAt: new Date(+(new Date()) - Math.floor(Math.random()*900000000000)),
+            orderedAt: new Date(+(new Date()) - Math.floor(Math.random() * 900000000000)),
         });
 
-        for (i = 0; i <= Math.floor(Math.random() * 3) + 1; i++) 
-        {
+        for (i = 0; i <= Math.floor(Math.random() * 3) + 1; i++) {
             // Get product
             const product = products[Math.floor(Math.random() * 10000) + 1];
 
@@ -934,7 +891,7 @@ async function generateOrders(x = 100)
 
             const user = users[Math.floor(Math.random() * 10000) + 1];
 
-            order.update({price: await order.getTotal()});
+            order.update({ price: await order.getTotal() });
 
             user.addOrder(order);
         }
@@ -946,12 +903,11 @@ async function generateStaff(x = 100) {
         count: x
     });
 
-    for (o = 0; o < x; o++) 
-    {
+    for (o = 0; o < x; o++) {
         Staff.create({
             username: id(),
-            email: id()+testUsers[o].email,
-            password: id()+id()+id(),
+            email: id() + testUsers[o].email,
+            password: id() + id() + id(),
             firstName: testUsers[o].name.first,
             lastName: testUsers[o].name.last
         });
@@ -963,13 +919,12 @@ async function generateUsers(x = 100) {
         count: x
     });
 
-    for (o = 0; o < x; o++) 
-    {
+    for (o = 0; o < x; o++) {
         let token = generateEmailVerfToken();
 
         User.create({
             username: id(),
-            email: testUsers[o].email+id(),
+            email: testUsers[o].email + id(),
             password: id(),
             firstName: testUsers[o].name.first,
             lastName: testUsers[o].name.last,
@@ -977,57 +932,55 @@ async function generateUsers(x = 100) {
             country: "Bulgaria",
             emailConfirmed: true,
             verificationToken: token
-    });
+        });
     }
 }
 
 async function generateLogs(x = 100) {
     let users = await User.findAll();
     let staffs = await Staff.findAll();
-    let orders = await Order.findAll({where: {status: { [Op.gte]: 1  }}});
+    let orders = await Order.findAll({ where: { status: { [Op.gte]: 1 } } });
 
-    for (o = 0; o < x; o++) 
-    {
+    for (o = 0; o < x; o++) {
         let rand = Math.floor(Math.random() * 8);
 
         let user = users[Math.floor(Math.random() * 10000) + 1];
         let staff = staffs[Math.floor(Math.random() * 10000) + 1];
         let order = orders[Math.floor(Math.random() * 10000) + 1];
 
-        switch (rand) 
-        {
+        switch (rand) {
             case 0:
-                let date1 = new Date(+(new Date()) - Math.floor(Math.random()*900000000000));
-                let date2 = new Date(+(date1) - Math.floor(Math.random()*10000000000));
+                let date1 = new Date(+(new Date()) - Math.floor(Math.random() * 900000000000));
+                let date2 = new Date(+(date1) - Math.floor(Math.random() * 10000000000));
 
                 logger.log('info',
                     `Staff ${staff.username} downloaded generated orders report from ${date1.toISOString()} to ${date2.toISOString()} trunced by month in .csv format`,
-                    {user: staff.username});
+                    { user: staff.username });
                 break;
             case 1:
                 logger.log('info',
                     `Staff ${staff.username} tried to see report without rights`,
-                    {user: staff.username});
+                    { user: staff.username });
                 break;
             case 2:
                 logger.log('info',
                     `Staff ${staff.username} updated status of order #${order.id} from ${STATUS_DISPLAY[1]} to ${STATUS_DISPLAY[Math.floor(Math.random() * 5)]}`,
-                    {user: staff.username});
+                    { user: staff.username });
                 break;
             case 3:
                 logger.log('info',
                     `Staff ${staff.username} tried to log in with invalid password!`,
-                    {user: staff.username});
+                    { user: staff.username });
                 break;
             case 4:
                 logger.log('info',
                     `User ${user.username} logged in!`,
-                    {user: user.username});
+                    { user: user.username });
                 break;
             case 5:
                 logger.log('info',
                     `User ${user.username} logged out!`,
-                    {user: user.username});
+                    { user: user.username });
                 break;
             case 6:
                 logger.log('alert',
@@ -1045,21 +998,19 @@ async function generateLogs(x = 100) {
 // generateOrders(80000);
 
 // Error Handler function
-async function handleError(err, ctx, fileOnly = false) 
-{
+async function handleError(err, ctx, fileOnly = false) {
     let username;
     let staffUsername;
     let session;
 
-    if (ctx && ctx.session) 
-    {
+    if (ctx && ctx.session) {
         username = ctx.session.dataValues.username;
         staffUsername = ctx.session.dataValues.staffUsername;
         session = JSON.stringify(ctx.session.dataValues);
     }
 
     logger.error(
-        `Error message: ${err.message}, User: ${username}, Staff User: ${staffUsername}`, 
+        `Error message: ${err.message}, User: ${username}, Staff User: ${staffUsername}`,
         {
             longMessage: `Unhandled exception: ${err}, Session: ${session}`,
             fileOnly: fileOnly
