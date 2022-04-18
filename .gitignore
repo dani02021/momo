@@ -1,11 +1,2 @@
-.vscode
-ecommerce/.venv
-ecommerce/__pycache__
-ecommerce/ecommerce/ecom/__pycache__
-ecommerce/ecommerce/ecommerce/__pycache__
-ecommerce/ecommerce/ecom/migrations
-oldgit.tar.gz
-square/__pycache__/
 node_ecom/.env
-node_ecom_test/
 node_ecom/logs/
