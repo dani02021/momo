@@ -6,7 +6,7 @@ let uri = process.env.DB_URI;
 let options = {
   // the sql dialect of the database
   // currently supported: 'mysql', 'sqlite', 'postgres', 'mssql'
-  dialect: 'postgres',
+  dialect: 'postgresa',
 
   // logging: false,
 
