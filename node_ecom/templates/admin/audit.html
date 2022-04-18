@@ -94,7 +94,7 @@
         <%= pages[i] %></a></li>
       <% } %>
       <% } %>
-      {<% if(page < pages[pages.length - 1]) { %>
+      <% if(page < pages[pages.length - 1]) { %>
       <li class="page-item">
         <a class="page-link" href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
       </li>

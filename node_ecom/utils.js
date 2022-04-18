@@ -221,7 +221,7 @@ function generateEmailVerfToken() {
 
 // Email functions
 async function sendEmail(email, subject, text, html) {
-    assert(email && subject && text && html);
+    // assert(email && subject && text && html);
 
     var message = {
         from: "danielgudjenev@gmail.com",

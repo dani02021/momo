@@ -1,7 +1,7 @@
 <div class="container mt-5">
   <div class="row tm-content-row">
     <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
-      <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 850px;">
+      <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1050px;">
         <h2 class="tm-block-title">Report</h2>
         <div class="container">
           <form action="/admin/report" method="get" onsubmit="checkOrderFilter(this);">
@@ -91,7 +91,7 @@
         <%= pages[i] %></a></li>
       <% } %>
       <% } %>
-      {<% if(page < pages[pages.length - 1]) { %>
+      <% if(page < pages[pages.length - 1]) { %>
       <li class="page-item">
         <a class="page-link" href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
       </li>
