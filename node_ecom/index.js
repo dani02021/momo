@@ -33,6 +33,7 @@ const Transaction = models.transaction();
 const PayPalTransaction = models.paypaltransacion();
 const CODTransaction = models.codtransaction();
 const Log = models.log();
+const EmailTemplate = models.emailtemplate();
 
 const app = new Koa();
 const router = new KoaRouter();
@@ -3054,11 +3055,16 @@ router.post('/captureOrder', async ctx => {
   const transaction = await Transaction.create({ type: ctx.request.fields.type });
 
   // Order complete
-  utilsEcom.sendEmail(user.dataValues.email, `Регистрирана поръчка #${order.id}`,null,
-    "<html>" + `<p>Thank you for your order ${user.dataValues.firstName}!</p>` +
-    (await utilsEcom.getOrderAsTableHTML(order)) +
-    `<p>Have a nice day!</p>` +
-    "</html>");
+  let emailtemplate = await EmailTemplate.findOne({where: { type: "order" }});
+
+  if (!emailtemplate)
+    emailtemplate = utilsEcom.DEFAULT_ORDER_EMAIL_TEMPLATE;
+
+  utilsEcom.sendEmail(emailtemplate.sender, user.dataValues.email,
+    utilsEcom.parseEmailPlaceholders(emailtemplate.subject), null,
+    utilsEcom.parseEmailPlaceholders(emailtemplate.upper) +
+    (await utilsEcom.getOrderAsTableHTML(order, emailtemplate)) +
+    utilsEcom.parseEmailPlaceholders(emailtemplate.lower));
 
   if (ctx.request.fields.type == "paypal") {
     let responce = await utilsEcom.captureOrder(ctx.request.fields.orderID);
@@ -3391,11 +3397,201 @@ router.get('/admin/audit', async ctx => getAdminAudit(ctx));
 router.get('/admin/audit/:page', async ctx => getAdminAudit(ctx));
 
 router.get('/admin/settings/email', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    ctx.redirect('/admin/login');
+    return;
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'settings.email')) {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see reports' };
+    utilsEcom.logger.log('info',
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see report without rights`,
+      { user: ctx.session.dataValues.staffUsername });
+
+    ctx.redirect('/admin');
+    return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
+  let payment = await EmailTemplate.findOne({where: { type: 'payment'}});
+  let order = await EmailTemplate.findOne({where: { type: 'order'}});
+
   await ctx.render('admin/settings/email-templates', {
     layout: 'admin/base',
     selected: 'settings',
     session: ctx.session,
+    payment: payment,
+    order: order,
   });
+
+  // Clear old messages
+  ctx.session.messages = null;
+});
+
+router.post('/admin/settings/email', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    ctx.redirect('/admin/login');
+    return;
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'settings.email')) {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see email template settings' };
+    utilsEcom.logger.log('info',
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see email template settings without rights`,
+      { user: ctx.session.dataValues.staffUsername });
+
+    ctx.redirect('/admin');
+    return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
+  let table = ctx.request.fields.table;
+  let type = ctx.request.fields.type;
+  let sender = ctx.request.fields.sender;
+  let subject = ctx.request.fields.subject;
+
+  let validTableValues = [
+    "name",
+    "price",
+    "subtotal",
+    "quantity",
+  ]
+
+  // Check table for empty values
+  if (table.includes('-')) 
+  {
+    ctx.session.messages = {"tableError": type == "payment" ? "Payment email template table has empty values!" : "Order email template table has empty values!"};
+    ctx.redirect("/admin/settings/email");
+
+    return;
+  }
+
+  // Check table for dublicates
+  if ((new Set(table)).size !== table.length) 
+  {
+    ctx.session.messages = {"tableError": type == "payment" ? "Payment template table has dublicate values!" : "Order template table has dublicate values!"};
+    ctx.redirect("/admin/settings/email");
+
+    return;
+  }
+
+  // Check table for invalid values
+  if (!table.every(elem => validTableValues.includes(elem))) 
+  {
+    ctx.session.messages = {"tableError": type == "payment" ? "Payment template table has invalid values!" : "Order template table has invalid values!"};
+    ctx.redirect("/admin/settings/email");
+
+    return;
+  }
+
+  if (sender == '' || subject == '') 
+  {
+    ctx.session.messages = {"tableError": type == "payment" ? "Payment template has empty sender or subject!" : "Order template has empty sender or subject!"};
+    ctx.redirect("/admin/settings/email");
+
+    return;
+  }
+
+  if (!/^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/g.test(sender)) 
+  {
+    ctx.session.messages = {"tableError": type == "payment" ? "Payment email is invalid!" : "Order email is invalid!"};
+    ctx.redirect("/admin/settings/email");
+
+    return;
+  }
+
+  if (type == "payment")
+    EmailTemplate.upsert({
+      type: "payment",
+      sender: sender,
+      subject: subject,
+      upper: ctx.request.fields.uppercontent,
+      lower: ctx.request.fields.lowercontent,
+      table: table.toString()
+    });
+  else EmailTemplate.upsert({
+    type: "order",
+    sender: sender,
+    subject: subject,
+    upper: ctx.request.fields.uppercontent,
+    lower: ctx.request.fields.lowercontent,
+    table: table.toString()
+  });
+
+  ctx.session.messages = {"tableOk": type == "payment" ? "Payment template is set!" : "Order template is set!"};
+  ctx.redirect("/admin/settings/email");
+});
+
+router.get('/admin/settings/other', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    ctx.redirect('/admin/login');
+    return;
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'settings.other')) {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see other settings' };
+    utilsEcom.logger.log('info',
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see other settings without rights`,
+      { user: ctx.session.dataValues.staffUsername });
+
+    ctx.redirect('/admin');
+    return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return; 
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
+  await ctx.render('admin/settings/other-settings', {
+    layout: 'admin/base',
+    selected: 'settings',
+    session: ctx.session
+  });
+
+  // Clear old messages
+  ctx.session.messages = null;
 });
 
 /* WARNING: 

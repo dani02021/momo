@@ -10,80 +10,103 @@
       <% } %>
         <% } %>
           <% } %>
-            <form action="" method="post">
+            <form action="" method="post" onsubmit="enableAllOptions(this);">
               <div class="container tm-mt-big tm-mb-big">
                 <div class="tm-bg-primary-dark tm-block tm-block-h-auto">
                   <input type="hidden" name="type" value="payment">
                   <div class="row mt-2">
                     <div class="col mx-auto d-flex justify-content-center">
-                      <label style="color: white;">E-Mail Payment Template</label>
+                      <label style="color: white; font-weight: bold;">E-Mail Payment Template</label>
                     </div>
                   </div>
                   <div class="row mt-3">
                     <div class="col mx-auto d-flex justify-content-center">
-                      <input name="text" name="subject" , placeholder="Subject">
+                    <% if (payment) { %>
+                    <input name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;" value="<%= payment.sender %>">
+                    <% } else { %>
+                    <input name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;">
+                    <% } %>
                     </div>
                   </div>
                   <div class="row mt-3">
                     <div class="col mx-auto d-flex justify-content-center">
+                      <% if (payment) { %>
+                      <input name="subject" placeholder="Subject" required maxlength="255" style="width: 30%;" value="<%= payment.subject %>">
+                      <% } else { %>
+                      <input name="subject" placeholder="Subject" required maxlength="255" style="width: 30%;">
+                      <% } %>
+                    </div>
+                  </div>
+                  <div class="row mt-3">
+                    <div class="col mx-auto d-flex justify-content-center">
+                      <% if (payment) { %>
                       <textarea name="uppercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
-                        placeholder="Upper Content"></textarea>
+                        placeholder="Upper Content (Above the table)"><%= payment.upper %></textarea>
+                      <% } else { %>
+                      <textarea name="uppercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
+                        placeholder="Upper Content (Above the table)"></textarea>
+                      <% } %>
                     </div>
                   </div>
-                  <div class="row mt-2">
+                  <div class="row mt-5">
                     <div class="col mx-auto d-flex justify-content-center">
                       <label style="color: white;">Table:</label>
                     </div>
                   </div>
-                  <div class="row mt-3">
+                  <div id="table1" class="row mt-3">
                     <div class="col mx-auto">
                       <div class="row justify-content-between">
                         <div class="col d-flex justify-content-center">
                           <select name="table" onchange="setTableCol(this, 0)">
                             <option value="-" selected>-</option>
-                            <option value="username">Username</option>
+                            <option value="name">Prod. Name</option>
                             <option value="quantity">Quantity</option>
-                            <option value="price">Price</option>
-                            <option value="subtotal">SubTotal</option>
+                            <option value="price">Prod. Price</option>
+                            <option value="subtotal">Subtotal</option>
                           </select>
                         </div>
                         <div class="col d-flex justify-content-center">
                           <select name="table" onchange="setTableCol(this, 1)">
                             <option value="-" selected>-</option>
-                            <option value="username">Username</option>
+                            <option value="name">Prod. Name</option>
                             <option value="quantity">Quantity</option>
-                            <option value="price">Price</option>
-                            <option value="subtotal">SubTotal</option>
+                            <option value="price">Prod. Price</option>
+                            <option value="subtotal">Subtotal</option>
                           </select>
                         </div>
                         <div class="col d-flex justify-content-center">
                           <select name="table" onchange="setTableCol(this, 2)">
                             <option value="-" selected>-</option>
-                            <option value="username">Username</option>
+                            <option value="name">Prod. Name</option>
                             <option value="quantity">Quantity</option>
-                            <option value="price">Price</option>
-                            <option value="subtotal">SubTotal</option>
+                            <option value="price">Prod. Price</option>
+                            <option value="subtotal">Subtotal</option>
                           </select>
                         </div>
                         <div class="col d-flex justify-content-center">
                           <select name="table" onchange="setTableCol(this, 3)">
                             <option value="-" selected>-</option>
-                            <option value="username">Username</option>
+                            <option value="name">Prod. Name</option>
                             <option value="quantity">Quantity</option>
-                            <option value="price">Price</option>
-                            <option value="subtotal">SubTotal</option>
+                            <option value="price">Prod. Price</option>
+                            <option value="subtotal">Subtotal</option>
                           </select>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div class="row mt-3">
+                  <div class="row mt-5">
                     <div class="col mx-auto d-flex justify-content-center">
+                      <% if (payment) { %>
                       <textarea name="lowercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
-                        placeholder="Lower Content"></textarea>
+                        placeholder="Lower Content (Below the table)"><%= payment.lower %></textarea>
+                      <% } else { %>
+                      <textarea name="lowercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
+                        placeholder="Lower Content (Below the table)"></textarea>
+                      <% } %>
                     </div>
                   </div>
-                  <div class="row mt-3">
+                  <div class="row mt-5">
                     <div class="col mx-auto d-flex justify-content-center">
                       <button type="submit" class="btn btn-primary btn-block">Submit</button>
                     </div>
@@ -91,18 +114,154 @@
                 </div>
               </div>
             </form>
+            <form action="" method="post" onsubmit="enableAllOptions(this);">
+              <div class="container tm-mt-big tm-mb-big">
+                <div class="tm-bg-primary-dark tm-block tm-block-h-auto">
+                  <input type="hidden" name="type" value="order">
+                  <div class="row mt-2">
+                    <div class="col mx-auto d-flex justify-content-center">
+                      <label style="color: white; font-weight: bold;">E-Mail Order Template</label>
+                    </div>
+                  </div>
+                  <div class="row mt-3">
+                    <div class="col mx-auto d-flex justify-content-center">
+                      <% if (order) { %>
+                      <input name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;" value="<%= order.sender %>">
+                      <% } else { %>
+                      <input name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;">
+                      <% } %>
+                    </div>
+                  </div>
+                  <div class="row mt-3">
+                    <div class="col mx-auto d-flex justify-content-center">
+                      <% if (order) { %>
+                      <input name="subject" placeholder="Subject" required maxlength="255" style="width: 30%;" value="<%= order.subject %>">
+                      <% } else { %>
+                      <input name="subject" placeholder="Subject" required maxlength="255" style="width: 30%;">
+                      <% } %>
+                    </div>
+                  </div>
+                  <div class="row mt-3">
+                    <div class="col mx-auto d-flex justify-content-center">
+                      <% if (order) { %>
+                      <textarea name="uppercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
+                        placeholder="Upper Content (Above the table)"><%= order.upper %></textarea>
+                      <% } else { %>
+                      <textarea name="uppercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
+                        placeholder="Upper Content (Above the table)"></textarea>
+                      <% } %>
+                    </div>
+                  </div>
+                  <div class="row mt-5">
+                    <div class="col mx-auto d-flex justify-content-center">
+                      <label style="color: white;">Table:</label>
+                    </div>
+                  </div>
+                  <div id="table2" class="row mt-3">
+                    <div class="col mx-auto">
+                      <div class="row justify-content-between">
+                        <div class="col d-flex justify-content-center">
+                          <select name="table" onchange="setTableCol(this, 4)">
+                            <option value="-" selected>-</option>
+                            <option value="name">Prod. Name</option>
+                            <option value="quantity">Quantity</option>
+                            <option value="price">Prod. Price</option>
+                            <option value="subtotal">Subtotal</option>
+                          </select>
+                        </div>
+                        <div class="col d-flex justify-content-center">
+                          <select name="table" onchange="setTableCol(this, 5)">
+                            <option value="-" selected>-</option>
+                            <option value="name">Prod. Name</option>
+                            <option value="quantity">Quantity</option>
+                            <option value="price">Prod. Price</option>
+                            <option value="subtotal">Subtotal</option>
+                          </select>
+                        </div>
+                        <div class="col d-flex justify-content-center">
+                          <select name="table" onchange="setTableCol(this, 6)">
+                            <option value="-" selected>-</option>
+                            <option value="name">Prod. Name</option>
+                            <option value="quantity">Quantity</option>
+                            <option value="price">Prod. Price</option>
+                            <option value="subtotal">Subtotal</option>
+                          </select>
+                        </div>
+                        <div class="col d-flex justify-content-center">
+                          <select name="table" onchange="setTableCol(this, 7)">
+                            <option value="-" selected>-</option>
+                            <option value="name">Prod. Name</option>
+                            <option value="quantity">Quantity</option>
+                            <option value="price">Prod. Price</option>
+                            <option value="subtotal">Subtotal</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row mt-5">
+                    <div class="col mx-auto d-flex justify-content-center">
+                      <% if (order) { %>
+                        <textarea name="lowercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
+                        placeholder="Lower Content (Below the table)"><%= order.lower %></textarea>
+                      <% } else { %>
+                      <textarea name="lowercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
+                        placeholder="Lower Content (Below the table)"></textarea>
+                      <% } %>
+                    </div>
+                  </div>
+                  <div class="row mt-5">
+                    <div class="col mx-auto d-flex justify-content-center">
+                      <button type="submit" class="btn btn-primary btn-block">Submit</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </form>
+            <div class="container tm-mt-big tm-mb-big">
+              <div class="tm-bg-primary-dark tm-block tm-block-h-auto">
+                <div class="row mt-2">
+                  <div class="col mx-auto d-flex justify-content-center">
+                    <label style="color: white; font-weight: bold;">Legend:</label>
+                  </div>
+                </div>
+                <div class="row mt-2">
+                  <div class="col mx-auto" style="color: white;">
+                    <ol>
+                      <li>
+                        Placeholders (Заменят съответната променлива в текста, case-insensitive):
+                        <ul>
+                          <li>$user - Username</li>
+                          <li>$orderid - Order ID</li>
+                        </ul>
+                      </li>
+                      <li>
+                        <b>Задължително</b> е всички полета в таблицата да се използват!
+                      </li>
+                      <li>
+                        Content полетата не са <b>задължителни</b>!
+                      </li>
+                      <li>
+                        Sender имейлът <b>задължително</b> трябва да е с домейн GMail!
+                      </li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            </div>
             <script>
               let cols = [];
-              let disabled = [];
+              let disabled1 = [];
+              let disabled2 = [];
 
               function setTableCol(elem, num) {
                 if (!cols[parseInt(num)]) {
                   cols[parseInt(num)] = elem.value;
 
-                  disabled = disabled.filter(item => item !== elem.value);
+                  parseInt(num) < 4 ? disabled1 = disabled1.filter(item => item !== cols[parseInt(num)]) : disabled2 = disabled2.filter(item => item !== cols[parseInt(num)]);
 
                   if (elem.value !== '-') {
-                    disabled.push(elem.value);
+                    parseInt(num) < 4 ? disabled1.push(elem.value) : disabled2.push(elem.value);
 
                     let selects = elem.parentElement.parentElement.getElementsByTagName("select");
 
@@ -110,39 +269,78 @@
                       let options = selects[i].options;
 
                       for (z = 0; z < options.length; z++) {
-                        if (disabled.includes(options[z].value))
+                        if (parseInt(num) < 4 ? disabled1.includes(options[z].value) : disabled2.includes(options[z].value))
                           options[z].disabled = true;
                       }
                     }
                   }
-                } else 
-                {
+                } else {
                   let selects = elem.parentElement.parentElement.getElementsByTagName("select");
 
                   for (i = 0; i < selects.length; i++) {
-                      let options = selects[i].options;
+                    let options = selects[i].options;
 
-                      for (z = 0; z < options.length; z++) {
-                        if (disabled.includes(cols[parseInt(num)]))
-                          options[z].disabled = false;
-                      }
+                    for (z = 0; z < options.length; z++) {
+                      if (parseInt(num) < 4 ? disabled1.includes(options[z].value) : disabled2.includes(options[z].value))
+                        options[z].disabled = false;
                     }
+                  }
 
-                    if (elem.value !== '-')
-                      disabled.push(elem.value);
+                  if (elem.value !== '-')
+                    parseInt(num) < 4 ? disabled1.push(elem.value) : disabled2.push(elem.value);
 
-                    disabled = disabled.filter(item => item !== cols[parseInt(num)]);
+                  parseInt(num) < 4 ? disabled1 = disabled1.filter(item => item !== cols[parseInt(num)]) : disabled2 = disabled2.filter(item => item !== cols[parseInt(num)]);
 
-                    for (i = 0; i < selects.length; i++) {
-                      let options = selects[i].options;
+                  for (i = 0; i < selects.length; i++) {
+                    let options = selects[i].options;
 
-                      for (z = 0; z < options.length; z++) {
-                        if (disabled.includes(options[z].value))
-                          options[z].disabled = true;
-                      }
+                    for (z = 0; z < options.length; z++) {
+                      if (parseInt(num) < 4 ? disabled1.includes(options[z].value) : disabled2.includes(options[z].value))
+                        options[z].disabled = true;
                     }
+                  }
 
-                    cols[parseInt(num)] = elem.value;
+                  cols[parseInt(num)] = elem.value;
                 }
               }
+
+              function enableAllOptions(elem) {
+                let selects = elem.parentElement.parentElement.getElementsByTagName("select");
+
+                for (i = 0; i < selects.length; i++) {
+                  let options = selects[i].options;
+
+                  for (z = 0; z < options.length; z++) {
+                    options[z].disabled = false;
+                  }
+                }
+              }
+
+              <% if (payment) { %>
+              let selects = document.getElementById("table1").getElementsByTagName("select");
+
+              let values = "<%= payment.table %>".split(",");
+
+              if (values.length == selects.length) 
+              {
+                for (i=0;i<values.length;i++) 
+                {
+                  selects[i].value = values[i]
+                }
+              }
+              <% } %>
+
+              <% if (order) { %>
+              let selects = document.getElementById("table2").getElementsByTagName("select");
+
+              let values = "<%= order.table %>".split(",");
+
+              if (values.length == selects.length) 
+              {
+                for (i=0;i<values.length;i++) 
+                {
+                  selects[i].value = values[i]
+                }
+              }
+              <% } %>
             </script>

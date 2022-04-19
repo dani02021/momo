@@ -19,6 +19,7 @@ const Order = models.order();
 const OrderItem = models.orderitem();
 const Product = models.product();
 const Log = models.log();
+const EmailTemplate = models.emailtemplate();
 
 const fs = require('fs');
 const os = require('os');
@@ -35,6 +36,23 @@ const excelJS = require("exceljs");
 const PRODUCTS_PER_PAGE = 12;
 const SESSION_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000; // 2 weeks
 const SESSION_BACK_OFFICE_EXPIRE = 5 * 60 * 1000; // 5 minutes
+
+const DEFAULT_PAYMENT_EMAIL_TEMPLATE = {
+    sender: 'danielgudjenev@gmail.com',
+    subject: 'Платена поръчка #$orderid',
+    upper: '$user, вашата поръчка #$orderid беше платена успешно',
+    table: 'name,price,quantity,subtotal',
+    lower: 'Благодаря за вашата поръчка'
+}
+
+const DEFAULT_ORDER_EMAIL_TEMPLATE = {
+    sender: 'danielgudjenev@gmail.com',
+    subject: 'Регистрирана поръчка #$orderid',
+    upper: '$user, вашата поръчка #$orderid беше регистрирана успешно',
+    table: 'name,price,quantity,subtotal',
+    lower: 'Благодаря за вашата поръчка'
+}
+
 const STATUS_DISPLAY = [
     "Not Ordered",
     "Pending",
@@ -143,13 +161,16 @@ function getHost() {
 
 /**
  * 
- * @param {import('sequelize/dist').Order} cart 
+ * @param {Order} cart 
+ * @param {EmailTemplate} emailtemplate
  */
-async function getOrderAsTableHTML(cart) {
+async function getOrderAsTableHTML(cart, emailtemplate) {
     assert(cart);
+    assert(emailtemplate);
 
     let orderitems = await cart.getOrderitems();
     let absTotal = 0.0;
+    let template = emailtemplate.table.split(",");
 
     let html =
         `<table style="width: 100%; border: 1px solid black">
@@ -168,21 +189,47 @@ async function getOrderAsTableHTML(cart) {
         absTotal += total;
 
         html +=
-            `<tr>
-        <td style="border: 1px solid black">${product.name}</td>
-        <td style="text-align: right; border: 1px solid black">$${product.discountPrice}</td>
-        <td style="text-align: right; border: 1px solid black">${orderitem.quantity}</td>
-        <td style="text-align: right; border: 1px solid black">$${total.toFixed(2)}</td>
-        </tr>\n`;
+            `<tr>\n`;
+
+        for(z=0;z<template.length;z++) 
+        {
+            switch(template[z]) 
+            {
+                case "name":
+                    html += `<td style="border: 1px solid black">${product.name}</td>\n`;
+                    break;
+                case "price":
+                    html += `<td style="text-align: right; border: 1px solid black">$${product.discountPrice}</td>\n`;
+                    break;
+                case "quantity":
+                    html += `<td style="text-align: right; border: 1px solid black">$${product.quantity}</td>\n`;
+                    break;
+                case "subtotal":
+                    html += `<td style="text-align: right; border: 1px solid black">$${total.toFixed(2)}</td>\n`;
+                    break;
+            }
+        }
+
+        html += `</tr>\n`;
     }
 
     html +=
-        `<tr>
-        <td style="border: 1px solid black"></td>
-        <td style="border: 1px solid black"></td>
-        <td style="border: 1px solid black"></td>
-        <td style="text-align: right; border: 1px solid black">$${absTotal.toFixed(2)}</td>
-        </tr>\n
+        `<tr>\n
+        </table>`;
+    
+    for(z=0;z<template.length;z++) 
+    {
+        if (template[z] == "subtotal") 
+        {
+            html += `<td style="text-align: right; border: 1px solid black">$${absTotal.toFixed(2)}</td>\n`;
+        } else 
+        {
+            html += `<td style="border: 1px solid black"></td>\n`;
+        }
+    }
+
+    html +=
+        `</tr>
         </table>`;
 
     return html;
@@ -236,12 +283,12 @@ function generateEmailVerfToken() {
 }
 
 // Email functions
-async function sendEmail(email, subject, text, html) {
+async function sendEmail(sender, email, subject, text, html) {
     assert(email);
     assert(subject);
 
     var message = {
-        from: "danielgudjenev@gmail.com",
+        from: sender,
         to: email,
         subject: subject,
     };
@@ -503,11 +550,16 @@ async function validateStatus(ctx, orderId, responce) {
         }
 
         // Order payed
-        sendEmail(user.dataValues.email, `Платена поръчка #${cart.id}`, null,
-            "<html>" + `<p>Thank you for your payment ${user.dataValues.firstName}!</p>` +
-            (await getOrderAsTableHTML(cart)) +
-            `<p>Have a nice day and shop again :)</p>` +
-            "</html>");
+        let emailtemplate = await EmailTemplate.findOne({where: { type: "order" }});
+
+        if (!emailtemplate)
+            emailtemplate = DEFAULT_PAYMENT_EMAIL_TEMPLATE;
+        
+        sendEmail(emailtemplate.sender, user.dataValues.email,
+            parseEmailPlaceholders(emailtemplate.subject), null,
+            parseEmailPlaceholders(emailtemplate.upper) +
+            (await utilsEcom.getOrderAsTableHTML(cart, emailtemplate)) +
+            parseEmailPlaceholders(emailtemplate.lower));
 
         await cart.update({ status: 1, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal() });
 
@@ -1083,6 +1135,8 @@ module.exports = {
     SESSION_MAX_AGE,
     STATUS_DISPLAY,
     LOG_LEVELS,
+    DEFAULT_PAYMENT_EMAIL_TEMPLATE,
+    DEFAULT_ORDER_EMAIL_TEMPLATE,
     logger,
     getHost,
     givePages,

@@ -99,7 +99,7 @@
                             </a>
                             <div class="dropdown-menu" aria-labelledby="navbarDropdown">
                                 <a class="dropdown-item" href="/admin/settings/email">E-Mail Templates</a>
-                                <a class="dropdown-item" href="#">Other settings</a>
+                                <a class="dropdown-item" href="/admin/settings/other">Other settings</a>
                             </div>
                         </li>
                     </ul>
@@ -150,13 +150,21 @@
             <div class="alert alert-success alert-dismissible fade show align-items-center" role="alert">
                 <i class="fas fa-check" style="margin-right: 10px;"></i>
                 <div>
-                    Successful login!
+                    <%= session.dataValues.messages[i] %>
                 </div>
             </div>
         <% } %>
-        <% if(i == 'logout') { %>
+        <% if(i == 'tableOk') { %>
             <div class="alert alert-success alert-dismissible fade show align-items-center" role="alert">
-                <i class="fas fa-check-triangle" style="margin-right: 10px;"></i>
+                <i class="fas fa-check" style="margin-right: 10px;"></i>
+                <div>
+                    <%= session.dataValues.messages[i] %>
+                </div>
+            </div>
+        <% } %>
+        <% if(i == 'tableError') { %>
+            <div class="alert alert-danger alert-dismissible fade show align-items-center" role="alert">
+                <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
                 <div>
                     <%= session.dataValues.messages[i] %>
                 </div>

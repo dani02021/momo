@@ -1,5 +1,5 @@
 const db = require("./db.js");
-const { Sequelize, Model, DataTypes, ValidationError } = require("sequelize");
+const { Sequelize, Model, DataTypes, ValidationError, STRING } = require("sequelize");
 const bcrypt = require("bcrypt");
 
 const Log = db.define("log", {
@@ -378,6 +378,34 @@ const Order = db.define("order", {
   timestamp: true
 });
 
+const EmailTemplate = db.define("emailtemplate", {
+  type: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    primaryKey: true
+  },
+  sender: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  subject: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  upper: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  table: {
+    type: STRING,
+    allowNull: true
+  },
+  lower: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  }
+});
+
 Order.belongsToMany(User, { through: 'user_orders' });
 User.belongsToMany(Order, { through: 'user_orders' });
 
@@ -479,9 +507,13 @@ function log() {
   return Log;
 }
 
+function emailtemplate() {
+  return EmailTemplate;
+}
+
 module.exports = {
   category, product, user, staff, session, permission, role, order, orderitem, transaction,
-  paypaltransacion, codtransaction, log
+  paypaltransacion, codtransaction, log, emailtemplate
 };
 
 // Alter the database
@@ -524,8 +556,9 @@ module.exports = {
   Permission.create({name: 'staff.delete'});
   Permission.create({name: 'report.read'});
   Permission.create({name: 'audit.read'});
+  Permission.create({name: 'settings.email'});
+  Permission.create({name: 'settings.other'});
   */
-
   // Create associations
 
   /*
@@ -553,6 +586,7 @@ module.exports = {
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'staff.delete'}}).then(perm => {role.addPermission(perm);})});
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'report.read'}}).then(perm => {role.addPermission(perm);})});
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'audit.read'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'settings.other'}}).then(perm => {role.addPermission(perm);})});
   */
 
   // Staff.findOne({where: {username: 'dakata'}}).then(user => {Role.findOne({where: {name: 'Admin'}}).then(role => {user.addRole(role);})});

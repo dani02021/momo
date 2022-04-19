@@ -1,0 +1,23 @@
+<% for(i in session.dataValues.messages) { %>
+  <% if(session.dataValues.messages.hasOwnProperty(i)) { %>
+    <% if(i=='userEdited' ) { %>
+      <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <strong>
+          <%= session.dataValues.messages[i] %>
+        </strong>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+      <% } %>
+        <% } %>
+          <% } %>
+            <div class="container tm-mt-big tm-mb-big">
+              <div class="tm-bg-primary-dark tm-block tm-block-h-auto">
+                <div class="row">
+                  <div class="col mx-auto d-flex justify-content-center">
+                    <form action="/logs/error.log">
+                      <button class="btn btn-primary btn-block text-uppercase" type="submit">Go to Error Log</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
