@@ -1,6 +1,7 @@
 const db = require("./db.js");
 const { Sequelize, Model, DataTypes, ValidationError, STRING } = require("sequelize");
 const bcrypt = require("bcrypt");
+const assert = require('assert/strict');
 
 const Log = db.define("log", {
   timestamp: {
@@ -356,6 +357,8 @@ OrderItem.belongsTo(Product, {
 OrderItem.prototype.getTotal = async function () {
   let product = await this.getProduct();
 
+  assert(product);
+
   return parseFloat((parseFloat(product.discountPrice) * parseFloat(this.quantity)).toFixed(2)); // Bad practise !
 };
 
@@ -423,6 +426,8 @@ Order.prototype.getItemsCount = function () {
 Order.prototype.getTotal = async function () {
   var total = 0.0;
   var orderitems = await this.getOrderitems();
+
+  assert(orderitems);
 
   for(i = 0; i < orderitems.length; i++) 
   {

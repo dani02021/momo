@@ -159,7 +159,7 @@ async function getAdminProducts(ctx) {
     ctx.session.staffUsername = null;
 
     await ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -258,7 +258,7 @@ async function getAdminAccounts(ctx) {
     ctx.session.staffUsername = null;
 
     await ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -361,7 +361,7 @@ async function getAdminStaffs(ctx) {
     ctx.session.staffUsername = null;
 
     await ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -456,7 +456,7 @@ async function getAdminRoles(ctx) {
     ctx.session.staffUsername = null;
 
     await ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -521,7 +521,7 @@ async function getAdminOrders(ctx) {
     ctx.session.staffUsername = null;
 
     await ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -636,7 +636,7 @@ async function getAdminReport(ctx) {
     ctx.session.staffUsername = null;
 
     await ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -736,7 +736,7 @@ async function getAdminAudit(ctx) {
     ctx.session.staffUsername = null;
 
     await ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -797,20 +797,20 @@ async function getAdminAudit(ctx) {
       timestamp BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}'
       ORDER BY timestamp DESC
       LIMIT ${limit} OFFSET ${offset}`, {
-        type: 'SELECT',
-        plain: false,
-        model: Log,
-        mapToModel: true,
-        bind: [filters.user, filters.level]
+    type: 'SELECT',
+    plain: false,
+    model: Log,
+    mapToModel: true,
+    bind: [filters.user, filters.level]
   });
 
   const count = await db.query(`SELECT COUNT(*) FROM logs WHERE
       position(upper($1) in upper(user)) > 0 AND
       position(upper($2) in upper(level)) > 0 AND
       timestamp BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}'`, {
-        type: 'SELECT',
-        plain: true,
-        bind: [filters.user, filters.level]
+    type: 'SELECT',
+    plain: true,
+    bind: [filters.user, filters.level]
   });
 
   await ctx.render("/admin/audit", {
@@ -877,8 +877,7 @@ router.post("/register", async ctx => {
   }
   else {
     // Password correct?
-    if ( ctx.request.fields.password1 !== ctx.request.fields.password1 ) 
-    {
+    if (ctx.request.fields.password1 !== ctx.request.fields.password1) {
       ctx.body = {
         message: 'Passwords does not match!'
       };
@@ -888,8 +887,7 @@ router.post("/register", async ctx => {
     // Send email
     let token = utilsEcom.generateEmailVerfToken();
 
-    try 
-    {
+    try {
       await User.create({
         username: ctx.request.fields.username,
         email: ctx.request.fields.email,
@@ -900,10 +898,8 @@ router.post("/register", async ctx => {
         country: ctx.request.fields.country,
         verificationToken: token,
       });
-    } catch (e) 
-    {
-      if (e instanceof ValidationError) 
-      {
+    } catch (e) {
+      if (e instanceof ValidationError) {
         // ctx.redirect('/register');
         // ctx.session.messages = { 'validationError': e.message };
         ctx.body = {
@@ -948,14 +944,12 @@ router.get('/verify_account/:token', async ctx => {
     return;
   }
 
-  if (!user.emailConfirmed) 
-  {
+  if (!user.emailConfirmed) {
     var messages = { 'registerSuccess': 'Your email is validated!' };
 
     user.set({ emailConfirmed: true });
     await user.save();
-  } else 
-  {
+  } else {
     var messages = { 'registerSuccess': 'Your email is already validated!' };
   }
 
@@ -964,7 +958,7 @@ router.get('/verify_account/:token', async ctx => {
   utilsEcom.logger.log('info',
     `User ${user.username} validated their e-mail!`,
     { user: user.username });
-  
+
   ctx.redirect('/');
 });
 
@@ -988,22 +982,19 @@ router.post("/login", async ctx => {
 
   if (user.authenticate(ctx.request.fields.password)) {
     if (!user.emailConfirmed) {
-      ctx.session.messages = {'emailNotConfirmed': 'Your email is not confirmed!'};
+      ctx.session.messages = { 'emailNotConfirmed': 'Your email is not confirmed!' };
       ctx.redirect("/");
       return;
     }
 
     // Transfer cookies to db
-    if (ctx.cookies.get("products")) 
-    {
+    if (ctx.cookies.get("products")) {
       let cookieProducts = JSON.parse(ctx.cookies.get("products"));
 
-      for (i in cookieProducts) 
-      {
-        const product = await Product.findOne({where: {id: i}});
+      for (i in cookieProducts) {
+        const product = await Product.findOne({ where: { id: i } });
 
-        if (product) 
-        {
+        if (product) {
           const [order, createdorder] = await Order.findOrCreate({
             where: {
               status: 0
@@ -1057,11 +1048,11 @@ router.post("/login", async ctx => {
 
 router.get('/logout', async ctx => {
   ctx.session.messages = { 'logout': 'Log-out successful!' };
-  
+
   utilsEcom.logger.log('info',
     `User ${ctx.session.username} logged out!`,
     { user: ctx.session.username });
-  
+
   ctx.session.username = null;
 
   ctx.redirect('/')
@@ -1078,7 +1069,7 @@ router.get('/admin', async ctx => {
       ctx.session.staffUsername = null;
 
       ctx.redirect('/admin/login');
-      return; 
+      return;
     } else {
       await staff.update({
         lastActivity: Sequelize.fn("NOW")
@@ -1141,8 +1132,7 @@ router.post('/admin/login', async ctx => {
     }, include: Role
   });
 
-  if (!user) 
-  {
+  if (!user) {
     let messages = { 'loginErrorUser': 'User not found!' };
     ctx.session.messages = messages;
 
@@ -1175,8 +1165,8 @@ router.post('/admin/login', async ctx => {
       `Staff ${ctx.request.fields.username} tried to log in with invalid password!`,
       { user: ctx.request.fields.username });
 
-      ctx.redirect('/admin/login');
-      return;
+    ctx.redirect('/admin/login');
+    return;
   }
 
   ctx.redirect('/admin');
@@ -1220,7 +1210,7 @@ router.post('/admin/products/add', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -1325,7 +1315,7 @@ router.get('/admin/products/edit/:id', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -1378,7 +1368,7 @@ router.post('/admin/products/edit/:id', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -1464,7 +1454,7 @@ router.post('/admin/products/delete', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -1534,7 +1524,7 @@ router.post('/admin/accounts/delete', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -1581,7 +1571,7 @@ router.get('/admin/accounts/edit/:id', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -1622,7 +1612,7 @@ router.post('/admin/accounts/edit/:id', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -1681,7 +1671,7 @@ router.post('/admin/accounts/add', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -1712,13 +1702,11 @@ router.post('/admin/accounts/add', async ctx => {
       defaults: defaultParams
     });
   } catch (e) {
-    if (e instanceof ValidationError) 
-    {
+    if (e instanceof ValidationError) {
       ctx.session.messages = { 'validationError': e.message };
       ctx.redirect('/admin/accounts');
       return;
-    } else 
-    {
+    } else {
       throw e;
     }
   }
@@ -1769,7 +1757,7 @@ router.post('/admin/staff/add', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -1797,15 +1785,12 @@ router.post('/admin/staff/add', async ctx => {
       paranoid: false,
       defaults: defaultParams
     });
-  } catch (e) 
-  {
-    if (e instanceof ValidationError) 
-    {
+  } catch (e) {
+    if (e instanceof ValidationError) {
       ctx.session.messages = { 'validationError': e.message };
       ctx.redirect('/admin/staff');
       return;
-    } else 
-    {
+    } else {
       throw e;
     }
   }
@@ -1853,7 +1838,7 @@ router.post('/admin/staff/delete', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -1900,7 +1885,7 @@ router.get('/admin/staff/edit/:id', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staffc.update({
       lastActivity: Sequelize.fn("NOW")
@@ -1945,7 +1930,7 @@ router.post('/admin/staff/edit/:id', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staffc.update({
       lastActivity: Sequelize.fn("NOW")
@@ -2003,7 +1988,7 @@ router.post('/admin/categories/add', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -2054,7 +2039,7 @@ router.post('/admin/categories/delete', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -2098,7 +2083,7 @@ router.post('/admin/roles/add', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -2159,7 +2144,7 @@ router.post('/admin/roles/delete', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -2203,7 +2188,7 @@ router.get('/admin/roles/edit/:id', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -2249,7 +2234,7 @@ router.post('/admin/roles/edit/:id', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -2295,8 +2280,7 @@ router.get('/api/permissions/get', async ctx => {
 
   let term = ctx.request.query.term;
 
-  if (!term) 
-  {
+  if (!term) {
     ctx.body = {};
     return;
   }
@@ -2304,11 +2288,11 @@ router.get('/api/permissions/get', async ctx => {
   ctx.body = JSON.stringify(
     await db.query(`SELECT id, name as value FROM permissions WHERE
       position(upper($1) in upper(name)) > 0`, {
-        type: "SELECT",
-        plain: false,
-        model: Permission,
-        mapToModel: true,
-        bind: [term]
+      type: "SELECT",
+      plain: false,
+      model: Permission,
+      mapToModel: true,
+      bind: [term]
     })
   );
 });
@@ -2321,8 +2305,7 @@ router.get('/api/accounts/get', async ctx => {
 
   let term = ctx.request.query.term;
 
-  if (!term) 
-  {
+  if (!term) {
     ctx.body = {};
     return;
   }
@@ -2330,11 +2313,11 @@ router.get('/api/accounts/get', async ctx => {
   ctx.body = JSON.stringify(
     await db.query(`SELECT id, username as value FROM accounts WHERE
       position(upper($1) in upper(name)) > 0`, {
-        type: "SELECT",
-        plain: false,
-        model: Permission,
-        mapToModel: true,
-        bind: [term]
+      type: "SELECT",
+      plain: false,
+      model: Permission,
+      mapToModel: true,
+      bind: [term]
     })
   );
 });
@@ -2347,8 +2330,7 @@ router.get('/api/products/get', async ctx => {
 
   let term = ctx.request.query.term;
 
-  if (!term) 
-  {
+  if (!term) {
     ctx.body = {};
     return;
   }
@@ -2356,11 +2338,11 @@ router.get('/api/products/get', async ctx => {
   ctx.body = JSON.stringify(
     await db.query(`SELECT id, name as value FROM products WHERE
       position(upper($1) in upper(name)) > 0`, {
-        type: "SELECT",
-        plain: false,
-        model: Permission,
-        mapToModel: true,
-        bind: [term]
+      type: "SELECT",
+      plain: false,
+      model: Permission,
+      mapToModel: true,
+      bind: [term]
     })
   );
 });
@@ -2393,7 +2375,7 @@ router.post('/admin/orders/add', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -2469,7 +2451,7 @@ router.post('/admin/orders/delete', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -2525,7 +2507,7 @@ router.get('/admin/orders/edit/:id', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -2590,7 +2572,7 @@ router.post('/admin/orders/edit/:id', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -2635,10 +2617,12 @@ router.post('/admin/orders/edit/:id', async ctx => {
   if (order.status != ctx.request.fields.status) {
     utilsEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} updated status of order #${ctx.params.id}`,
-      { user: ctx.session.dataValues.staffUsername,
+      {
+        user: ctx.session.dataValues.staffUsername,
         isStaff: true,
         longMessage:
-          `Staff ${ctx.session.dataValues.staffUsername} updated status of order #${ctx.params.id} from ${utilsEcom.STATUS_DISPLAY[order.status]} to ${utilsEcom.STATUS_DISPLAY[ctx.request.fields.status]}`});
+          `Staff ${ctx.session.dataValues.staffUsername} updated status of order #${ctx.params.id} from ${utilsEcom.STATUS_DISPLAY[order.status]} to ${utilsEcom.STATUS_DISPLAY[ctx.request.fields.status]}`
+      });
   }
 
   // Update status, price and orderedAt
@@ -2662,49 +2646,41 @@ router.get('/addToCart', async ctx => {
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
     let qty = ctx.query.quantity;
 
-    if (ctx.cookies.get('products')) 
-    {
+    if (ctx.cookies.get('products')) {
       const json = JSON.parse(ctx.cookies.get('products'));
 
       if (json[ctx.query.id])
         qty = parseInt(json[ctx.query.id]) + parseInt(ctx.query.quantity);
     }
 
-    if (!await utilsEcom.compareQtyAndProductQty(ctx.query.id, qty) == 1) 
-    {
+    if (!await utilsEcom.compareQtyAndProductQty(ctx.query.id, qty) == 1) {
       ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
       ctx.redirect('/products');
       return;
     }
 
     if (!ctx.cookies.get('products'))
-      ctx.cookies.set('products', `{"${ctx.query.id}": ${ctx.query.quantity}}`, {httpOnly: true, expires: new Date(2147483647e3)});
-    else 
-    {
-      try 
-      {
+      ctx.cookies.set('products', `{"${ctx.query.id}": ${ctx.query.quantity}}`, { httpOnly: true, expires: new Date(2147483647e3) });
+    else {
+      try {
         var cooks = JSON.parse(ctx.cookies.get('products'));
-      } catch (e) 
-      {
-        var cooks = { };
+      } catch (e) {
+        var cooks = {};
       }
 
       if (!cooks[ctx.query.id])
         cooks[ctx.query.id] = ctx.query.quantity;
-      else 
-      {
-        try 
-        {
+      else {
+        try {
           cooks[ctx.query.id] = parseInt(cooks[ctx.query.id]) + parseInt(ctx.query.quantity);
-        } catch (e) 
-        {
+        } catch (e) {
           cooks[ctx.query.id] = ctx.query.quantity;
         }
       }
 
-      ctx.cookies.set('products', JSON.stringify(cooks), {httpOnly: true, expires: new Date(2147483647e3)});
+      ctx.cookies.set('products', JSON.stringify(cooks), { httpOnly: true, expires: new Date(2147483647e3) });
     }
-    
+
     ctx.session.messages = { 'productAdded': 'Product added to the cart!' };
     ctx.redirect('/products');
     // ctx.session.messages = { 'noPermission': 'You are not registered!' };
@@ -2746,13 +2722,10 @@ router.get('/addToCart', async ctx => {
     }
   });
 
-  if (!await utilsEcom.compareQtyAndProductQty(ctx.query.id, orderitem.quantity) == 1) 
-  {
-    if (ctx.query.cart) 
-    {
+  if (!await utilsEcom.compareQtyAndProductQty(ctx.query.id, orderitem.quantity) == 1) {
+    if (ctx.query.cart) {
       ctx.status = 400;
-    } else 
-    {
+    } else {
       ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
       ctx.redirect('/products');
     }
@@ -2779,23 +2752,20 @@ router.get('/removeFromCart', async ctx => {
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
     let products = JSON.parse(ctx.cookies.get('products'));
 
-    if (products[ctx.query.id]) 
-    {
-      if (quantity > 0) 
-      {
+    if (products[ctx.query.id]) {
+      if (quantity > 0) {
         if (products[ctx.query.id] > quantity)
           products[ctx.query.id] -= quantity;
         else {
           ctx.status = 400;
           return;
         }
-      } else 
-      {
+      } else {
         delete products[ctx.query.id];
       }
     }
 
-    ctx.cookies.set('products', JSON.stringify(products), {httpOnly: true, expires: new Date(2147483647e3)});
+    ctx.cookies.set('products', JSON.stringify(products), { httpOnly: true, expires: new Date(2147483647e3) });
 
     ctx.session.messages = { 'cartRemoved': 'Removed selected items from the cart' };
 
@@ -2837,8 +2807,7 @@ router.get('/removeFromCart', async ctx => {
   });
 
   if (quantity > 0) {
-    if (orderitem.quantity <= 1) 
-    {
+    if (orderitem.quantity <= 1) {
       ctx.status = 400;
       return;
     }
@@ -2864,19 +2833,16 @@ router.get('/cart', async ctx => {
     let totals = [];
     let orderTotal = "0.00";
 
-    if (ctx.cookies.get("products")) 
-    {
+    if (ctx.cookies.get("products")) {
       var cookieProducts = JSON.parse(ctx.cookies.get("products"));
 
-      for (i in cookieProducts) 
-      {
-        let product = await Product.findOne({where: {id: i}});
+      for (i in cookieProducts) {
+        let product = await Product.findOne({ where: { id: i } });
 
-        if (product) 
-        {
-          orderitems.push({'id': i, 'productId': i, 'quantity': cookieProducts[i]});
+        if (product) {
+          orderitems.push({ 'id': i, 'productId': i, 'quantity': cookieProducts[i] });
           products.push(product);
-          totals.push((parseFloat(cookieProducts[i])* parseFloat(product.discountPrice)).toFixed(2));
+          totals.push((parseFloat(cookieProducts[i]) * parseFloat(product.discountPrice)).toFixed(2));
         }
       }
 
@@ -2894,7 +2860,7 @@ router.get('/cart', async ctx => {
       totals: totals,
       orderTotal: orderTotal,
     });
-  
+
     // Clear the messages
     ctx.session.messages = null;
 
@@ -2981,9 +2947,8 @@ router.get('/checkout', async ctx => {
 
   let qty = await utilsEcom.hasEnoughQtyOfProductsOfOrder(order);
 
-  if (qty !== true) 
-  {
-    ctx.session.messages = {"notEnoughQty": "There are not enough quantities of the selected product: " + qty}
+  if (qty !== true) {
+    ctx.session.messages = { "notEnoughQty": "There are not enough quantities of the selected product: " + qty }
     ctx.redirect("/cart");
     return;
   }
@@ -3055,16 +3020,16 @@ router.post('/captureOrder', async ctx => {
   const transaction = await Transaction.create({ type: ctx.request.fields.type });
 
   // Order complete
-  let emailtemplate = await EmailTemplate.findOne({where: { type: "order" }});
+  let emailtemplate = await EmailTemplate.findOne({ where: { type: "order" } });
 
   if (!emailtemplate)
     emailtemplate = utilsEcom.DEFAULT_ORDER_EMAIL_TEMPLATE;
 
   utilsEcom.sendEmail(emailtemplate.sender, user.dataValues.email,
-    utilsEcom.parseEmailPlaceholders(emailtemplate.subject), null,
-    utilsEcom.parseEmailPlaceholders(emailtemplate.upper) +
+    utilsEcom.parseEmailPlaceholders(emailtemplate.subject, user, order), null,
+    utilsEcom.parseEmailPlaceholders(emailtemplate.upper, user, order) +
     (await utilsEcom.getOrderAsTableHTML(order, emailtemplate)) +
-    utilsEcom.parseEmailPlaceholders(emailtemplate.lower));
+    utilsEcom.parseEmailPlaceholders(emailtemplate.lower, user, order));
 
   if (ctx.request.fields.type == "paypal") {
     let responce = await utilsEcom.captureOrder(ctx.request.fields.orderID);
@@ -3112,7 +3077,7 @@ router.post('/captureOrder', async ctx => {
 
     await utilsEcom.removeProductQtyFromOrder(cart);
 
-    ctx.body = {'msg': 'Your order is completed!', 'status': 'ok'};
+    ctx.body = { 'msg': 'Your order is completed!', 'status': 'ok' };
     // ctx.redirect('/');
   }
 
@@ -3139,7 +3104,7 @@ router.get('/admin/export/report/pdf', async ctx => {
     return;
   }
 
-  let staff = await Staff.findOne({where: {username: ctx.session.dataValues.staffUsername}});
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
   if (utilsEcom.isSessionExpired(staff)) {
@@ -3147,7 +3112,7 @@ router.get('/admin/export/report/pdf', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -3201,10 +3166,12 @@ router.get('/admin/export/report/pdf', async ctx => {
 
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report`,
-    { user: ctx.session.dataValues.staffUsername,
+    {
+      user: ctx.session.dataValues.staffUsername,
       isStaff: true,
       longMessage:
-        `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .pdf format`});
+        `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .pdf format`
+    });
 
   ctx.res.writeHead(200, {
     'Content-Type': 'application/pdf',
@@ -3229,7 +3196,7 @@ router.get('/admin/export/report/excel', async ctx => {
     return;
   }
 
-  let staff = await Staff.findOne({where: {username: ctx.session.dataValues.staffUsername}});
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
   if (utilsEcom.isSessionExpired(staff)) {
@@ -3237,7 +3204,7 @@ router.get('/admin/export/report/excel', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -3291,7 +3258,8 @@ router.get('/admin/export/report/excel', async ctx => {
 
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report`,
-    { user: ctx.session.dataValues.staffUsername,
+    {
+      user: ctx.session.dataValues.staffUsername,
       isStaff: true,
       longMessage:
         `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .xlsx format`
@@ -3328,7 +3296,7 @@ router.get('/admin/export/report/csv', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -3382,10 +3350,12 @@ router.get('/admin/export/report/csv', async ctx => {
 
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report`,
-    { user: ctx.session.dataValues.staffUsername,
+    {
+      user: ctx.session.dataValues.staffUsername,
       isStaff: true,
-      longMessage: 
-      `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .csv format`});
+      longMessage:
+        `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} in .csv format`
+    });
 
   ctx.res.writeHead(200, {
     'Content-Type': 'text/csv',
@@ -3421,15 +3391,15 @@ router.get('/admin/settings/email', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
     });
   }
 
-  let payment = await EmailTemplate.findOne({where: { type: 'payment'}});
-  let order = await EmailTemplate.findOne({where: { type: 'order'}});
+  let payment = await EmailTemplate.findOne({ where: { type: 'payment' } });
+  let order = await EmailTemplate.findOne({ where: { type: 'order' } });
 
   await ctx.render('admin/settings/email-templates', {
     layout: 'admin/base',
@@ -3468,7 +3438,7 @@ router.post('/admin/settings/email', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -3488,43 +3458,38 @@ router.post('/admin/settings/email', async ctx => {
   ]
 
   // Check table for empty values
-  if (table.includes('-')) 
-  {
-    ctx.session.messages = {"tableError": type == "payment" ? "Payment email template table has empty values!" : "Order email template table has empty values!"};
+  if (table.includes('-')) {
+    ctx.session.messages = { "tableError": type == "payment" ? "Payment email template table has empty values!" : "Order email template table has empty values!" };
     ctx.redirect("/admin/settings/email");
 
     return;
   }
 
   // Check table for dublicates
-  if ((new Set(table)).size !== table.length) 
-  {
-    ctx.session.messages = {"tableError": type == "payment" ? "Payment template table has dublicate values!" : "Order template table has dublicate values!"};
+  if ((new Set(table)).size !== table.length) {
+    ctx.session.messages = { "tableError": type == "payment" ? "Payment template table has dublicate values!" : "Order template table has dublicate values!" };
     ctx.redirect("/admin/settings/email");
 
     return;
   }
 
   // Check table for invalid values
-  if (!table.every(elem => validTableValues.includes(elem))) 
-  {
-    ctx.session.messages = {"tableError": type == "payment" ? "Payment template table has invalid values!" : "Order template table has invalid values!"};
+  if (!table.every(elem => validTableValues.includes(elem))) {
+    ctx.session.messages = { "tableError": type == "payment" ? "Payment template table has invalid values!" : "Order template table has invalid values!" };
     ctx.redirect("/admin/settings/email");
 
     return;
   }
 
-  if (sender == '' || subject == '') 
-  {
-    ctx.session.messages = {"tableError": type == "payment" ? "Payment template has empty sender or subject!" : "Order template has empty sender or subject!"};
+  if (sender == '' || subject == '') {
+    ctx.session.messages = { "tableError": type == "payment" ? "Payment template has empty sender or subject!" : "Order template has empty sender or subject!" };
     ctx.redirect("/admin/settings/email");
 
     return;
   }
 
-  if (!/^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/g.test(sender)) 
-  {
-    ctx.session.messages = {"tableError": type == "payment" ? "Payment email is invalid!" : "Order email is invalid!"};
+  if (!/^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/g.test(sender)) {
+    ctx.session.messages = { "tableError": type == "payment" ? "Payment email is invalid!" : "Order email is invalid!" };
     ctx.redirect("/admin/settings/email");
 
     return;
@@ -3548,7 +3513,7 @@ router.post('/admin/settings/email', async ctx => {
     table: table.toString()
   });
 
-  ctx.session.messages = {"tableOk": type == "payment" ? "Payment template is set!" : "Order template is set!"};
+  ctx.session.messages = { "emailOk": type == "payment" ? "Payment template is set!" : "Order template is set!" };
   ctx.redirect("/admin/settings/email");
 });
 
@@ -3577,7 +3542,7 @@ router.get('/admin/settings/other', async ctx => {
     ctx.session.staffUsername = null;
 
     ctx.redirect('/admin/login');
-    return; 
+    return;
   } else {
     await staff.update({
       lastActivity: Sequelize.fn("NOW")
@@ -3587,11 +3552,77 @@ router.get('/admin/settings/other', async ctx => {
   await ctx.render('admin/settings/other-settings', {
     layout: 'admin/base',
     selected: 'settings',
-    session: ctx.session
+    session: ctx.session,
+    pagint: utilsEcom.PRODUCTS_PER_PAGE,
+    expire: parseInt(utilsEcom.SESSION_BACK_OFFICE_EXPIRE / (1000 * 60))
   });
 
   // Clear old messages
   ctx.session.messages = null;
+});
+
+router.post('/admin/settings/other', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    ctx.redirect('/admin/login');
+    return;
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'settings.other')) {
+    ctx.session.messages = { 'noPermission': 'You don\'t have permission to see other settings' };
+    utilsEcom.logger.log('info',
+      `Staff ${ctx.session.dataValues.staffUsername} tried to see other settings without rights`,
+      { user: ctx.session.dataValues.staffUsername });
+
+    ctx.redirect('/admin');
+    return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (utilsEcom.isSessionExpired(staff)) {
+    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
+    ctx.session.staffUsername = null;
+
+    ctx.redirect('/admin/login');
+    return;
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
+  let settings
+  let settingsJSON;
+
+  try {
+    settings = fs.readFileSync("../settings.json", "utf-8");
+    settingsJSON = JSON.parse(settings);
+  }
+  catch (e) {
+    fs.closeSync(fs.openSync('../settings.json', 'w'));
+
+    settings = fs.readFileSync("../settings.json", "utf-8");
+    settingsJSON = {};
+  }
+
+  if (ctx.request.fields.pagint && !Number.isNaN(ctx.request.fields.pagint)) {
+    utilsEcom.PRODUCTS_PER_PAGE = parseInt(ctx.request.fields.pagint);
+
+    settingsJSON["pagint"] = utilsEcom.PRODUCTS_PER_PAGE;
+  }
+
+  if (ctx.request.fields.expire && !Number.isNaN(ctx.request.fields.expire)) {
+    utilsEcom.SESSION_BACK_OFFICE_EXPIRE = parseInt(ctx.request.fields.expire) * 60 * 1000;
+
+    settingsJSON["expire"] = utilsEcom.SESSION_BACK_OFFICE_EXPIRE;
+  }
+
+  fs.writeFile("../settings.json", JSON.stringify(settingsJSON), function (err) { });
+
+  ctx.session.messages = { 'settingsOK': 'Settings changed!' };
+  ctx.redirect('/admin/settings/other');
 });
 
 /* WARNING: 
@@ -3629,3 +3660,9 @@ app.on("error", (err, ctx) => {
 // app.listen(3210);
 
 app.listen(process.env.PORT);
+
+// Init settings
+let settings = fs.readFileSync("../settings.json", "utf-8");
+
+if (settings["pagint"])
+  utilsEcom.PRODUCTS_PER_PAGE = settings["pagint"]

@@ -33,9 +33,10 @@ const db = require("./db.js");
 
 const excelJS = require("exceljs");
 
-const PRODUCTS_PER_PAGE = 12;
 const SESSION_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000; // 2 weeks
-const SESSION_BACK_OFFICE_EXPIRE = 5 * 60 * 1000; // 5 minutes
+
+let PRODUCTS_PER_PAGE = 12;
+let SESSION_BACK_OFFICE_EXPIRE = 5 * 60 * 1000; // 5 minutes
 
 const DEFAULT_PAYMENT_EMAIL_TEMPLATE = {
     sender: 'danielgudjenev@gmail.com',
@@ -214,8 +215,7 @@ async function getOrderAsTableHTML(cart, emailtemplate) {
     }
 
     html +=
-        `<tr>\n
-        </table>`;
+        `<tr>\n`;
     
     for(z=0;z<template.length;z++) 
     {
@@ -283,7 +283,18 @@ function generateEmailVerfToken() {
 }
 
 // Email functions
-async function sendEmail(sender, email, subject, text, html) {
+function parseEmailPlaceholders(text, user, order) 
+{
+    assert(user)
+    assert(order)
+
+    text = text.replaceAll(/\$user/gi, user.username);
+    text = text.replaceAll(/\$orderid/gi, order.id);
+
+    return text;
+}
+async function sendEmail(sender, email, subject, text, html) 
+{
     assert(email);
     assert(subject);
 
@@ -556,10 +567,10 @@ async function validateStatus(ctx, orderId, responce) {
             emailtemplate = DEFAULT_PAYMENT_EMAIL_TEMPLATE;
         
         sendEmail(emailtemplate.sender, user.dataValues.email,
-            parseEmailPlaceholders(emailtemplate.subject), null,
-            parseEmailPlaceholders(emailtemplate.upper) +
+            parseEmailPlaceholders(emailtemplate.subject, user, cart), null,
+            parseEmailPlaceholders(emailtemplate.upper, user, cart) +
             (await utilsEcom.getOrderAsTableHTML(cart, emailtemplate)) +
-            parseEmailPlaceholders(emailtemplate.lower));
+            parseEmailPlaceholders(emailtemplate.lower, user, cart));
 
         await cart.update({ status: 1, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal() });
 
@@ -719,6 +730,10 @@ function escapeCSVParam(param) {
 }
 
 async function saveReportCsv(reportRes, filters, time) {
+    assert(reportRes);
+    assert(filters);
+    assert(time);
+
     var dataToWrite = escapeCSVParam(`From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`);
 
     dataToWrite += "\nStart Date, Orders, Products, Total Price, Currency\n";
@@ -737,6 +752,10 @@ async function saveReportCsv(reportRes, filters, time) {
 }
 
 async function saveReportPdf(reportRes, filters, time) {
+    assert(reportRes);
+    assert(filters);
+    assert(time);
+
     let doc = new PDFDocument({ margin: 30, size: 'A4' });
     let temp = await createTempFile('excelReport.pdf');
     let rows = [];
@@ -773,6 +792,10 @@ async function saveReportPdf(reportRes, filters, time) {
 }
 
 async function saveReportExcel(reportRes, filters, time) {
+    assert(reportRes);
+    assert(filters);
+    assert(time);
+
     const workbook = new excelJS.Workbook();
     const worksheet = workbook.addWorksheet("Report Orders");
     const path = "./files";  // Path to download excel
@@ -1073,6 +1096,9 @@ async function generateLogs(x = 100) {
  * @param {boolean} fileOnly 
  */
 async function handleError(err, ctx, fileOnly = false) {
+    assert(err);
+    assert(ctx);
+    
     let username;
     let staffUsername;
     let session;
@@ -1133,6 +1159,7 @@ def validate_status(request, uid, order_id, order):
 module.exports = {
     PRODUCTS_PER_PAGE,
     SESSION_MAX_AGE,
+    SESSION_BACK_OFFICE_EXPIRE,
     STATUS_DISPLAY,
     LOG_LEVELS,
     DEFAULT_PAYMENT_EMAIL_TEMPLATE,
@@ -1143,6 +1170,7 @@ module.exports = {
     generateEmailVerfToken,
     generateSessionKey,
     configPostgreSessions,
+    parseEmailPlaceholders,
     sendEmail,
     getOrderAsTableHTML,
     isSessionExpired,

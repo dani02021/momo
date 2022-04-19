@@ -1,23 +1,43 @@
-<% for(i in session.dataValues.messages) { %>
-  <% if(session.dataValues.messages.hasOwnProperty(i)) { %>
-    <% if(i=='userEdited' ) { %>
-      <div class="alert alert-warning alert-dismissible fade show" role="alert">
-        <strong>
-          <%= session.dataValues.messages[i] %>
-        </strong>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+<div class="container tm-mt-big tm-mb-big">
+  <div class="tm-bg-primary-dark tm-block tm-block-h-auto">
+    <form method="post">
+      <div class="row">
+        <div class="col mx-auto d-flex justify-content-center align-items-center">
+          <label style="color: white; margin-right: 10px;">Numer of elements per page:</label>
+          <input type="number" name="pagint" data-bs-toggle="tooltip" data-bs-placement="top"
+            title="Number of elements per page" value="<%= pagint %>">
+        </div>
+        <div class="col mx-auto d-flex justify-content-end">
+          <button class="btn btn-primary btn-block text-uppercase" type="submit">Change</button>
+        </div>
       </div>
-      <% } %>
-        <% } %>
-          <% } %>
-            <div class="container tm-mt-big tm-mb-big">
-              <div class="tm-bg-primary-dark tm-block tm-block-h-auto">
-                <div class="row">
-                  <div class="col mx-auto d-flex justify-content-center">
-                    <form action="/logs/error.log">
-                      <button class="btn btn-primary btn-block text-uppercase" type="submit">Go to Error Log</button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            </div>
+    </form>
+    <form method="post">
+      <div class="row mt-3">
+        <div class="col mx-auto d-flex justify-content-center align-items-center">
+          <label style="color: white; margin-right: 10px;">Session expire time in minutes:</label>
+          <input type="number" name="expire" data-bs-toggle="tooltip" data-bs-placement="top"
+            title="Number of elements per page" value="<%= expire %>">
+        </div>
+        <div class="col mx-auto d-flex justify-content-end">
+          <button class="btn btn-primary btn-block text-uppercase" type="submit">Change</button>
+        </div>
+      </div>
+    </form>
+    <hr style="color: white;">
+    <div class="row mt-3">
+      <div class="col mx-auto d-flex justify-content-center">
+        <form action="/logs/error.log">
+          <button class="btn btn-primary btn-block text-uppercase" type="submit">Go to Error Log</button>
+        </form>
+      </div>
+    </div>
+    <div class="row mt-3">
+      <div class="col mx-auto d-flex justify-content-center">
+        <form action="/logs/fullerror.log">
+          <button class="btn btn-primary btn-block text-uppercase" type="submit">Go to Full Error Log</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

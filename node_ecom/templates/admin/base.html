@@ -154,7 +154,15 @@
                 </div>
             </div>
         <% } %>
-        <% if(i == 'tableOk') { %>
+        <% if(i == 'emailOk') { %>
+            <div class="alert alert-success alert-dismissible fade show align-items-center" role="alert">
+                <i class="fas fa-check" style="margin-right: 10px;"></i>
+                <div>
+                    <%= session.dataValues.messages[i] %>
+                </div>
+            </div>
+        <% } %>
+        <% if(i == 'settingsOk') { %>
             <div class="alert alert-success alert-dismissible fade show align-items-center" role="alert">
                 <i class="fas fa-check" style="margin-right: 10px;"></i>
                 <div>
