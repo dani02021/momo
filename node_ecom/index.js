@@ -34,6 +34,7 @@ const PayPalTransaction = models.paypaltransacion();
 const CODTransaction = models.codtransaction();
 const Log = models.log();
 const EmailTemplate = models.emailtemplate();
+const Settings = models.settings();
 
 const app = new Koa();
 const router = new KoaRouter();
@@ -3398,8 +3399,21 @@ router.get('/admin/settings/email', async ctx => {
     });
   }
 
-  let payment = await EmailTemplate.findOne({ where: { type: 'payment' } });
-  let order = await EmailTemplate.findOne({ where: { type: 'order' } });
+  let paymentSeq = await Settings.findAll({ where: { type: 'payment' } });
+  let orderSeq = await Settings.findAll({ where: { type: 'order' } });
+
+  let payment = {};
+  let order = {};
+
+  for (i=0;i<paymentSeq.length;i++) 
+  {
+    payment[paymentSeq[i].key] = paymentSeq[i].value
+  }
+
+  for (i=0;i<orderSeq.length;i++) 
+  {
+    order[orderSeq[i].key] = orderSeq[i].value
+  }
 
   await ctx.render('admin/settings/email-templates', {
     layout: 'admin/base',
@@ -3496,21 +3510,23 @@ router.post('/admin/settings/email', async ctx => {
   }
 
   if (type == "payment")
-    EmailTemplate.upsert({
-      type: "payment",
-      sender: sender,
-      subject: subject,
-      upper: ctx.request.fields.uppercontent,
-      lower: ctx.request.fields.lowercontent,
-      table: table.toString()
+    Settings.bulkCreate([
+      {key: "email_payment_sender", value: sender},
+      {key: "email_payment_subject", value: subject},
+      {key: "email_payment_upper", value: ctx.request.fields.uppercontent},
+      {key: "email_payment_lower", value: ctx.request.fields.lowercontent},
+      {key: "email_payment_table", value: table.toString()},
+    ], {
+      updateOnDuplicate: ["key"]
     });
-  else EmailTemplate.upsert({
-    type: "order",
-    sender: sender,
-    subject: subject,
-    upper: ctx.request.fields.uppercontent,
-    lower: ctx.request.fields.lowercontent,
-    table: table.toString()
+  else Settings.bulkCreate([
+    {key: "email_order_sender", value: sender},
+    {key: "email_order_subject", value: subject},
+    {key: "email_order_upper", value: ctx.request.fields.uppercontent},
+    {key: "email_order_lower", value: ctx.request.fields.lowercontent},
+    {key: "email_order_table", value: table.toString()},
+  ], {
+    updateOnDuplicate: ["key"]
   });
 
   ctx.session.messages = { "emailOk": type == "payment" ? "Payment template is set!" : "Order template is set!" };

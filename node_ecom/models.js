@@ -3,6 +3,25 @@ const { Sequelize, Model, DataTypes, ValidationError, STRING } = require("sequel
 const bcrypt = require("bcrypt");
 const assert = require('assert/strict');
 
+const Settings = db.define('settings', {
+  key: {
+    type: DataTypes.STRING,
+    primaryKey: true
+  },
+  type: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  value: {
+    type: DataTypes.STRING,
+    allowNull: true
+  }
+},
+{
+  timestamps: false,
+  paranoid: false
+});
+
 const Log = db.define("log", {
   timestamp: {
     type: DataTypes.DATE,
@@ -516,9 +535,13 @@ function emailtemplate() {
   return EmailTemplate;
 }
 
+function settings() {
+  return Settings;
+}
+
 module.exports = {
   category, product, user, staff, session, permission, role, order, orderitem, transaction,
-  paypaltransacion, codtransaction, log, emailtemplate
+  paypaltransacion, codtransaction, log, emailtemplate, settings
 };
 
 // Alter the database
