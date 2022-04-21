@@ -33,7 +33,6 @@ const Transaction = models.transaction();
 const PayPalTransaction = models.paypaltransacion();
 const CODTransaction = models.codtransaction();
 const Log = models.log();
-const EmailTemplate = models.emailtemplate();
 const Settings = models.settings();
 
 const app = new Koa();
@@ -2929,10 +2928,10 @@ router.get('/cart', async ctx => {
   let totals = [];
 
   for (i = 0; i < orderitems.length; i++) {
-    totals.push(await (orderitems[i].getTotal()));
+    totals.push((await (orderitems[i].getTotal())).toFixed(2));
   }
 
-  let orderTotal = (totals.reduce((partialSum, a) => partialSum + a, 0)).toFixed(2);
+  let orderTotal = (totals.reduce((partialSum, a) => parseInt(partialSum) + parseInt(a), 0)).toFixed(2);
   let cartQty = await utilsEcom.getCartQuantity(ctx);
 
   await ctx.render('cart', {
@@ -3056,7 +3055,7 @@ router.post('/captureOrder', async ctx => {
   const transaction = await Transaction.create({ type: ctx.request.fields.type });
 
   // Order complete
-  let emailtemplate = await EmailTemplate.findOne({ where: { type: "order" } });
+  let emailtemplate = await Settings.findOne({ where: { type: "order" } });
 
   if (!emailtemplate)
     emailtemplate = utilsEcom.DEFAULT_ORDER_EMAIL_TEMPLATE;
@@ -3448,6 +3447,11 @@ router.get('/admin/settings/email', async ctx => {
     order[orderSeq[i].key] = orderSeq[i].value
   }
 
+  if (paymentSeq.length == 0)
+    payment = utilsEcom.DEFAULT_PAYMENT_EMAIL_TEMPLATE;
+  if (orderSeq.length == 0)
+    order = utilsEcom.DEFAULT_ORDER_EMAIL_TEMPLATE;
+
   await ctx.render('admin/settings/email-templates', {
     layout: 'admin/base',
     selected: 'settings',
@@ -3544,20 +3548,20 @@ router.post('/admin/settings/email', async ctx => {
 
   if (type == "payment")
     Settings.bulkCreate([
-      { key: "email_payment_sender", value: sender },
-      { key: "email_payment_subject", value: subject },
-      { key: "email_payment_upper", value: ctx.request.fields.uppercontent },
-      { key: "email_payment_lower", value: ctx.request.fields.lowercontent },
-      { key: "email_payment_table", value: table.toString() },
+      { type: 'email_payment', key: "email_payment_sender", value: sender },
+      { type: 'email_payment', key: "email_payment_subject", value: subject },
+      { type: 'email_payment', key: "email_payment_upper", value: ctx.request.fields.uppercontent },
+      { type: 'email_payment', key: "email_payment_lower", value: ctx.request.fields.lowercontent },
+      { type: 'email_payment', key: "email_payment_table", value: table.toString() },
     ], {
       updateOnDuplicate: ["key"]
     });
   else Settings.bulkCreate([
-    { key: "email_order_sender", value: sender },
-    { key: "email_order_subject", value: subject },
-    { key: "email_order_upper", value: ctx.request.fields.uppercontent },
-    { key: "email_order_lower", value: ctx.request.fields.lowercontent },
-    { key: "email_order_table", value: table.toString() },
+    { type: 'email_order', key: "email_order_sender", value: sender },
+    { type: 'email_order', key: "email_order_subject", value: subject },
+    { type: 'email_order', key: "email_order_upper", value: ctx.request.fields.uppercontent },
+    { type: 'email_order', key: "email_order_lower", value: ctx.request.fields.lowercontent },
+    { type: 'email_order', key: "email_order_table", value: table.toString() },
   ], {
     updateOnDuplicate: ["key"]
   });
@@ -3642,33 +3646,18 @@ router.post('/admin/settings/other', async ctx => {
     });
   }
 
-  let settings
-  let settingsJSON;
-
-  try {
-    settings = fs.readFileSync("../settings.json", "utf-8");
-    settingsJSON = JSON.parse(settings);
-  }
-  catch (e) {
-    fs.closeSync(fs.openSync('../settings.json', 'w'));
-
-    settings = fs.readFileSync("../settings.json", "utf-8");
-    settingsJSON = {};
-  }
-
-  if (ctx.request.fields.pagint && !Number.isNaN(ctx.request.fields.pagint)) {
+  if (ctx.request.fields.pagint && !Number.isNaN(ctx.request.fields.pagint))
     utilsEcom.PRODUCTS_PER_PAGE = parseInt(ctx.request.fields.pagint);
-
-    settingsJSON["pagint"] = utilsEcom.PRODUCTS_PER_PAGE;
-  }
-
-  if (ctx.request.fields.expire && !Number.isNaN(ctx.request.fields.expire)) {
+  
+  if (ctx.request.fields.expire && !Number.isNaN(ctx.request.fields.expire))
     utilsEcom.SESSION_BACK_OFFICE_EXPIRE = parseInt(ctx.request.fields.expire) * 60 * 1000;
 
-    settingsJSON["expire"] = utilsEcom.SESSION_BACK_OFFICE_EXPIRE;
-  }
-
-  fs.writeFile("../settings.json", JSON.stringify(settingsJSON), function (err) { });
+  Settings.bulkCreate([
+      { type: 'settings', key: "pagint", value: utilsEcom.PRODUCTS_PER_PAGE },
+      { type: 'settings', key: "backoffice_expire", value: utilsEcom.SESSION_BACK_OFFICE_EXPIRE }
+    ], {
+      updateOnDuplicate: ["key"]
+  });
 
   ctx.session.messages = { 'settingsOK': 'Settings changed!' };
   ctx.redirect('/admin/settings/other');

@@ -410,11 +410,11 @@ function recalculateTotals() {
 
         subtotal += parseFloat(total);
 
-        table.rows[i].getElementsByClassName("total")[0].innerHTML = total + " $";
+        table.rows[i].getElementsByClassName("total")[0].innerHTML = "$" + total;
     }
 
-    document.getElementById("subtotal").innerHTML = subtotal.toFixed(2) + " $";
-    document.getElementById("grandtotal").innerHTML = subtotal.toFixed(2) + " $";
+    document.getElementById("subtotal").innerHTML = "$" + subtotal.toFixed(2);
+    document.getElementById("grandtotal").innerHTML = "$" + subtotal.toFixed(2);
 }
 
 function addToCart(elem, id, qty, isCart) {

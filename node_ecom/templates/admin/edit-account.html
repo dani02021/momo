@@ -22,8 +22,7 @@
           <div class="row tm-edit-account-row">
             <div class="col-xl-6 col-lg-6 col-md-12">
               <div class="form-group mb-3">
-                <label for="name">Username
-                </label>
+                <label for="name">Username</label>
                 <input id="name" name="name" type="text" value="<%= user.username %>" class="form-control validate"
                   required />
               </div>
@@ -86,7 +85,10 @@
 </div>
 <script>
   function editAccount(elem) {
-    document.getElementById('edit-form').action = '/admin/accounts/edit/<%= user.id %>/';
-    document.getElementById('edit-form').submit();
+    if (document.getElementById('edit-form').checkValidity()) 
+    {
+      document.getElementById('edit-form').action = '/admin/accounts/edit/<%= user.id %>/';
+      document.getElementById('edit-form').submit();
+    }
   }
 </script>

@@ -19,7 +19,7 @@ const Order = models.order();
 const OrderItem = models.orderitem();
 const Product = models.product();
 const Log = models.log();
-const EmailTemplate = models.emailtemplate();
+const Settings = models.settings();
 
 const fs = require('fs');
 const os = require('os');
@@ -39,19 +39,19 @@ let PRODUCTS_PER_PAGE = 12;
 let SESSION_BACK_OFFICE_EXPIRE = 5 * 60 * 1000; // 5 minutes
 
 const DEFAULT_PAYMENT_EMAIL_TEMPLATE = {
-    sender: 'danielgudjenev@gmail.com',
-    subject: 'Платена поръчка #$orderid',
-    upper: '$user, вашата поръчка #$orderid беше платена успешно',
-    table: 'name,price,quantity,subtotal',
-    lower: 'Благодаря за вашата поръчка'
+    email_payment_sender: 'danielgudjenev@gmail.com',
+    email_payment_subject: 'Платена поръчка #$orderid',
+    email_payment_upper: '$user, вашата поръчка #$orderid беше платена успешно',
+    email_payment_table: 'name,price,quantity,subtotal',
+    email_payment_lower: 'Благодаря за вашата поръчка'
 }
 
 const DEFAULT_ORDER_EMAIL_TEMPLATE = {
-    sender: 'danielgudjenev@gmail.com',
-    subject: 'Регистрирана поръчка #$orderid',
-    upper: '$user, вашата поръчка #$orderid беше регистрирана успешно',
-    table: 'name,price,quantity,subtotal',
-    lower: 'Благодаря за вашата поръчка'
+    email_order_sender: 'danielgudjenev@gmail.com',
+    email_order_subject: 'Регистрирана поръчка #$orderid',
+    email_order_upper: '$user, вашата поръчка #$orderid беше регистрирана успешно',
+    email_order_table: 'name,price,quantity,subtotal',
+    email_order_lower: 'Благодаря за вашата поръчка'
 }
 
 const STATUS_DISPLAY = [
@@ -160,11 +160,6 @@ function getHost() {
     return (process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : '10.20.1.159');
 }
 
-/**
- * 
- * @param {Order} cart 
- * @param {EmailTemplate} emailtemplate
- */
 async function getOrderAsTableHTML(cart, emailtemplate) {
     assert(cart);
     assert(emailtemplate);
@@ -561,7 +556,7 @@ async function validateStatus(ctx, orderId, responce) {
         }
 
         // Order payed
-        let emailtemplate = await EmailTemplate.findOne({where: { type: "order" }});
+        let emailtemplate = await Settings.findOne({where: { type: "order" }});
 
         if (!emailtemplate)
             emailtemplate = DEFAULT_PAYMENT_EMAIL_TEMPLATE;

@@ -2,6 +2,7 @@ const db = require("./db.js");
 const { Sequelize, Model, DataTypes, ValidationError, STRING } = require("sequelize");
 const bcrypt = require("bcrypt");
 const assert = require('assert/strict');
+const { validate } = require("./db.js");
 
 const Settings = db.define('settings', {
   key: {
@@ -77,11 +78,17 @@ const User = db.define("user", {
   },
   firstName: {
     type: DataTypes.STRING(50),
-    allowNull: false
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   },
   lastName: {
     type: DataTypes.STRING(50),
-    allowNull: false
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   },
   password: {
     type: DataTypes.STRING(100),
@@ -99,11 +106,25 @@ const User = db.define("user", {
   },
   address: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    validate: {
+      notEmpty: true
+    }
   },
   country: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    validate: {
+      notEmpty: true
+    }
+  },
+  gender: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  birthday: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
   },
   emailConfirmed: {
     type: DataTypes.BOOLEAN,
@@ -115,7 +136,8 @@ const User = db.define("user", {
     allowNull: true
   },
   verificationToken: {
-    type: DataTypes.STRING
+    type: DataTypes.STRING,
+    allowNull: true
   }
 },
   {
@@ -378,7 +400,13 @@ OrderItem.prototype.getTotal = async function () {
 
   assert(product);
 
-  return parseFloat((parseFloat(product.discountPrice) * parseFloat(this.quantity)).toFixed(2)); // Bad practise !
+  return parseFloat((await db.query(`SELECT "discountPrice" * orderitems.quantity
+    AS total FROM products, orderitems
+    WHERE products.id = ${product.id} AND orderitems.id = ${this.id}
+    AND products.id = orderitems."productId"`, {
+    type: 'SELECT',
+    plain: true,
+  })).total);
 };
 
 const Order = db.define("order", {
@@ -400,34 +428,6 @@ const Order = db.define("order", {
   timestamp: true
 });
 
-const EmailTemplate = db.define("emailtemplate", {
-  type: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    primaryKey: true
-  },
-  sender: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  subject: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  upper: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  table: {
-    type: STRING,
-    allowNull: true
-  },
-  lower: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  }
-});
-
 Order.belongsToMany(User, { through: 'user_orders' });
 User.belongsToMany(Order, { through: 'user_orders' });
 
@@ -442,7 +442,7 @@ Order.prototype.getItemsCount = function () {
   return this.getOrderItems().length;
 }
 
-Order.prototype.getTotal = async function () {
+/*Order.prototype.getTotal = async function () {
   var total = 0.0;
   var orderitems = await this.getOrderitems();
 
@@ -454,6 +454,15 @@ Order.prototype.getTotal = async function () {
   }
   
   return total;
+}*/
+
+Order.prototype.getTotal = async function () {
+  return parseFloat((await db.query(`SELECT price
+    FROM orders
+    WHERE orders.id = ${this.id}`, {
+    type: 'SELECT',
+    plain: true,
+  })).price);
 }
 
 Order.prototype.orderedAtHTML = function() {
@@ -531,17 +540,13 @@ function log() {
   return Log;
 }
 
-function emailtemplate() {
-  return EmailTemplate;
-}
-
 function settings() {
   return Settings;
 }
 
 module.exports = {
   category, product, user, staff, session, permission, role, order, orderitem, transaction,
-  paypaltransacion, codtransaction, log, emailtemplate, settings
+  paypaltransacion, codtransaction, log, settings
 };
 
 // Alter the database
