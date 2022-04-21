@@ -29,8 +29,8 @@
             <div class="row" style="margin-bottom: 12px;">
               <div class="col-sm-3">
                 <select name="longmsg" id="longmsg" class="form-select">
-                  <option value="1" <% if (filters.longmsg) { %> selected <% } %>>Show</option>
-                  <option value="0" <% if (!filters.longmsg) { %> selected <% } %>>Hide</option>
+                  <option value="1" <% if (filters.longmsg) { %> selected <% } %>>Show Long Message</option>
+                  <option value="0" <% if (!filters.longmsg) { %> selected <% } %>>Hide Long Message</option>
                 </select>
               </div>
             </div>
@@ -49,7 +49,9 @@
                 <th scope="col" class="clickable">TIMESTAMP</th>
                 <th scope="col" class="clickable">LEVEL</th>
                 <th scope="col" class="clickable">USER</th>
+                <th scope="col" class="clickable">STAFF/USER</th>
                 <th scope="col" class="clickable">MESSAGE</th>
+                <th scope="col" class="clickable">LONG MESSAGE</th>
               </tr>
             </thead>
             <tbody>
@@ -58,6 +60,11 @@
                 <td><b><%= report[i].dataValues.timestamp.toLocaleString('en-GB') %></b></td>
                 <td><%= report[i].dataValues.level %></td>
                 <td><%= report[i].dataValues.user %></td>
+                <% if (report[i].dataValues.isStaff) { %>
+                <td>STAFF</td>
+                <% } else { %>
+                <td>USER</td>
+                <% } %>
                 <td><%= report[i].dataValues.message %></td>
                 <% if (filters.longmsg) { %>
                 <td><%= report[i].dataValues.longMessage %></td>
