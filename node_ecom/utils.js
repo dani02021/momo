@@ -774,7 +774,26 @@ async function saveReportPdf(reportRes, filters, time) {
     const table = {
         title: "Report Orders",
         subtitle: subtitle,
-        headers: ["Start Date", "Orders", "Products", "Total Price", "Currency"],
+        headers: [
+        {
+            label: "Start Date"
+        },
+        {
+            label: "Orders",
+            align: "right"
+        },
+        {
+            label: "Products",
+            align: "right"
+        },
+        {
+            label: "Total Price",
+            align: "right"
+        },
+        {
+            label: "Currency",
+            align: "right"
+        }],
         rows: rows
     };
     doc.table(table, {
