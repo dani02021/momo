@@ -457,7 +457,7 @@ async function captureOrder(orderId, debug) {
         handleError(e, null, true);
 
         logger.log('alert',
-            `There was an error while trying to capture order #${orderId}!
+            `There was an error while trying to capture paypal order #${orderId}!
                 ${e.message}`);
     }
 
@@ -1076,7 +1076,7 @@ async function generateLogs(x = 100) {
                 break;
             case 6:
                 logger.log('alert',
-                    `There was an error while trying to capture order #${order.id}!`);
+                    `There was an error while trying to capture paypal order #${order.id}!`);
                 break;
             case 7:
                 logger.log('alert',
@@ -1098,7 +1098,7 @@ async function generateLogs(x = 100) {
 async function handleError(err, ctx, fileOnly = false) {
     assert(err);
     assert(ctx);
-    
+
     let username;
     let staffUsername;
     let session;

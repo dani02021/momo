@@ -33,6 +33,15 @@
                   <option value="0" <% if (!filters.longmsg) { %> selected <% } %>>Hide Long Message</option>
                 </select>
               </div>
+              <div class="col-sm-3">
+                <select name="datetrunc" class="form-select">
+                  <option value="-1" selected disabled>Group by timestamp:</option>
+                  <option value="0" <% if (filters['datetrunc'] == '0') { %> selected <% } %>>Day</option>
+                  <option value="1" <% if (filters['datetrunc'] == '1') { %> selected <% } %>>Week</option>
+                  <option value="2" <% if (filters['datetrunc'] == '2') { %> selected <% } %>>Month</option>
+                  <option value="3" <% if (filters['datetrunc'] == '3') { %> selected <% } %>>Year</option>
+                </select>
+              </div>
             </div>
             <div class="row" style="margin-bottom: 12px;">
               <div class="d-grid gap-2">
@@ -52,24 +61,38 @@
                 <th scope="col" class="clickable">STAFF/USER</th>
                 <th scope="col" class="clickable">MESSAGE</th>
                 <th scope="col" class="clickable">LONG MESSAGE</th>
+                <% if (filters.datetrunc) { %>
+                <th scope="col" class="clickable">COUNT</th>
+                <% } %>
               </tr>
             </thead>
             <tbody>
               <% for(i = 0; i < report.length; i++) { %>
               <tr>
+                <% if (filters.datetrunc !== '-1') { %>
+                <td><b><%= report[i].dataValues.t.toLocaleString('en-GB') %></b></td>
+                <% } else {%>
                 <td><b><%= report[i].dataValues.timestamp.toLocaleString('en-GB') %></b></td>
+                <% } %>
                 <td><%= report[i].dataValues.level %></td>
                 <td><%= report[i].dataValues.user %></td>
-                <% if (report[i].dataValues.isStaff) { %>
+                <% if (filters.datetrunc) { %>
+                <td></td>
+                <% } else { %>
+                <% if (report[i].dataValues.isStaff === true) { %>
                 <td>STAFF</td>
                 <% } else { %>
                 <td>USER</td>
+                <% } %>
                 <% } %>
                 <td><%= report[i].dataValues.message %></td>
                 <% if (filters.longmsg) { %>
                 <td><%= report[i].dataValues.longMessage %></td>
                 <% } else { %>
                 <td></td>
+                <% } %>
+                <% if (filters.datetrunc) { %>
+                <td><%= report[i].dataValues.count %></td>
                 <% } %>
               </tr>
               <% } %>

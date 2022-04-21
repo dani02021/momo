@@ -778,6 +778,30 @@ async function getAdminAudit(ctx) {
     filters['longmsg'] = false;
     filtersToReturn['longmsg'] = false;
   }
+  if (ctx.query.datetrunc) {
+    filters['datetrunc'] = ctx.query.datetrunc;
+    filtersToReturn['datetrunc'] = ctx.query.datetrunc;
+  } else {
+    filters['datetrunc'] = '-1';
+    filtersToReturn['datetrunc'] = '-1';
+  }
+
+  let time;
+
+  switch (filters.datetrunc) {
+    case '0':
+      time = 'day';
+      break;
+    case '1':
+      time = 'week';
+      break;
+    case '2':
+      time = 'month';
+      break;
+    case '3':
+      time = 'year';
+      break;
+  }
 
   let page = 1;
 
@@ -792,12 +816,26 @@ async function getAdminAudit(ctx) {
     offset = (page - 1) * limit;
   }
 
-  const result = await db.query(`SELECT * FROM logs WHERE
+  let query = `SELECT * FROM logs WHERE
+  position(upper($1) in upper(user)) > 0 AND
+  position(upper($2) in upper(level)) > 0 AND
+  timestamp BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}'
+  ORDER BY timestamp DESC`;
+
+  if (filters.datetrunc != '-1') {
+    query = `SELECT count(*), date_trunc('${time}', timestamp) t FROM logs WHERE
       position(upper($1) in upper(user)) > 0 AND
       position(upper($2) in upper(level)) > 0 AND
       timestamp BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}'
-      ORDER BY timestamp DESC
-      LIMIT ${limit} OFFSET ${offset}`, {
+      GROUP BY t
+      ORDER BY t DESC`;
+  }
+
+  let queryC = `SELECT COUNT(*) FROM (${query}) foo`
+
+  query += `\nLIMIT ${limit} OFFSET ${offset}`;
+
+  const result = await db.query(query, {
     type: 'SELECT',
     plain: false,
     model: Log,
@@ -805,10 +843,7 @@ async function getAdminAudit(ctx) {
     bind: [filters.user, filters.level]
   });
 
-  const count = await db.query(`SELECT COUNT(*) FROM logs WHERE
-      position(upper($1) in upper(user)) > 0 AND
-      position(upper($2) in upper(level)) > 0 AND
-      timestamp BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}'`, {
+  const count = await db.query(queryC, {
     type: 'SELECT',
     plain: true,
     bind: [filters.user, filters.level]
@@ -3405,13 +3440,11 @@ router.get('/admin/settings/email', async ctx => {
   let payment = {};
   let order = {};
 
-  for (i=0;i<paymentSeq.length;i++) 
-  {
+  for (i = 0; i < paymentSeq.length; i++) {
     payment[paymentSeq[i].key] = paymentSeq[i].value
   }
 
-  for (i=0;i<orderSeq.length;i++) 
-  {
+  for (i = 0; i < orderSeq.length; i++) {
     order[orderSeq[i].key] = orderSeq[i].value
   }
 
@@ -3511,20 +3544,20 @@ router.post('/admin/settings/email', async ctx => {
 
   if (type == "payment")
     Settings.bulkCreate([
-      {key: "email_payment_sender", value: sender},
-      {key: "email_payment_subject", value: subject},
-      {key: "email_payment_upper", value: ctx.request.fields.uppercontent},
-      {key: "email_payment_lower", value: ctx.request.fields.lowercontent},
-      {key: "email_payment_table", value: table.toString()},
+      { key: "email_payment_sender", value: sender },
+      { key: "email_payment_subject", value: subject },
+      { key: "email_payment_upper", value: ctx.request.fields.uppercontent },
+      { key: "email_payment_lower", value: ctx.request.fields.lowercontent },
+      { key: "email_payment_table", value: table.toString() },
     ], {
       updateOnDuplicate: ["key"]
     });
   else Settings.bulkCreate([
-    {key: "email_order_sender", value: sender},
-    {key: "email_order_subject", value: subject},
-    {key: "email_order_upper", value: ctx.request.fields.uppercontent},
-    {key: "email_order_lower", value: ctx.request.fields.lowercontent},
-    {key: "email_order_table", value: table.toString()},
+    { key: "email_order_sender", value: sender },
+    { key: "email_order_subject", value: subject },
+    { key: "email_order_upper", value: ctx.request.fields.uppercontent },
+    { key: "email_order_lower", value: ctx.request.fields.lowercontent },
+    { key: "email_order_table", value: table.toString() },
   ], {
     updateOnDuplicate: ["key"]
   });
