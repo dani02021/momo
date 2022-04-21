@@ -69,7 +69,7 @@ const User = db.define("user", {
     }
   },
   email: {
-    type: DataTypes.STRING(50),
+    type: DataTypes.STRING(100),
     unique: true,
     allowNull: false,
     validate: {
@@ -77,17 +77,23 @@ const User = db.define("user", {
     }
   },
   firstName: {
-    type: DataTypes.STRING(50),
+    type: DataTypes.STRING(100),
     allowNull: false,
     validate: {
-      notEmpty: true
+      notEmpty: true,
+      is: {
+        args: /^[a-zA-Zа-яА-Я]{2,50}$/i
+      }
     }
   },
   lastName: {
-    type: DataTypes.STRING(50),
+    type: DataTypes.STRING(100),
     allowNull: false,
     validate: {
-      notEmpty: true
+      notEmpty: true,
+      is: {
+        args: /^[a-zA-Zа-яА-Я]{2,50}$/i
+      }
     }
   },
   password: {

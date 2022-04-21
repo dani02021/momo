@@ -919,6 +919,27 @@ router.post("/register", async ctx => {
 
       return;
     }
+
+    // Age between 18 - 120
+    let age = utilsEcom.getAge(ctx.request.fields.birthday);
+
+    if (age < 18) 
+    {
+      ctx.body = {
+        message: 'You have to be at least 18 years old!'
+      };
+
+      return;
+    }
+
+    if (age > 120) 
+    {
+      ctx.body = {
+        message: 'Invalid age!'
+      };
+
+      return;
+    }
     // Send email
     let token = utilsEcom.generateEmailVerfToken();
 
@@ -931,6 +952,8 @@ router.post("/register", async ctx => {
         lastName: ctx.request.fields.last,
         address: ctx.request.fields.address,
         country: ctx.request.fields.country,
+        gender: ctx.request.fields.gender,
+        birthday: ctx.request.fields.birthday,
         verificationToken: token,
       });
     } catch (e) {
@@ -3055,16 +3078,23 @@ router.post('/captureOrder', async ctx => {
   const transaction = await Transaction.create({ type: ctx.request.fields.type });
 
   // Order complete
-  let emailtemplate = await Settings.findOne({ where: { type: "order" } });
+  let emailtemplate = await Settings.findAll({ where: { type: "email_order" } });
 
-  if (!emailtemplate)
+  if (emailtemplate.length === 0)
     emailtemplate = utilsEcom.DEFAULT_ORDER_EMAIL_TEMPLATE;
+  
+  let orderSeq = await Settings.findAll({ where: { type: 'email_order' } });
+  let orderEm = {};
 
-  utilsEcom.sendEmail(emailtemplate.sender, user.dataValues.email,
-    utilsEcom.parseEmailPlaceholders(emailtemplate.subject, user, order), null,
-    utilsEcom.parseEmailPlaceholders(emailtemplate.upper, user, order) +
-    (await utilsEcom.getOrderAsTableHTML(order, emailtemplate)) +
-    utilsEcom.parseEmailPlaceholders(emailtemplate.lower, user, order));
+  for (i = 0; i < orderSeq.length; i++) {
+    orderEm[orderSeq[i].key] = orderSeq[i].value
+  }
+
+  utilsEcom.sendEmail(orderEm.email_order_sender, user.dataValues.email,
+    utilsEcom.parseEmailPlaceholders(orderEm.email_order_subject, user, order), null,
+    utilsEcom.parseEmailPlaceholders(orderEm.email_order_upper, user, order) +
+    (await utilsEcom.getOrderAsTableHTML(order, orderEm.email_order_table)) +
+    utilsEcom.parseEmailPlaceholders(orderEm.email_order_lower, user, order));
 
   if (ctx.request.fields.type == "paypal") {
     let responce = await utilsEcom.captureOrder(ctx.request.fields.orderID);
@@ -3433,8 +3463,8 @@ router.get('/admin/settings/email', async ctx => {
     });
   }
 
-  let paymentSeq = await Settings.findAll({ where: { type: 'payment' } });
-  let orderSeq = await Settings.findAll({ where: { type: 'order' } });
+  let paymentSeq = await Settings.findAll({ where: { type: 'email_payment' } });
+  let orderSeq = await Settings.findAll({ where: { type: 'email_order' } });
 
   let payment = {};
   let order = {};
