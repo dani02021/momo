@@ -38,29 +38,31 @@ const SESSION_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000; // 2 weeks
 let PRODUCTS_PER_PAGE = 12;
 let SESSION_BACK_OFFICE_EXPIRE = 5 * 60 * 1000; // 5 minutes
 
-const DEFAULT_PAYMENT_EMAIL_TEMPLATE = {
+const DEFAULT_EMAIL_SENDER = "danielgudjenev@gmail.com";
+
+const DEFAULT_PAYMENT_EMAIL_TEMPLATE = Object.freeze({
     email_payment_sender: 'danielgudjenev@gmail.com',
     email_payment_subject: 'Платена поръчка #$orderid',
     email_payment_upper: '$user, вашата поръчка #$orderid беше платена успешно',
     email_payment_table: 'name,price,quantity,subtotal',
     email_payment_lower: 'Благодаря за вашата поръчка'
-}
+});
 
-const DEFAULT_ORDER_EMAIL_TEMPLATE = {
+const DEFAULT_ORDER_EMAIL_TEMPLATE = Object.freeze({
     email_order_sender: 'danielgudjenev@gmail.com',
     email_order_subject: 'Регистрирана поръчка #$orderid',
     email_order_upper: '$user, вашата поръчка #$orderid беше регистрирана успешно',
     email_order_table: 'name,price,quantity,subtotal',
     email_order_lower: 'Благодаря за вашата поръчка'
-}
+});
 
 const STATUS_DISPLAY = [
     "Not Ordered",
-    "Pending",
+    "Paid",
     "Shipped",
     "Declined",
     "Completed",
-    "Not payed",
+    "Not paid",
     "Payer action needed"
 ]
 const LOG_LEVELS = {
@@ -160,7 +162,7 @@ function getHost() {
     return (process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : '10.20.1.159');
 }
 
-async function getOrderAsTableHTML(cart, table) {
+async function getOrderAsTableHTML(cart, table, options) {
     assert(cart);
     assert(table);
 
@@ -168,14 +170,18 @@ async function getOrderAsTableHTML(cart, table) {
     let absTotal = 0.0;
     let template = table.split(",");
 
-    let html =
-        `<table style="width: 100%; border: 1px solid black">
-    <tr>
-    <th style="border: 1px solid black">Name</th>
-    <th style="border: 1px solid black">Price</th>
-    <th style="border: 1px solid black">Quantity</th>
-    <th style="border: 1px solid black">Total Price</th>
-    </tr>\n`;
+    let html = `<table style="width: 100%; border: 1px solid black">`;
+
+    if (options)
+        html = `<table style="width: 100%; border:` + (options.borderweight ? options.borderweight : "1") + `px solid;`
+            + `border-color: `+ (options.color ? options.color : "black") + `">`;
+
+    html += `<tr>
+        <th style="border: 1px solid black">Name</th>
+        <th style="border: 1px solid black">Price</th>
+        <th style="border: 1px solid black">Quantity</th>
+        <th style="border: 1px solid black">Total Price</th>
+        </tr>\n`;
 
     for (i = 0; i < orderitems.length; i++) {
         let orderitem = orderitems[i];
@@ -294,9 +300,6 @@ async function sendEmail(sender, email, subject, text, html)
     assert(email);
     assert(subject);
 
-    console.log(sender);
-    console.log(email);
-
     var message = {
         from: sender,
         to: email,
@@ -307,8 +310,15 @@ async function sendEmail(sender, email, subject, text, html)
         message["text"] = text;
     if (html)
         message["html"] = html;
-
-    EmailTransport.sendMail(message);
+    
+    try 
+    {
+        EmailTransport.sendMail(message);
+    } 
+    catch (e) 
+    {
+        handleError(e);
+    }
 }
 
 function configPostgreSessions() {
@@ -574,7 +584,8 @@ async function validateStatus(ctx, orderId, responce) {
         sendEmail(payment.email_payment_sender, user.dataValues.email,
             parseEmailPlaceholders(payment.email_payment_subject, user, cart), null,
             parseEmailPlaceholders(payment.email_payment_upper, user, cart) +
-            (await getOrderAsTableHTML(cart, payment.email_payment_table)) +
+            (await getOrderAsTableHTML(cart, payment.email_payment_table,
+                {color: payment.email_payment_table_border_color, borderweight: payment.email_payment_table_border_weight})) +
             parseEmailPlaceholders(payment.email_payment_lower, user, cart));
 
         await cart.update({ status: 1, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal() });
@@ -1197,6 +1208,7 @@ module.exports = {
     SESSION_BACK_OFFICE_EXPIRE,
     STATUS_DISPLAY,
     LOG_LEVELS,
+    DEFAULT_EMAIL_SENDER,
     DEFAULT_PAYMENT_EMAIL_TEMPLATE,
     DEFAULT_ORDER_EMAIL_TEMPLATE,
     logger,

@@ -135,6 +135,75 @@ async function getProducts(ctx) {
   ctx.session.messages = null;
 }
 
+async function getMyAccount(ctx) 
+{
+  if (!await utilsEcom.isAuthenticatedUser(ctx)) {
+    ctx.session.messages = {"noAcc": "You are not logged in!!"};
+    ctx.redirect("/");
+    return;
+  }
+
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
+
+  let page = 1;
+
+  if (ctx.params.page) {
+    page = parseInt(ctx.params.page)
+  }
+
+  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let offset = 0;
+
+  if (ctx.params.page) {
+    offset = (parseInt(ctx.params.page) - 1) * limit;
+  }
+
+  let result = await Order.findAndCountAll({
+    where: {
+      status: { [Op.gte]: 1 },
+    },
+    limit: limit,
+    offset: offset,
+    include: [{
+      model: User,
+      required: true,
+      where: {
+        'username': ctx.session.dataValues.username
+      }
+    }],
+    order: [
+      ['orderedAt', 'DESC']
+    ]
+  });
+
+  let orderitems = [];
+  let products = [];
+
+  for (i = 0; i < result.rows.length; i++) {
+    let orderitemsF = await result.rows[i].getOrderitems();
+
+    for (z = 0; z < orderitemsF.length; z++) {
+      orderitems.push(orderitemsF[0]);
+    }
+  }
+
+  for (i = 0; i < orderitems.length; i++) {
+    products.push(await (orderitems[i].getProduct()));
+  }
+
+  await ctx.render('my-account', {
+    selected: 'my-account',
+    session: ctx.session,
+    cartQty: cartQty,
+    orders: result.rows,
+    orderitems: orderitems,
+    products: products,
+    page: page,
+    pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE)),
+    statuses: utilsEcom.STATUS_DISPLAY
+  });
+}
+
 async function getAdminProducts(ctx) {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
@@ -869,18 +938,9 @@ router.get("/products", async ctx => getProducts(ctx));
 
 router.get("/products/:page", async ctx => getProducts(ctx));
 
-router.get("/register", async ctx => {
-  let cartQty = await utilsEcom.getCartQuantity(ctx);
+router.get("/my-account", async ctx => getMyAccount(ctx));
 
-  await ctx.render('register', {
-    selected: 'register',
-    session: ctx.session,
-    cartQty: cartQty
-  });
-
-  // Clear the messages
-  ctx.session.messages = null;
-});
+router.get("/my-account/orders/:page", async ctx => getMyAccount(ctx));
 
 router.post("/register", async ctx => {
   let unique = false;
@@ -939,8 +999,14 @@ router.post("/register", async ctx => {
       return;
     }
 
-    console.log(ctx.request.fields.gender);
-    if (!ctx.request.fields.gender) {
+    let validGenders = [
+      'Male',
+      'Female'
+    ];
+
+    // Check table for invalid gender
+    if (!ctx.request.fields.gender ||
+      !table.every(elem => validGenders.includes(elem))) {
       ctx.body = {
         message: 'Invalid gender!'
       };
@@ -983,7 +1049,7 @@ router.post("/register", async ctx => {
 
   let msg = `Here is your link: https://` + utilsEcom.getHost() + `/verify_account/${token}`
 
-  utilsEcom.sendEmail(ctx.request.fields.email, `Email Verification NodeJS`, msg);
+  utilsEcom.sendEmail(utilsEcom.DEFAULT_EMAIL_SENDER, ctx.request.fields.email, `Email Verification NodeJS`, msg);
 
   let message = { 'registerSuccess': 'Please validate your e-mail!' };
   ctx.session.messages = message;
@@ -3109,7 +3175,8 @@ router.post('/captureOrder', async ctx => {
   utilsEcom.sendEmail(orderEm.email_order_sender, user.dataValues.email,
     utilsEcom.parseEmailPlaceholders(orderEm.email_order_subject, user, order), null,
     utilsEcom.parseEmailPlaceholders(orderEm.email_order_upper, user, order) +
-    (await utilsEcom.getOrderAsTableHTML(order, orderEm.email_order_table)) +
+    (await utilsEcom.getOrderAsTableHTML(order, orderEm.email_order_table,
+      {color: orderEm.email_order_table_border_color, borderweight: orderEm.email_order_table_border_weight})) +
     utilsEcom.parseEmailPlaceholders(orderEm.email_order_lower, user, order));
 
   if (ctx.request.fields.type == "paypal") {
@@ -3599,6 +3666,8 @@ router.post('/admin/settings/email', async ctx => {
       { type: 'email_payment', key: "email_payment_upper", value: ctx.request.fields.uppercontent },
       { type: 'email_payment', key: "email_payment_lower", value: ctx.request.fields.lowercontent },
       { type: 'email_payment', key: "email_payment_table", value: table.toString() },
+      { type: 'email_payment', key: "email_payment_table_border_weight", value: ctx.request.fields.borderweight },
+      { type: 'email_payment', key: "email_payment_table_border_color", value: ctx.request.fields.bordercolor },
     ], {
       updateOnDuplicate: ["key"]
     });
@@ -3608,6 +3677,8 @@ router.post('/admin/settings/email', async ctx => {
     { type: 'email_order', key: "email_order_upper", value: ctx.request.fields.uppercontent },
     { type: 'email_order', key: "email_order_lower", value: ctx.request.fields.lowercontent },
     { type: 'email_order', key: "email_order_table", value: table.toString() },
+    { type: 'email_order', key: "email_order_table_border_weight", value: ctx.request.fields.borderweight },
+      { type: 'email_order', key: "email_order_table_border_color", value: ctx.request.fields.bordercolor },
   ], {
     updateOnDuplicate: ["key"]
   });
@@ -3648,12 +3719,29 @@ router.get('/admin/settings/other', async ctx => {
     });
   }
 
+  let otherSettings = await Settings.findAll({where: { type: "settings"}});
+
+  let settings = {};
+
+  for (i = 0; i < otherSettings.length; i++) {
+    settings[otherSettings[i].key] = otherSettings[i].value
+  }
+
+  if (!settings["pagint"])
+    settings["pagint"] = utilsEcom.PRODUCTS_PER_PAGE;
+  
+  if (!settings["backoffice_expire"])
+    settings["backoffice_expire"] = parseInt(utilsEcom.SESSION_BACK_OFFICE_EXPIRE / (1000 * 60));
+  else 
+  {
+    settings["backoffice_expire"] = parseInt(parseInt(settings["backoffice_expire"]) / (1000 * 60));
+  }
+
   await ctx.render('admin/settings/other-settings', {
     layout: 'admin/base',
     selected: 'settings',
     session: ctx.session,
-    pagint: utilsEcom.PRODUCTS_PER_PAGE,
-    expire: parseInt(utilsEcom.SESSION_BACK_OFFICE_EXPIRE / (1000 * 60))
+    settings: settings,
   });
 
   // Clear old messages

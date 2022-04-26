@@ -118,6 +118,23 @@
       </div>
       <div class="row mt-5">
         <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Table Settings:</label>
+        </div>
+      </div>
+      <div id="table1settings" class="row mt-3">
+        <div class="col mx-auto">
+          <div class="row justify-content-between">
+            <div class="col d-flex justify-content-center">
+              <input type="text" value="<%= payment.email_payment_table_border_weight %>" name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip" title="Table border weight">
+            </div>
+            <div class="col d-flex justify-content-center">
+              <input type="color" value="<%= payment.email_payment_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Color of table border">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row mt-5">
+        <div class="col mx-auto d-flex justify-content-center">
           <% if (payment) { %>
             <textarea name="lowercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
               placeholder="Lower Content (Below the table)"><%= payment.email_payment_lower %></textarea>
@@ -218,6 +235,23 @@
                 <option value="price">Prod. Price</option>
                 <option value="subtotal">Subtotal</option>
               </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row mt-5">
+        <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Table Settings:</label>
+        </div>
+      </div>
+      <div id="table1settings" class="row mt-3">
+        <div class="col mx-auto">
+          <div class="row justify-content-between">
+            <div class="col d-flex justify-content-center">
+              <input type="text" value="<%= order.email_order_table_border_weight %>" name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip" title="Table border weight">
+            </div>
+            <div class="col d-flex justify-content-center">
+              <input type="color" value="<%= order.email_order_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Color of table border">
             </div>
           </div>
         </div>

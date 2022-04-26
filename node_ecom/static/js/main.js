@@ -597,20 +597,20 @@ function clearFilter(filter) {
     window.location.search = searchParams.toString();
 }
 
-function moveToPage(page) {
+function moveToPage(page, prefix) {
     if(hasPage()) {
-        replacePage(page);
+        replacePage(page, prefix);
     } else {
-        window.location.pathname += "/" + page;
+        window.location.pathname += "/" + (prefix ? prefix + "/" : "") + page;
     }
 }
 
 function hasPage() {
-    return new RegExp("/[0-9]+").test(window.location.pathname);
+    return new RegExp("\/[0-9]+\/*").test(window.location.pathname);
 }
 
-function replacePage(page) {
-    window.location.pathname = window.location.pathname.replace(new RegExp("/[0-9]+"), "/" + page);
+function replacePage(page, prefix) {
+    window.location.pathname = window.location.pathname.replace(new RegExp(("\/" + (prefix ? prefix : "")) + "\/[0-9]+\/*"), "/" + (prefix ? prefix + "/" : "") + page);
 }
 
 function checkRegisterForm() {
@@ -625,7 +625,8 @@ function checkRegisterForm() {
     $.post( "/register", {
         username: $( "#username" ).val(),
         email: $( "#email" ).val(),
-        password1: pass,
+        password: $( "#password1" ).val(),
+        password1: $( "#password2" ).val(),
         first: $( "#first" ).val(),
         last: $( "#last" ).val(),
         address: $( "#address" ).val(),

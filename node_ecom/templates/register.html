@@ -51,14 +51,15 @@
                                         </div>
                                         <div class="col-md-6">
                                             <label>Country</label>
-                                            <select class="form-control" name="country" id="country" required>
+                                            <select class="form-control" name="country" id="country"
+                                                onmousedown="addCountries();" required>
                                                 <option value="" selected disabled>Select country</option>
                                             </select>
                                         </div>
                                         <div class="col-md-6">
                                             <label>Gender</label>
                                             <select class="form-control" name="gender" id="gender" required>
-                                                <option value="Select gebder" selected disabled></option>
+                                                <option value="Select gebder" selected disabled>Select gender</option>
                                                 <option value="Male">Male</option>
                                                 <option value="Female">Female</option>
                                             </select>
@@ -83,8 +84,13 @@
     </div>
 </div>
 <script>
-    (async () => {
+    async function addCountries()
+    {
         var select = document.getElementById("country");
+
+        if (select.getElementsByTagName("option").length > 1)
+            return;
+        
         var options = await getCountries();
 
         for(var i = 0; i < options.length; i++) {
@@ -94,6 +100,8 @@
             el.value = opt;
             select.appendChild(el);
         }
-    })();
+        
+        select.getElementsByTagName("option").length > 1;
+    }
 </script>
 <!-- Login End -->
