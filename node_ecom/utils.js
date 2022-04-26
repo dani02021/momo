@@ -198,7 +198,7 @@ async function getOrderAsTableHTML(cart, table) {
                     html += `<td style="text-align: right; border: 1px solid black">$${product.discountPrice}</td>\n`;
                     break;
                 case "quantity":
-                    html += `<td style="text-align: right; border: 1px solid black">$${product.quantity}</td>\n`;
+                    html += `<td style="text-align: right; border: 1px solid black">${orderitem.quantity}</td>\n`;
                     break;
                 case "subtotal":
                     html += `<td style="text-align: right; border: 1px solid black">$${total.toFixed(2)}</td>\n`;
@@ -560,16 +560,22 @@ async function validateStatus(ctx, orderId, responce) {
         }
 
         // Order payed
-        let emailtemplate = await Settings.findOne({where: { type: "email_payment" }});
+        let paymentSeq = await Settings.findAll({where: { type: "email_payment" }});
 
-        if (!emailtemplate)
-            emailtemplate = DEFAULT_PAYMENT_EMAIL_TEMPLATE;
+        if (!paymentSeq)
+        paymentSeq = DEFAULT_PAYMENT_EMAIL_TEMPLATE;
         
-        sendEmail(emailtemplate.email_payment_sender, user.dataValues.email,
-            parseEmailPlaceholders(emailtemplate.email_payment_subject, user, cart), null,
-            parseEmailPlaceholders(emailtemplate.email_payment_upper, user, cart) +
-            (await utilsEcom.getOrderAsTableHTML(cart, emailtemplate.email_payment_table)) +
-            parseEmailPlaceholders(emailtemplate.email_payment_lower, user, cart));
+        let payment = {};
+
+        for (i = 0; i < paymentSeq.length; i++) {
+            payment[paymentSeq[i].key] = paymentSeq[i].value
+        }
+        
+        sendEmail(payment.email_payment_sender, user.dataValues.email,
+            parseEmailPlaceholders(payment.email_payment_subject, user, cart), null,
+            parseEmailPlaceholders(payment.email_payment_upper, user, cart) +
+            (await getOrderAsTableHTML(cart, payment.email_payment_table)) +
+            parseEmailPlaceholders(payment.email_payment_lower, user, cart));
 
         await cart.update({ status: 1, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal() });
 

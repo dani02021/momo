@@ -41,8 +41,9 @@
                         <h1>Cart Total</h1>
                         <% for(i=0; i < items.length; i++) { %>
                             <p>
-                                <%= products[i].name %><span>
-                                        $<%= products[i].discountPrice %>
+                                <%= products[i].name %>     x<%= items[i].quantity %>
+                                <span>
+                                        $<%= totals[i] %>
                                     </span>
                             </p>
                             <% } %>

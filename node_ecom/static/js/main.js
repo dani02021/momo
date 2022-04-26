@@ -629,7 +629,9 @@ function checkRegisterForm() {
         first: $( "#first" ).val(),
         last: $( "#last" ).val(),
         address: $( "#address" ).val(),
-        country: $( "#country" ).val()
+        country: $( "#country" ).val(),
+        gender: $( "#gender" ).val(),
+        birthday: $( "#birthday" ).val(),
     }, function( data ) {
         if(data.ok)
             window.location.replace("/");
@@ -767,7 +769,15 @@ async function getCountries()
         return DEFAULT_COUNTRY_LIST;
     }
 
-    let data = responce.json();
+    let data = await responce.json();
+    let countries = [];
 
-    return data;
+    for (country in data) 
+    {
+        countries.push(data[country].name.common);
+    }
+
+    countries.sort();
+
+    return countries;
 }

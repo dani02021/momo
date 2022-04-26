@@ -923,8 +923,7 @@ router.post("/register", async ctx => {
     // Age between 18 - 120
     let age = utilsEcom.getAge(ctx.request.fields.birthday);
 
-    if (age < 18) 
-    {
+    if (age < 18) {
       ctx.body = {
         message: 'You have to be at least 18 years old!'
       };
@@ -932,55 +931,70 @@ router.post("/register", async ctx => {
       return;
     }
 
-    if (age > 120) 
-    {
+    if (age > 120) {
       ctx.body = {
         message: 'Invalid age!'
       };
 
       return;
     }
-    // Send email
-    let token = utilsEcom.generateEmailVerfToken();
 
-    try {
-      await User.create({
-        username: ctx.request.fields.username,
-        email: ctx.request.fields.email,
-        password: ctx.request.fields.password1,
-        firstName: ctx.request.fields.first,
-        lastName: ctx.request.fields.last,
-        address: ctx.request.fields.address,
-        country: ctx.request.fields.country,
-        gender: ctx.request.fields.gender,
-        birthday: ctx.request.fields.birthday,
-        verificationToken: token,
-      });
-    } catch (e) {
-      if (e instanceof ValidationError) {
-        // ctx.redirect('/register');
-        // ctx.session.messages = { 'validationError': e.message };
+    console.log(ctx.request.fields.gender);
+    if (!ctx.request.fields.gender) {
+      ctx.body = {
+        message: 'Invalid gender!'
+      };
+
+      return;
+    }
+
+  // Send email
+  let token = utilsEcom.generateEmailVerfToken();
+
+  try {
+    await User.create({
+      username: ctx.request.fields.username,
+      email: ctx.request.fields.email,
+      password: ctx.request.fields.password1,
+      firstName: ctx.request.fields.first,
+      lastName: ctx.request.fields.last,
+      address: ctx.request.fields.address,
+      country: ctx.request.fields.country,
+      gender: ctx.request.fields.gender,
+      birthday: ctx.request.fields.birthday,
+      verificationToken: token,
+    });
+  } catch (e) {
+    if (e instanceof ValidationError) {
+      // ctx.redirect('/register');
+      // ctx.session.messages = { 'validationError': e.message };
+      if (e.errors.length != 0) {
+        ctx.body = {
+          message: e.errors[0].message
+        };
+      } else {
         ctx.body = {
           message: e.message
         };
-        return;
       }
+      return;
     }
-
-    let msg = `Here is your link: https://` + utilsEcom.getHost() + `/verify_account/${token}`
-
-    utilsEcom.sendEmail(ctx.request.fields.email, `Email Verification NodeJS`, msg);
-
-    let message = { 'registerSuccess': 'Please validate your e-mail!' };
-    ctx.session.messages = message;
-
-    ctx.body = {
-      ok: "redirect"
-    };
-    return;
-
-    // ctx.redirect('/');
   }
+
+  let msg = `Here is your link: https://` + utilsEcom.getHost() + `/verify_account/${token}`
+
+  utilsEcom.sendEmail(ctx.request.fields.email, `Email Verification NodeJS`, msg);
+
+  let message = { 'registerSuccess': 'Please validate your e-mail!' };
+  ctx.session.messages = message;
+
+  ctx.body = {
+    ok: "redirect"
+  };
+  return;
+
+  // ctx.redirect('/');
+}
 });
 
 router.get('/verify_account/:token', async ctx => {
@@ -2953,8 +2967,12 @@ router.get('/cart', async ctx => {
   for (i = 0; i < orderitems.length; i++) {
     totals.push((await (orderitems[i].getTotal())).toFixed(2));
   }
-  
-  let orderTotal = await order.getTotal();
+
+  let orderTotal = "0.00";
+
+  if (order)
+    orderTotal = await order.getTotal();
+
   let cartQty = await utilsEcom.getCartQuantity(ctx);
 
   await ctx.render('cart', {
@@ -3025,7 +3043,7 @@ router.get('/checkout', async ctx => {
     totals.push(await (orderitems[i].getTotal()));
   }
 
-  let orderTotal = (totals.reduce((partialSum, a) => partialSum + a, 0)).toFixed(2);
+  let orderTotal = await order.getTotal();
 
   let cartQty = await utilsEcom.getCartQuantity(ctx);
 
@@ -3069,7 +3087,6 @@ router.post('/captureOrder', async ctx => {
     let product = await orderitems[i].getProduct();
     if (product.quantity < orderitems[i].quantity) {
       ctx.body = { 'msg': 'There is not enough quantity of ' + product.name, 'status': 'error' };
-
       return;
     }
   }
@@ -3078,12 +3095,11 @@ router.post('/captureOrder', async ctx => {
   const transaction = await Transaction.create({ type: ctx.request.fields.type });
 
   // Order complete
-  let emailtemplate = await Settings.findAll({ where: { type: "email_order" } });
+  let orderSeq = await Settings.findAll({ where: { type: "email_order" } });
 
-  if (emailtemplate.length === 0)
-    emailtemplate = utilsEcom.DEFAULT_ORDER_EMAIL_TEMPLATE;
+  if (orderSeq.length === 0)
+  orderSeq = utilsEcom.DEFAULT_ORDER_EMAIL_TEMPLATE;
   
-  let orderSeq = await Settings.findAll({ where: { type: 'email_order' } });
   let orderEm = {};
 
   for (i = 0; i < orderSeq.length; i++) {
@@ -3678,15 +3694,15 @@ router.post('/admin/settings/other', async ctx => {
 
   if (ctx.request.fields.pagint && !Number.isNaN(ctx.request.fields.pagint))
     utilsEcom.PRODUCTS_PER_PAGE = parseInt(ctx.request.fields.pagint);
-  
+
   if (ctx.request.fields.expire && !Number.isNaN(ctx.request.fields.expire))
     utilsEcom.SESSION_BACK_OFFICE_EXPIRE = parseInt(ctx.request.fields.expire) * 60 * 1000;
 
   Settings.bulkCreate([
-      { type: 'settings', key: "pagint", value: utilsEcom.PRODUCTS_PER_PAGE },
-      { type: 'settings', key: "backoffice_expire", value: utilsEcom.SESSION_BACK_OFFICE_EXPIRE }
-    ], {
-      updateOnDuplicate: ["key"]
+    { type: 'settings', key: "pagint", value: utilsEcom.PRODUCTS_PER_PAGE },
+    { type: 'settings', key: "backoffice_expire", value: utilsEcom.SESSION_BACK_OFFICE_EXPIRE }
+  ], {
+    updateOnDuplicate: ["key"]
   });
 
   ctx.session.messages = { 'settingsOK': 'Settings changed!' };

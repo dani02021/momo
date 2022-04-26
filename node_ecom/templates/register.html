@@ -17,7 +17,7 @@
                                         <div class="col-md-6">
                                             <label>Username</label>
                                             <input class="form-control" type="text" placeholder="Username"
-                                                name="username" id="username" pattern="^[a-zA-Z0-9]$" minlength="4" maxlength="14" required>
+                                                name="username" id="username" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label>E-mail</label>
@@ -27,43 +27,45 @@
                                         <div class="col-md-6">
                                             <label>Password</label>
                                             <input class="form-control" type="password" placeholder="Password"
-                                                name="password1" id="password1" pattern="^(?=.*[0-9])(?=.*[a-zA-Z])(?!.*\s).{8,32}$" required>
+                                                name="password1" id="password1" maxlength="50" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label>Confirm Password</label>
                                             <input class="form-control" type="password" placeholder="Password"
-                                                name="password2" id="password2"  pattern="^(?=.*[0-9])(?=.*[a-zA-Z])(?!.*\s).{8,32}$" required>
+                                                name="password2" id="password2" maxlength="50" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label>First Name</label>
                                             <input class="form-control" type="text" placeholder="First Name"
-                                                name="first" id="first" pattern="^[a-zA-Zа-яА-Я]$" minlength="2" maxlength="50" required>
+                                                name="first" id="first" maxlength="50" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label>Last Name</label>
-                                            <input class="form-control" type="text" placeholder="Last Name" name="last"
-                                                id="last" pattern="^[a-zA-Zа-яА-Я]$" minlength="2" maxlength="50" required>
+                                            <input class="form-control" maxlength="50" type="text" placeholder="Last Name" name="last"
+                                                id="last" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label>Address</label>
                                             <input class="form-control" type="text" placeholder="Address" name="address"
-                                                id="address" required>
+                                                id="address" maxlength="200" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label>Country</label>
-                                            <input class="form-control" type="text" placeholder="Country" name="country"
-                                            id="country" required>
+                                            <select class="form-control" name="country" id="country" required>
+                                                <option value="" selected disabled>Select country</option>
+                                            </select>
                                         </div>
                                         <div class="col-md-6">
                                             <label>Gender</label>
-                                            <select name="gender" id="gender" required>
+                                            <select class="form-control" name="gender" id="gender" required>
+                                                <option value="Select gebder" selected disabled></option>
                                                 <option value="Male">Male</option>
                                                 <option value="Female">Female</option>
                                             </select>
                                         </div>
                                         <div class="col-md-6">
-                                            <label>Birthdate</label>
-                                            <input type="date" name="birthdate" id="birthdate" required>
+                                            <label>Birthday</label>
+                                            <input class="form-control" type="date" name="birthday" id="birthday" required>
                                         </div>
                                         <div class="col-md-12">
                                             <label class="form-label" id="errorMsg" style="color: red;"></label>
@@ -81,6 +83,17 @@
     </div>
 </div>
 <script>
-    getCountries();
+    (async () => {
+        var select = document.getElementById("country");
+        var options = await getCountries();
+
+        for(var i = 0; i < options.length; i++) {
+            var opt = options[i];
+            var el = document.createElement("option");
+            el.textContent = opt;
+            el.value = opt;
+            select.appendChild(el);
+        }
+    })();
 </script>
 <!-- Login End -->
