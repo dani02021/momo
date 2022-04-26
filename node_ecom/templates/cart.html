@@ -25,10 +25,10 @@
                                         </div>
                                     </td>
                                     <td class="price">
-                                    $<% if (products[i].discountPrice != products[i].price) { %>
-                                    <%= products[i].discountPrice %>
+                                    <% if (products[i].discountPrice != products[i].price) { %>
+                                    $<%= products[i].discountPrice %>
                                     <% } else { %>
-                                    <%= products[i].price %>
+                                    $<%= products[i].price %>
                                     <% } %>
                                     </td>
                                     <td>

@@ -2930,8 +2930,8 @@ router.get('/cart', async ctx => {
   for (i = 0; i < orderitems.length; i++) {
     totals.push((await (orderitems[i].getTotal())).toFixed(2));
   }
-
-  let orderTotal = (totals.reduce((partialSum, a) => parseInt(partialSum) + parseInt(a), 0)).toFixed(2);
+  
+  let orderTotal = await order.getTotal();
   let cartQty = await utilsEcom.getCartQuantity(ctx);
 
   await ctx.render('cart', {

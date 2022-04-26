@@ -457,12 +457,15 @@ Order.prototype.getItemsCount = function () {
 }*/
 
 Order.prototype.getTotal = async function () {
-  return parseFloat((await db.query(`SELECT price
-    FROM orders
-    WHERE orders.id = ${this.id}`, {
+  return parseFloat((await db.query(
+    `SELECT SUM(orderitems.quantity * products.price) FROM orders
+    INNER JOIN orderitems ON orders.id = orderitems."orderId"
+    INNER JOIN products ON orderitems."productId" = products.id
+    WHERE orders.id = ${this.id} AND
+    orderitems."deletedAt" is Null;`, {
     type: 'SELECT',
     plain: true,
-  })).price);
+  })).sum);
 }
 
 Order.prototype.orderedAtHTML = function() {

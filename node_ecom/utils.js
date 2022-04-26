@@ -760,12 +760,12 @@ async function saveReportPdf(reportRes, filters, time) {
         reportRes[i].dataValues.orders,
         reportRes[i].dataValues.products,
         reportRes[i].dataValues.total,
-            "USD"]);
+            " USD"]);
     }
 
     // Total
     let absTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.total), 0).toFixed(2);
-    rows.push(["", "", "", absTotal, "USD"]);
+    rows.push(["", "", "", absTotal, " USD"]);
 
     let subtitle = `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`
 
@@ -791,8 +791,7 @@ async function saveReportPdf(reportRes, filters, time) {
             align: "right"
         },
         {
-            label: "Currency",
-            align: "right"
+            label: " Currency"
         }],
         rows: rows
     };
