@@ -17,7 +17,7 @@
                                         <div class="col-md-6">
                                             <label>Username</label>
                                             <input class="form-control" type="text" placeholder="Username"
-                                                name="username" id="username" required>
+                                                name="username" id="username" pattern="^[a-zA-Z0-9]$" minlength="4" maxlength="14" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label>E-mail</label>
@@ -27,32 +27,32 @@
                                         <div class="col-md-6">
                                             <label>Password</label>
                                             <input class="form-control" type="password" placeholder="Password"
-                                                name="password1" id="password1" required>
+                                                name="password1" id="password1" pattern="^(?=.*[0-9])(?=.*[a-zA-Z])(?!.*\s).{8,32}$" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label>Confirm Password</label>
                                             <input class="form-control" type="password" placeholder="Password"
-                                                name="password2" id="password2" required>
+                                                name="password2" id="password2"  pattern="^(?=.*[0-9])(?=.*[a-zA-Z])(?!.*\s).{8,32}$" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label>First Name</label>
                                             <input class="form-control" type="text" placeholder="First Name"
-                                                name="first" id="first">
+                                                name="first" id="first" pattern="^[a-zA-Zа-яА-Я]$" minlength="2" maxlength="50" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label>Last Name</label>
                                             <input class="form-control" type="text" placeholder="Last Name" name="last"
-                                                id="last">
+                                                id="last" pattern="^[a-zA-Zа-яА-Я]$" minlength="2" maxlength="50" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label>Address</label>
                                             <input class="form-control" type="text" placeholder="Address" name="address"
-                                                id="address">
+                                                id="address" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label>Country</label>
                                             <input class="form-control" type="text" placeholder="Country" name="country"
-                                            id="country">
+                                            id="country" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label>Gender</label>
@@ -80,4 +80,7 @@
         </div>
     </div>
 </div>
+<script>
+    getCountries();
+</script>
 <!-- Login End -->

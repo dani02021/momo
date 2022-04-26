@@ -160,13 +160,13 @@ function getHost() {
     return (process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : '10.20.1.159');
 }
 
-async function getOrderAsTableHTML(cart, emailtemplate) {
+async function getOrderAsTableHTML(cart, table) {
     assert(cart);
-    assert(emailtemplate);
+    assert(table);
 
     let orderitems = await cart.getOrderitems();
     let absTotal = 0.0;
-    let template = emailtemplate.table.split(",");
+    let template = table.split(",");
 
     let html =
         `<table style="width: 100%; border: 1px solid black">
@@ -290,8 +290,12 @@ function parseEmailPlaceholders(text, user, order)
 }
 async function sendEmail(sender, email, subject, text, html) 
 {
+    assert(sender);
     assert(email);
     assert(subject);
+
+    console.log(sender);
+    console.log(email);
 
     var message = {
         from: sender,
@@ -556,16 +560,16 @@ async function validateStatus(ctx, orderId, responce) {
         }
 
         // Order payed
-        let emailtemplate = await Settings.findOne({where: { type: "order" }});
+        let emailtemplate = await Settings.findOne({where: { type: "email_payment" }});
 
         if (!emailtemplate)
             emailtemplate = DEFAULT_PAYMENT_EMAIL_TEMPLATE;
         
-        sendEmail(emailtemplate.sender, user.dataValues.email,
-            parseEmailPlaceholders(emailtemplate.subject, user, cart), null,
-            parseEmailPlaceholders(emailtemplate.upper, user, cart) +
-            (await utilsEcom.getOrderAsTableHTML(cart, emailtemplate)) +
-            parseEmailPlaceholders(emailtemplate.lower, user, cart));
+        sendEmail(emailtemplate.email_payment_sender, user.dataValues.email,
+            parseEmailPlaceholders(emailtemplate.email_payment_subject, user, cart), null,
+            parseEmailPlaceholders(emailtemplate.email_payment_upper, user, cart) +
+            (await utilsEcom.getOrderAsTableHTML(cart, emailtemplate.email_payment_table)) +
+            parseEmailPlaceholders(emailtemplate.email_payment_lower, user, cart));
 
         await cart.update({ status: 1, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal() });
 
@@ -971,6 +975,18 @@ function combineTwoObjects(obj1, obj2, parseNum) {
 
     return obj3;
 }
+
+function getAge(dateString) {
+    var today = new Date();
+    var birthDate = new Date(dateString);
+    var age = today.getFullYear() - birthDate.getFullYear();
+    var m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+}
+
 // Generate
 async function generateOrders(x = 100) {
     const products = await Product.findAll();
@@ -1205,5 +1221,6 @@ module.exports = {
     saveReportPdf,
     createTempFile,
     combineTwoObjects,
+    getAge,
     handleError,
 };
