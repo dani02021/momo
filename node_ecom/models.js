@@ -39,7 +39,7 @@ const Log = db.define("log", {
     allowNull: false
   },
   message: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(1024),
     allowNull: true
   },
   longMessage: {

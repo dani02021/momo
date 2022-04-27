@@ -29,8 +29,9 @@
             <div class="row" style="margin-bottom: 12px;">
               <div class="col-sm-3">
                 <select name="longmsg" id="longmsg" class="form-select">
-                  <option value="1" <% if (filters.longmsg) { %> selected <% } %>>Show Long Message</option>
-                  <option value="0" <% if (!filters.longmsg) { %> selected <% } %>>Hide Long Message</option>
+                  <option value="-1" selected disabled>Long message</option>
+                  <option value="1" <% console.log(filters.longmsg); if (filters.longmsg) { %> selected <% } %>>Show Long Message</option>
+                  <option value="0" <% if (filters.longmsg === false) { %> selected <% } %>>Hide Long Message</option>
                 </select>
               </div>
               <div class="col-sm-3">
@@ -60,8 +61,9 @@
                 <th scope="col" class="clickable">USER</th>
                 <th scope="col" class="clickable">STAFF/USER</th>
                 <th scope="col" class="clickable">MESSAGE</th>
+                <% if (filters.longmsg) { %>
                 <th scope="col" class="clickable">LONG MESSAGE</th>
-                <% if (filters.datetrunc) { %>
+                <% } if (filters.datetrunc !== '-1') { %>
                 <th scope="col" class="clickable">COUNT</th>
                 <% } %>
               </tr>
@@ -88,10 +90,7 @@
                 <td><%= report[i].dataValues.message %></td>
                 <% if (filters.longmsg) { %>
                 <td><%= report[i].dataValues.longMessage %></td>
-                <% } else { %>
-                <td></td>
-                <% } %>
-                <% if (filters.datetrunc) { %>
+                <% } if (filters.datetrunc !== '-1') { %>
                 <td><%= report[i].dataValues.count %></td>
                 <% } %>
               </tr>

@@ -946,6 +946,9 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
 function isSessionExpired(staff) {
     assert(staff);
 
+    if (SESSION_BACK_OFFICE_EXPIRE == 0)
+        return false;
+
     if (!staff.lastActivity)
         return false;
 

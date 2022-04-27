@@ -202,6 +202,9 @@ async function getMyAccount(ctx)
     pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE)),
     statuses: utilsEcom.STATUS_DISPLAY
   });
+
+  // Clear old messages
+  ctx.session.messages = null;
 }
 
 async function getAdminProducts(ctx) {
@@ -842,7 +845,7 @@ async function getAdminAudit(ctx) {
   if (ctx.query.longmsg == 1) {
     filters['longmsg'] = true;
     filtersToReturn['longmsg'] = true;
-  } else {
+  } else if (ctx.query.longmsg === '0') {
     filters['longmsg'] = false;
     filtersToReturn['longmsg'] = false;
   }
@@ -3645,23 +3648,34 @@ router.post('/admin/settings/email', async ctx => {
     return;
   }
 
-  if (sender == '' || subject == '') {
-    ctx.session.messages = { "tableError": type == "payment" ? "Payment template has empty sender or subject!" : "Order template has empty sender or subject!" };
+  if (subject == '') {
+    ctx.session.messages = { "tableError": type == "payment" ? "Payment template has empty subject!" : "Order template has empty subject!" };
     ctx.redirect("/admin/settings/email");
 
     return;
   }
 
+  if (!ctx.request.fields.borderweight || !ctx.request.fields.bordercolor) 
+  {
+    ctx.session.messages = { "invalidVal": type == "payment" ? "Payment template has invalid table settings!" : "Order template has invalid table settings!" };
+    ctx.redirect("/admin/settings/email");
+
+    return;
+  } 
+
+  /*
   if (!/^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/g.test(sender)) {
     ctx.session.messages = { "tableError": type == "payment" ? "Payment email is invalid!" : "Order email is invalid!" };
     ctx.redirect("/admin/settings/email");
 
     return;
   }
+  */
 
+  console.log(ctx.request.fields.borderweight);
   if (type == "payment")
     Settings.bulkCreate([
-      { type: 'email_payment', key: "email_payment_sender", value: sender },
+      { type: 'email_payment', key: "email_payment_sender", value: "danielgudjenev@gmail.com" }, // HARD-CODED, FOR NOW
       { type: 'email_payment', key: "email_payment_subject", value: subject },
       { type: 'email_payment', key: "email_payment_upper", value: ctx.request.fields.uppercontent },
       { type: 'email_payment', key: "email_payment_lower", value: ctx.request.fields.lowercontent },
@@ -3669,10 +3683,10 @@ router.post('/admin/settings/email', async ctx => {
       { type: 'email_payment', key: "email_payment_table_border_weight", value: ctx.request.fields.borderweight },
       { type: 'email_payment', key: "email_payment_table_border_color", value: ctx.request.fields.bordercolor },
     ], {
-      updateOnDuplicate: ["key"]
+      updateOnDuplicate: ["type", "key", "value"]
     });
   else Settings.bulkCreate([
-    { type: 'email_order', key: "email_order_sender", value: sender },
+    { type: 'email_order', key: "email_order_sender", value: "danielgudjenev@gmail.com" }, // HARD-CODED, FOR NOW
     { type: 'email_order', key: "email_order_subject", value: subject },
     { type: 'email_order', key: "email_order_upper", value: ctx.request.fields.uppercontent },
     { type: 'email_order', key: "email_order_lower", value: ctx.request.fields.lowercontent },
@@ -3680,7 +3694,7 @@ router.post('/admin/settings/email', async ctx => {
     { type: 'email_order', key: "email_order_table_border_weight", value: ctx.request.fields.borderweight },
       { type: 'email_order', key: "email_order_table_border_color", value: ctx.request.fields.bordercolor },
   ], {
-    updateOnDuplicate: ["key"]
+    updateOnDuplicate: ["type", "key", "value"]
   });
 
   ctx.session.messages = { "emailOk": type == "payment" ? "Payment template is set!" : "Order template is set!" };
@@ -3780,17 +3794,37 @@ router.post('/admin/settings/other', async ctx => {
     });
   }
 
-  if (ctx.request.fields.pagint && !Number.isNaN(ctx.request.fields.pagint))
-    utilsEcom.PRODUCTS_PER_PAGE = parseInt(ctx.request.fields.pagint);
+  // Validate values
+  if (parseInt(ctx.request.fields.pagint) < 1 ||
+      parseInt(ctx.request.fields.pagint) > 1000) 
+  {
+    ctx.session.messages = {"invalidVal": "Pagination number must be in range [1-1000]"};
 
-  if (ctx.request.fields.expire && !Number.isNaN(ctx.request.fields.expire))
-    utilsEcom.SESSION_BACK_OFFICE_EXPIRE = parseInt(ctx.request.fields.expire) * 60 * 1000;
+    ctx.redirect("/admin/settings/other");
+    return;
+  }
+
+  if (parseInt(ctx.request.fields.expire) < 0 ||
+      parseInt(ctx.request.fields.expire) > 1440) 
+  {
+    ctx.session.messages = {"invalidVal": "Back-office expire time must be between [0-1440] minutes"};
+
+    ctx.redirect("/admin/settings/other");
+    return;
+  }
+
+  if (parseInt(ctx.request.fields.pagint))
+      utilsEcom.PRODUCTS_PER_PAGE = parseInt(ctx.request.fields.pagint);
+
+  if (parseInt(ctx.request.fields.expire) ||
+      parseInt(ctx.request.fields.expire) === 0)
+      utilsEcom.SESSION_BACK_OFFICE_EXPIRE = parseInt(ctx.request.fields.expire) * 60 * 1000;
 
   Settings.bulkCreate([
     { type: 'settings', key: "pagint", value: utilsEcom.PRODUCTS_PER_PAGE },
     { type: 'settings', key: "backoffice_expire", value: utilsEcom.SESSION_BACK_OFFICE_EXPIRE }
   ], {
-    updateOnDuplicate: ["key"]
+    updateOnDuplicate: ["type", "key", "value"]
   });
 
   ctx.session.messages = { 'settingsOK': 'Settings changed!' };

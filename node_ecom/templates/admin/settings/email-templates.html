@@ -41,20 +41,20 @@
       <div class="row mt-3">
         <div class="col mx-auto d-flex justify-content-center">
           <% if (payment) { %>
-            <input name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;"
+            <input disabled name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;"
               value="<%= payment.email_payment_sender %>">
             <% } else { %>
-              <input name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;">
+              <input disabled name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;">
               <% } %>
         </div>
       </div>
       <div class="row mt-3">
         <div class="col mx-auto d-flex justify-content-center">
           <% if (payment) { %>
-            <input name="subject" placeholder="Subject" required maxlength="255" style="width: 30%;"
+            <input name="subject" placeholder="Subject" maxlength="255" style="width: 30%;"
               value="<%= payment.email_payment_subject %>">
             <% } else { %>
-              <input name="subject" placeholder="Subject" required maxlength="255" style="width: 30%;">
+              <input name="subject" placeholder="Subject" maxlength="255" style="width: 30%;">
               <% } %>
         </div>
       </div>
@@ -125,10 +125,10 @@
         <div class="col mx-auto">
           <div class="row justify-content-between">
             <div class="col d-flex justify-content-center">
-              <input type="text" value="<%= payment.email_payment_table_border_weight %>" name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip" title="Table border weight">
+              <input type="number" value="<%= payment.email_payment_table_border_weight %>" name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip" title="Table border weight">
             </div>
             <div class="col d-flex justify-content-center">
-              <input type="color" value="<%= payment.email_payment_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Color of table border">
+              <input type="color" value="<%= payment.email_payment_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Table border color">
             </div>
           </div>
         </div>
@@ -144,7 +144,12 @@
               <% } %>
         </div>
       </div>
-      <div class="row mt-5">
+      <div class="row mt-4">
+        <div class="col mx-auto d-flex justify-content-center">
+          <p style="color: #fff249; font-weight: bold;"></p>
+        </div>
+      </div>
+      <div class="row mt-2">
         <div class="col mx-auto d-flex justify-content-center">
           <button type="submit" class="btn btn-primary btn-block">Submit</button>
         </div>
@@ -164,7 +169,7 @@
       <div class="row mt-3">
         <div class="col mx-auto d-flex justify-content-center">
           <% if (order) { %>
-            <input name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;"
+            <input disabled name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;"
               value="<%= order.email_order_sender %>">
             <% } else { %>
               <input name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;">
@@ -174,10 +179,10 @@
       <div class="row mt-3">
         <div class="col mx-auto d-flex justify-content-center">
           <% if (order) { %>
-            <input name="subject" placeholder="Subject" required maxlength="255" style="width: 30%;"
+            <input name="subject" placeholder="Subject" maxlength="255" style="width: 30%;"
               value="<%= order.email_order_subject %>">
             <% } else { %>
-              <input name="subject" placeholder="Subject" required maxlength="255" style="width: 30%;">
+              <input name="subject" placeholder="Subject" maxlength="255" style="width: 30%;">
               <% } %>
         </div>
       </div>
@@ -248,10 +253,10 @@
         <div class="col mx-auto">
           <div class="row justify-content-between">
             <div class="col d-flex justify-content-center">
-              <input type="text" value="<%= order.email_order_table_border_weight %>" name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip" title="Table border weight">
+              <input type="number" value="<%= order.email_order_table_border_weight %>" name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip" title="Table border weight">
             </div>
             <div class="col d-flex justify-content-center">
-              <input type="color" value="<%= order.email_order_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Color of table border">
+              <input type="color" value="<%= order.email_order_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Table border color">
             </div>
           </div>
         </div>
@@ -267,7 +272,12 @@
               <% } %>
         </div>
       </div>
-      <div class="row mt-5">
+      <div class="row mt-4">
+        <div class="col mx-auto d-flex justify-content-center">
+          <p style="color: #fff249; font-weight: bold;"></p>
+        </div>
+      </div>
+      <div class="row mt-2">
         <div class="col mx-auto d-flex justify-content-center">
           <button type="submit" class="btn btn-primary btn-block">Submit</button>
         </div>

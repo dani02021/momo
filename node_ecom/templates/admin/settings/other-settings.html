@@ -3,9 +3,10 @@
     <form method="post">
       <div class="row">
         <div class="col mx-auto d-flex justify-content-center align-items-center">
-          <label style="color: white; margin-right: 10px;">Numer of elements per page:</label>
+          <label style="color: white; margin-right: 10px;">Number of elements per page:</label>
           <input type="number" name="pagint" data-bs-toggle="tooltip" data-bs-placement="top"
-            title="Number of elements per page" value="<%= settings.pagint %>">
+            title="Number of elements per page" value="<%= settings.pagint %>"
+            min="1" max="1000">
         </div>
         <div class="col mx-auto d-flex justify-content-end">
           <button class="btn btn-primary btn-block text-uppercase" type="submit">Change</button>
@@ -17,7 +18,8 @@
         <div class="col mx-auto d-flex justify-content-center align-items-center">
           <label style="color: white; margin-right: 10px;">Session expire time in minutes:</label>
           <input type="number" name="expire" data-bs-toggle="tooltip" data-bs-placement="top"
-            title="Number of elements per page" value="<%= settings.backoffice_expire %>">
+            title="Number of elements per page" value="<%= settings.backoffice_expire %>"
+            min="0" max="1440">
         </div>
         <div class="col mx-auto d-flex justify-content-end">
           <button class="btn btn-primary btn-block text-uppercase" type="submit">Change</button>
