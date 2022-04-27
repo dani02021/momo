@@ -71,6 +71,7 @@
                 <th scope="col" class="clickable">FULL NAME</th>
                 <th scope="col" class="clickable">COUNTRY</th>
                 <th scope="col" class="clickable">EMAIL</th>
+                <th scope="col" class="clickable">VERIFIED</th>
                 <th scope="col" class="clickable">ACTION</th>
               </tr>
             </thead>
@@ -84,6 +85,11 @@
                 <td><b><%= users[i].firstName + ' ' + users[i].lastName %></b></td>
                 <td><b><%= users[i].country %></b></td>
                 <td><b><%= users[i].email %></b></td>
+                <% if (users[i].emailConfirmed) { %>
+                <td><b>Yes</b></td>
+                <% } else { %>
+                <td><b>No</b></td>
+                <% } %>
                 <td><a href="/admin/accounts/edit/<%= users[i].id %>" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>

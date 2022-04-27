@@ -180,15 +180,17 @@ async function getMyAccount(ctx)
   let products = [];
 
   for (i = 0; i < result.rows.length; i++) {
-    let orderitemsF = await result.rows[i].getOrderitems();
-
-    for (z = 0; z < orderitemsF.length; z++) {
-      orderitems.push(orderitemsF[0]);
-    }
+    orderitems.push(await result.rows[i].getOrderitems());
   }
 
   for (i = 0; i < orderitems.length; i++) {
-    products.push(await (orderitems[i].getProduct()));
+    let productsArray = [];
+
+    for (z = 0; z < orderitems[i].length; z++) {
+      productsArray.push(await (orderitems[i][z].getProduct()));
+    }
+
+    products.push(productsArray);
   }
 
   await ctx.render('my-account', {
@@ -1046,8 +1048,8 @@ router.post("/register", async ctx => {
           message: e.message
         };
       }
-      return;
     }
+    return;
   }
 
   let msg = `Here is your link: https://` + utilsEcom.getHost() + `/verify_account/${token}`
@@ -3648,6 +3650,7 @@ router.post('/admin/settings/email', async ctx => {
     return;
   }
 
+  // Check for empty subject
   if (subject == '') {
     ctx.session.messages = { "tableError": type == "payment" ? "Payment template has empty subject!" : "Order template has empty subject!" };
     ctx.redirect("/admin/settings/email");
@@ -3655,13 +3658,33 @@ router.post('/admin/settings/email', async ctx => {
     return;
   }
 
+  // Check for empty border weight or color
   if (!ctx.request.fields.borderweight || !ctx.request.fields.bordercolor) 
   {
     ctx.session.messages = { "invalidVal": type == "payment" ? "Payment template has invalid table settings!" : "Order template has invalid table settings!" };
     ctx.redirect("/admin/settings/email");
 
     return;
-  } 
+  }
+
+  // Check for range in border weight
+  if (ctx.request.fields.borderweight < 1 ||
+      ctx.request.fields.borderweight > 10) 
+  {
+    ctx.session.messages = { "invalidVal": type == "payment" ? "Payment template has border weight out of range [1-10]!" : "Order template has border weight out of range [1-10]!" };
+    ctx.redirect("/admin/settings/email");
+
+    return;
+  }
+
+  // Check for valid color
+  if (!/^#([0-9A-F]{3}){1,2}$/i.test(ctx.request.fields.bordercolor)) 
+  {
+    ctx.session.messages = { "invalidVal": type == "payment" ? "Payment template has invalid border color!" : "Order template has invalid border color!" };
+    ctx.redirect("/admin/settings/email");
+
+    return;
+  }
 
   /*
   if (!/^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/g.test(sender)) {
@@ -3671,8 +3694,7 @@ router.post('/admin/settings/email', async ctx => {
     return;
   }
   */
-
-  console.log(ctx.request.fields.borderweight);
+  
   if (type == "payment")
     Settings.bulkCreate([
       { type: 'email_payment', key: "email_payment_sender", value: "danielgudjenev@gmail.com" }, // HARD-CODED, FOR NOW

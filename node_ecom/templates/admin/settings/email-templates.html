@@ -40,6 +40,11 @@
       </div>
       <div class="row mt-3">
         <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Sender:</label>
+        </div>
+      </div>
+      <div class="row mt-1">
+        <div class="col mx-auto d-flex justify-content-center">
           <% if (payment) { %>
             <input disabled name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;"
               value="<%= payment.email_payment_sender %>">
@@ -50,6 +55,11 @@
       </div>
       <div class="row mt-3">
         <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Subject:</label>
+        </div>
+      </div>
+      <div class="row mt-1">
+        <div class="col mx-auto d-flex justify-content-center">
           <% if (payment) { %>
             <input name="subject" placeholder="Subject" maxlength="255" style="width: 30%;"
               value="<%= payment.email_payment_subject %>">
@@ -59,6 +69,11 @@
         </div>
       </div>
       <div class="row mt-3">
+        <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Upper content:</label>
+        </div>
+      </div>
+      <div class="row mt-1">
         <div class="col mx-auto d-flex justify-content-center">
           <% if (payment) { %>
             <textarea name="uppercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
@@ -122,18 +137,27 @@
         </div>
       </div>
       <div id="table1settings" class="row mt-3">
-        <div class="col mx-auto">
-          <div class="row justify-content-between">
-            <div class="col d-flex justify-content-center">
-              <input type="number" value="<%= payment.email_payment_table_border_weight %>" name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip" title="Table border weight">
-            </div>
-            <div class="col d-flex justify-content-center">
-              <input type="color" value="<%= payment.email_payment_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Table border color">
-            </div>
-          </div>
+        <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Border weight:</label>
+        </div>
+        <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Border color:</label>
+        </div>
+      </div>
+      <div id="table1settings" class="row mt-1">
+        <div class="col d-flex justify-content-center">
+          <input type="number" value="<%= payment.email_payment_table_border_weight %>" name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip" title="Table border weight">
+        </div>
+        <div class="col d-flex justify-content-center">
+          <input type="color" value="<%= payment.email_payment_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Table border color">
         </div>
       </div>
       <div class="row mt-5">
+        <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Lower content:</label>
+        </div>
+      </div>
+      <div class="row mt-1">
         <div class="col mx-auto d-flex justify-content-center">
           <% if (payment) { %>
             <textarea name="lowercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
@@ -168,6 +192,11 @@
       </div>
       <div class="row mt-3">
         <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Sender:</label>
+        </div>
+      </div>
+      <div class="row mt-1">
+        <div class="col mx-auto d-flex justify-content-center">
           <% if (order) { %>
             <input disabled name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;"
               value="<%= order.email_order_sender %>">
@@ -178,6 +207,11 @@
       </div>
       <div class="row mt-3">
         <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Subject:</label>
+        </div>
+      </div>
+      <div class="row mt-1">
+        <div class="col mx-auto d-flex justify-content-center">
           <% if (order) { %>
             <input name="subject" placeholder="Subject" maxlength="255" style="width: 30%;"
               value="<%= order.email_order_subject %>">
@@ -187,6 +221,11 @@
         </div>
       </div>
       <div class="row mt-3">
+        <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Upper content:</label>
+        </div>
+      </div>
+      <div class="row mt-1">
         <div class="col mx-auto d-flex justify-content-center">
           <% if (order) { %>
             <textarea name="uppercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
@@ -250,18 +289,28 @@
         </div>
       </div>
       <div id="table1settings" class="row mt-3">
-        <div class="col mx-auto">
-          <div class="row justify-content-between">
-            <div class="col d-flex justify-content-center">
-              <input type="number" value="<%= order.email_order_table_border_weight %>" name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip" title="Table border weight">
-            </div>
-            <div class="col d-flex justify-content-center">
-              <input type="color" value="<%= order.email_order_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Table border color">
-            </div>
-          </div>
+        <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Border weight:</label>
+        </div>
+        <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Border color:</label>
+        </div>
+      </div>
+      <div id="table1settings" class="row mt-1">
+        <div class="col d-flex justify-content-center">
+          <input type="number" value="<%= payment.email_payment_table_border_weight %>"
+            min="1" max="10" name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip" title="Table border weight">
+        </div>
+        <div class="col d-flex justify-content-center">
+          <input type="color" value="<%= payment.email_payment_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Table border color">
         </div>
       </div>
       <div class="row mt-5">
+        <div class="col mx-auto d-flex justify-content-center">
+          <label style="color: white;">Lower content:</label>
+        </div>
+      </div>
+      <div class="row mt-1">
         <div class="col mx-auto d-flex justify-content-center">
           <% if (order) { %>
             <textarea name="lowercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"

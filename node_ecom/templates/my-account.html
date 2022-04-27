@@ -89,7 +89,7 @@
         <div class="modal-body">
             <p><b>Date:</b> <%= orders[i].orderedAt.toLocaleString("en-GB") %></p>
             <p><b>Status:</b> <%= statuses[orders[i].status] %></p>
-            <p><b>Price:</b> $<%= orders[i].price %></p>
+            <p><b>Total Price:</b> $<%= orders[i].price %></p>
             <p><b>Products:</b></p>
             <div class="table-responsive">
                 <table class="table table-bordered" style="width: 100%;">
@@ -99,13 +99,13 @@
                             <th>Quantity</th>
                         </tr>
                     </thead>
-                    <% for (z=0;z<orders.length;z++) { %>
+                    <% for (z=0;z<products[i].length;z++) { %>
                         <tr>
                             <td>
-                                <%= products[z].name%>
+                                <%= products[i][z].name %>
                             </td>
                             <td align="right">
-                                <%= orderitems[z].quantity %>
+                                <%= orderitems[i][z].quantity %>
                             </td>
                         </tr>
                     <% } %>
