@@ -1001,7 +1001,7 @@ router.post("/register", async ctx => {
   }
   else {
     // Password correct?
-    if (ctx.request.fields.password1 !== ctx.request.fields.password1) {
+    if (ctx.request.fields.password !== ctx.request.fields.password1) {
       ctx.body = {
         message: 'Passwords does not match!'
       };
@@ -1035,7 +1035,7 @@ router.post("/register", async ctx => {
 
     // Check table for invalid gender
     if (!ctx.request.fields.gender ||
-      !table.every(elem => validGenders.includes(elem))) {
+      !validGenders.includes(ctx.request.fields.gender)) {
       ctx.body = {
         message: 'Invalid gender!'
       };
