@@ -30,7 +30,7 @@
               <div class="col-sm-3">
                 <select name="longmsg" id="longmsg" class="form-select">
                   <option value="-1" selected disabled>Long message</option>
-                  <option value="1" <% console.log(filters.longmsg); if (filters.longmsg) { %> selected <% } %>>Show Long Message</option>
+                  <option value="1" <% if (filters.longmsg) { %> selected <% } %>>Show Long Message</option>
                   <option value="0" <% if (filters.longmsg === false) { %> selected <% } %>>Hide Long Message</option>
                 </select>
               </div>

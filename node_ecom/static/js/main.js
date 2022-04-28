@@ -606,11 +606,11 @@ function moveToPage(page, prefix) {
 }
 
 function hasPage() {
-    return new RegExp("\/[0-9]+\/*").test(window.location.pathname);
+    return new RegExp("/[0-9]+/*").test(window.location.pathname);
 }
 
 function replacePage(page, prefix) {
-    window.location.pathname = window.location.pathname.replace(new RegExp(("\/" + (prefix ? prefix : "")) + "\/[0-9]+\/*"), "/" + (prefix ? prefix + "/" : "") + page);
+    window.location.pathname = window.location.pathname.replace(new RegExp(((prefix ? prefix : "")) + "/[0-9]+/*"), (prefix ? prefix + "/" : "/") + page);
 }
 
 function checkRegisterForm() {

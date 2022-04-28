@@ -32,11 +32,7 @@ const { id, user } = require('rangen');
 const db = require("./db.js");
 
 const excelJS = require("exceljs");
-
-const SESSION_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000; // 2 weeks
-
-let PRODUCTS_PER_PAGE = 12;
-let SESSION_BACK_OFFICE_EXPIRE = 5 * 60 * 1000; // 5 minutes
+const configEcom = require("./config.js");
 
 const DEFAULT_EMAIL_SENDER = "danielgudjenev@gmail.com";
 
@@ -946,13 +942,13 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
 function isSessionExpired(staff) {
     assert(staff);
 
-    if (SESSION_BACK_OFFICE_EXPIRE == 0)
-        return false;
-
     if (!staff.lastActivity)
         return false;
+    
+    if (configEcom.SESSION_BACK_OFFICE_EXPIRE == 0)
+        return false;
 
-    return new Date() - new Date(staff.lastActivity) > SESSION_BACK_OFFICE_EXPIRE;
+    return new Date() - new Date(staff.lastActivity) > configEcom.SESSION_BACK_OFFICE_EXPIRE;
 }
 
 // Other
@@ -1206,9 +1202,6 @@ def validate_status(request, uid, order_id, order):
 */
 
 module.exports = {
-    PRODUCTS_PER_PAGE,
-    SESSION_MAX_AGE,
-    SESSION_BACK_OFFICE_EXPIRE,
     STATUS_DISPLAY,
     LOG_LEVELS,
     DEFAULT_EMAIL_SENDER,

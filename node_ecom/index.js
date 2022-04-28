@@ -9,6 +9,7 @@ const path = require('path');
 const serve = require('koa-static');
 const render = require("koa-ejs");
 const utilsEcom = require("./utils.js");
+const configEcom = require("./config.js");
 const session = require('koa-session');
 const assert = require('assert/strict');
 
@@ -109,7 +110,7 @@ async function getProducts(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.PRODUCTS_PER_PAGE;
   let offset = 0;
 
   if (ctx.params.page) {
@@ -128,17 +129,16 @@ async function getProducts(ctx) {
     products: await products,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear the messages
   ctx.session.messages = null;
 }
 
-async function getMyAccount(ctx) 
-{
+async function getMyAccount(ctx) {
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    ctx.session.messages = {"noAcc": "You are not logged in!!"};
+    ctx.session.messages = { "noAcc": "You are not logged in!!" };
     ctx.redirect("/");
     return;
   }
@@ -151,7 +151,7 @@ async function getMyAccount(ctx)
     page = parseInt(ctx.params.page)
   }
 
-  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.PRODUCTS_PER_PAGE;
   let offset = 0;
 
   if (ctx.params.page) {
@@ -201,7 +201,7 @@ async function getMyAccount(ctx)
     orderitems: orderitems,
     products: products,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE)),
+    pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.PRODUCTS_PER_PAGE)),
     statuses: utilsEcom.STATUS_DISPLAY
   });
 
@@ -274,7 +274,7 @@ async function getAdminProducts(ctx) {
   // Paginator
   let page = 1;
 
-  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.PRODUCTS_PER_PAGE;
   let offset = 0;
   if (ctx.params.page) {
     page = parseInt(ctx.params.page);
@@ -301,7 +301,7 @@ async function getAdminProducts(ctx) {
     categoriesNames: categoriesNames, // Find better way
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear old messages
@@ -367,7 +367,7 @@ async function getAdminAccounts(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.PRODUCTS_PER_PAGE;
   let offset = 0;
 
   if (ctx.params.page) {
@@ -404,7 +404,7 @@ async function getAdminAccounts(ctx) {
     users: result,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear the messages
@@ -464,7 +464,7 @@ async function getAdminStaffs(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.PRODUCTS_PER_PAGE;
   let offset = 0;
 
   if (ctx.params.page) {
@@ -499,7 +499,7 @@ async function getAdminStaffs(ctx) {
     staff: result,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear the messages
@@ -543,7 +543,7 @@ async function getAdminRoles(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.PRODUCTS_PER_PAGE;
   let offset = 0;
 
   if (ctx.params.page) {
@@ -564,7 +564,7 @@ async function getAdminRoles(ctx) {
     session: ctx.session,
     roles: result.rows,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(result.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear the messages
@@ -641,7 +641,7 @@ async function getAdminOrders(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.PRODUCTS_PER_PAGE;
   let offset = 0;
 
   if (ctx.params.page) {
@@ -678,7 +678,7 @@ async function getAdminOrders(ctx) {
     statuses: utilsEcom.STATUS_DISPLAY,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear the messages
@@ -745,7 +745,7 @@ async function getAdminReport(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.PRODUCTS_PER_PAGE;
   let offset = 0;
 
   if (ctx.params.page) {
@@ -782,7 +782,7 @@ async function getAdminReport(ctx) {
     report: await reportRes,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].count / utilsEcom.PRODUCTS_PER_PAGE)),
+    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].count / configEcom.PRODUCTS_PER_PAGE)),
   });
 }
 
@@ -882,7 +882,7 @@ async function getAdminAudit(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = utilsEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.PRODUCTS_PER_PAGE;
   let offset = 0;
 
   if (ctx.params.page) {
@@ -930,7 +930,7 @@ async function getAdminAudit(ctx) {
     filters: filtersToReturn,
     levels: utilsEcom.LOG_LEVELS,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count.count / utilsEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.PRODUCTS_PER_PAGE))
   });
 
   // Clear the messages
@@ -946,6 +946,19 @@ router.get("/products/:page", async ctx => getProducts(ctx));
 router.get("/my-account", async ctx => getMyAccount(ctx));
 
 router.get("/my-account/orders/:page", async ctx => getMyAccount(ctx));
+
+router.get("/register", async ctx => {
+  let cartQty = await utilsEcom.getCartQuantity(ctx);
+
+  await ctx.render('register', {
+    selected: 'register',
+    session: ctx.session,
+    cartQty: cartQty
+  });
+
+  // Clear the messages
+  ctx.session.messages = null;
+});
 
 router.post("/register", async ctx => {
   let unique = false;
@@ -1019,53 +1032,53 @@ router.post("/register", async ctx => {
       return;
     }
 
-  // Send email
-  let token = utilsEcom.generateEmailVerfToken();
+    // Send email
+    let token = utilsEcom.generateEmailVerfToken();
 
-  try {
-    await User.create({
-      username: ctx.request.fields.username,
-      email: ctx.request.fields.email,
-      password: ctx.request.fields.password1,
-      firstName: ctx.request.fields.first,
-      lastName: ctx.request.fields.last,
-      address: ctx.request.fields.address,
-      country: ctx.request.fields.country,
-      gender: ctx.request.fields.gender,
-      birthday: ctx.request.fields.birthday,
-      verificationToken: token,
-    });
-  } catch (e) {
-    if (e instanceof ValidationError) {
-      // ctx.redirect('/register');
-      // ctx.session.messages = { 'validationError': e.message };
-      if (e.errors.length != 0) {
-        ctx.body = {
-          message: e.errors[0].message
-        };
-      } else {
-        ctx.body = {
-          message: e.message
-        };
+    try {
+      await User.create({
+        username: ctx.request.fields.username,
+        email: ctx.request.fields.email,
+        password: ctx.request.fields.password1,
+        firstName: ctx.request.fields.first,
+        lastName: ctx.request.fields.last,
+        address: ctx.request.fields.address,
+        country: ctx.request.fields.country,
+        gender: ctx.request.fields.gender,
+        birthday: ctx.request.fields.birthday,
+        verificationToken: token,
+      });
+    } catch (e) {
+      if (e instanceof ValidationError) {
+        // ctx.redirect('/register');
+        // ctx.session.messages = { 'validationError': e.message };
+        if (e.errors.length != 0) {
+          ctx.body = {
+            message: e.errors[0].message
+          };
+        } else {
+          ctx.body = {
+            message: e.message
+          };
+        }
       }
+      return;
     }
+
+    let msg = `Here is your link: https://` + utilsEcom.getHost() + `/verify_account/${token}`
+
+    utilsEcom.sendEmail(utilsEcom.DEFAULT_EMAIL_SENDER, ctx.request.fields.email, `Email Verification NodeJS`, msg);
+
+    let message = { 'registerSuccess': 'Please validate your e-mail!' };
+    ctx.session.messages = message;
+
+    ctx.body = {
+      ok: "redirect"
+    };
     return;
+
+    // ctx.redirect('/');
   }
-
-  let msg = `Here is your link: https://` + utilsEcom.getHost() + `/verify_account/${token}`
-
-  utilsEcom.sendEmail(utilsEcom.DEFAULT_EMAIL_SENDER, ctx.request.fields.email, `Email Verification NodeJS`, msg);
-
-  let message = { 'registerSuccess': 'Please validate your e-mail!' };
-  ctx.session.messages = message;
-
-  ctx.body = {
-    ok: "redirect"
-  };
-  return;
-
-  // ctx.redirect('/');
-}
 });
 
 router.get('/verify_account/:token', async ctx => {
@@ -1152,10 +1165,38 @@ router.post("/login", async ctx => {
             paranoid: false,
             defaults: {}
           });
-          const orderitem = await OrderItem.create({ quantity: parseInt(cookieProducts[i]) });
-          await orderitem.setProduct(product);
-          await order.addOrderitem(orderitem);
-          await user.addOrder(order);
+
+          const [orderitem, createdorderitem] = await OrderItem.findOrCreate({
+            where: {
+              productId: product.id
+            },
+            include: [{
+              model: Order,
+              required: true,
+              where: {
+                id: order.id
+              }
+            }],
+            defaults: {
+              productId: product.id,
+              quantity: parseInt(cookieProducts[i]),
+            }
+          });
+
+          if (product.quantity < orderitem.quantity + parseInt(cookieProducts[i])) {
+            await orderitem.update({
+              quantity: product.quantity
+            });
+          } 
+          else 
+          {
+            if (!createdorderitem) 
+            {
+              await orderitem.update({
+                quantity: orderitem.quantity + parseInt(cookieProducts[i])
+              });
+            }
+          }
         }
       }
 
@@ -2865,7 +2906,7 @@ router.get('/addToCart', async ctx => {
     }
   });
 
-  if (!await utilsEcom.compareQtyAndProductQty(ctx.query.id, orderitem.quantity) == 1) {
+  if (await utilsEcom.compareQtyAndProductQty(ctx.query.id, parseInt(orderitem.quantity) + parseInt(ctx.query.quantity)) == 0) {
     if (ctx.query.cart) {
       ctx.status = 400;
     } else {
@@ -3169,8 +3210,8 @@ router.post('/captureOrder', async ctx => {
   let orderSeq = await Settings.findAll({ where: { type: "email_order" } });
 
   if (orderSeq.length === 0)
-  orderSeq = utilsEcom.DEFAULT_ORDER_EMAIL_TEMPLATE;
-  
+    orderSeq = utilsEcom.DEFAULT_ORDER_EMAIL_TEMPLATE;
+
   let orderEm = {};
 
   for (i = 0; i < orderSeq.length; i++) {
@@ -3181,7 +3222,7 @@ router.post('/captureOrder', async ctx => {
     utilsEcom.parseEmailPlaceholders(orderEm.email_order_subject, user, order), null,
     utilsEcom.parseEmailPlaceholders(orderEm.email_order_upper, user, order) +
     (await utilsEcom.getOrderAsTableHTML(order, orderEm.email_order_table,
-      {color: orderEm.email_order_table_border_color, borderweight: orderEm.email_order_table_border_weight})) +
+      { color: orderEm.email_order_table_border_color, borderweight: orderEm.email_order_table_border_weight })) +
     utilsEcom.parseEmailPlaceholders(orderEm.email_order_lower, user, order));
 
   if (ctx.request.fields.type == "paypal") {
@@ -3659,8 +3700,7 @@ router.post('/admin/settings/email', async ctx => {
   }
 
   // Check for empty border weight or color
-  if (!ctx.request.fields.borderweight || !ctx.request.fields.bordercolor) 
-  {
+  if (!ctx.request.fields.borderweight || !ctx.request.fields.bordercolor) {
     ctx.session.messages = { "invalidVal": type == "payment" ? "Payment template has invalid table settings!" : "Order template has invalid table settings!" };
     ctx.redirect("/admin/settings/email");
 
@@ -3669,8 +3709,7 @@ router.post('/admin/settings/email', async ctx => {
 
   // Check for range in border weight
   if (ctx.request.fields.borderweight < 1 ||
-      ctx.request.fields.borderweight > 10) 
-  {
+    ctx.request.fields.borderweight > 10) {
     ctx.session.messages = { "invalidVal": type == "payment" ? "Payment template has border weight out of range [1-10]!" : "Order template has border weight out of range [1-10]!" };
     ctx.redirect("/admin/settings/email");
 
@@ -3678,8 +3717,7 @@ router.post('/admin/settings/email', async ctx => {
   }
 
   // Check for valid color
-  if (!/^#([0-9A-F]{3}){1,2}$/i.test(ctx.request.fields.bordercolor)) 
-  {
+  if (!/^#([0-9A-F]{3}){1,2}$/i.test(ctx.request.fields.bordercolor)) {
     ctx.session.messages = { "invalidVal": type == "payment" ? "Payment template has invalid border color!" : "Order template has invalid border color!" };
     ctx.redirect("/admin/settings/email");
 
@@ -3694,7 +3732,7 @@ router.post('/admin/settings/email', async ctx => {
     return;
   }
   */
-  
+
   if (type == "payment")
     Settings.bulkCreate([
       { type: 'email_payment', key: "email_payment_sender", value: "danielgudjenev@gmail.com" }, // HARD-CODED, FOR NOW
@@ -3714,7 +3752,7 @@ router.post('/admin/settings/email', async ctx => {
     { type: 'email_order', key: "email_order_lower", value: ctx.request.fields.lowercontent },
     { type: 'email_order', key: "email_order_table", value: table.toString() },
     { type: 'email_order', key: "email_order_table_border_weight", value: ctx.request.fields.borderweight },
-      { type: 'email_order', key: "email_order_table_border_color", value: ctx.request.fields.bordercolor },
+    { type: 'email_order', key: "email_order_table_border_color", value: ctx.request.fields.bordercolor },
   ], {
     updateOnDuplicate: ["type", "key", "value"]
   });
@@ -3755,7 +3793,7 @@ router.get('/admin/settings/other', async ctx => {
     });
   }
 
-  let otherSettings = await Settings.findAll({where: { type: "settings"}});
+  let otherSettings = await Settings.findAll({ where: { type: "settings" } });
 
   let settings = {};
 
@@ -3764,14 +3802,11 @@ router.get('/admin/settings/other', async ctx => {
   }
 
   if (!settings["pagint"])
-    settings["pagint"] = utilsEcom.PRODUCTS_PER_PAGE;
-  
-  if (!settings["backoffice_expire"])
-    settings["backoffice_expire"] = parseInt(utilsEcom.SESSION_BACK_OFFICE_EXPIRE / (1000 * 60));
-  else 
-  {
+    settings["pagint"] = configEcom.PRODUCTS_PER_PAGE;
+
+  if (settings["backoffice_expire"] || settings["backoffice_expire"] === 0)
     settings["backoffice_expire"] = parseInt(parseInt(settings["backoffice_expire"]) / (1000 * 60));
-  }
+  else settings["backoffice_expire"] = parseInt(configEcom.SESSION_BACK_OFFICE_EXPIRE / (1000 * 60));
 
   await ctx.render('admin/settings/other-settings', {
     layout: 'admin/base',
@@ -3818,33 +3853,31 @@ router.post('/admin/settings/other', async ctx => {
 
   // Validate values
   if (parseInt(ctx.request.fields.pagint) < 1 ||
-      parseInt(ctx.request.fields.pagint) > 1000) 
-  {
-    ctx.session.messages = {"invalidVal": "Pagination number must be in range [1-1000]"};
+    parseInt(ctx.request.fields.pagint) > 1000) {
+    ctx.session.messages = { "invalidVal": "Pagination number must be in range [1-1000]" };
 
     ctx.redirect("/admin/settings/other");
     return;
   }
 
   if (parseInt(ctx.request.fields.expire) < 0 ||
-      parseInt(ctx.request.fields.expire) > 1440) 
-  {
-    ctx.session.messages = {"invalidVal": "Back-office expire time must be between [0-1440] minutes"};
+    parseInt(ctx.request.fields.expire) > 1440) {
+    ctx.session.messages = { "invalidVal": "Back-office expire time must be between [0-1440] minutes" };
 
     ctx.redirect("/admin/settings/other");
     return;
   }
 
   if (parseInt(ctx.request.fields.pagint))
-      utilsEcom.PRODUCTS_PER_PAGE = parseInt(ctx.request.fields.pagint);
+    configEcom.PRODUCTS_PER_PAGE = parseInt(ctx.request.fields.pagint);
 
   if (parseInt(ctx.request.fields.expire) ||
-      parseInt(ctx.request.fields.expire) === 0)
-      utilsEcom.SESSION_BACK_OFFICE_EXPIRE = parseInt(ctx.request.fields.expire) * 60 * 1000;
+    parseInt(ctx.request.fields.expire) === 0)
+    configEcom.SESSION_BACK_OFFICE_EXPIRE = parseInt(ctx.request.fields.expire) * 60 * 1000;
 
   Settings.bulkCreate([
-    { type: 'settings', key: "pagint", value: utilsEcom.PRODUCTS_PER_PAGE },
-    { type: 'settings', key: "backoffice_expire", value: utilsEcom.SESSION_BACK_OFFICE_EXPIRE }
+    { type: 'settings', key: "pagint", value: configEcom.PRODUCTS_PER_PAGE },
+    { type: 'settings', key: "backoffice_expire", value: configEcom.SESSION_BACK_OFFICE_EXPIRE }
   ], {
     updateOnDuplicate: ["type", "key", "value"]
   });
@@ -3862,7 +3895,7 @@ router.post('/admin/settings/other', async ctx => {
 app.use(session({
   store: utilsEcom.configPostgreSessions(),
   key: process.env.COOKIE_SECRET,
-  maxAge: utilsEcom.SESSION_MAX_AGE, // 2 weeks
+  maxAge: configEcom.SESSION_MAX_AGE,
   renew: true
 }, app));
 
