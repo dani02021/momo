@@ -40,11 +40,39 @@ const Log = db.define("log", {
   },
   message: {
     type: DataTypes.STRING(1024),
-    allowNull: true
+    allowNull: true,
+    validate: {
+      stringTruncate() {
+        Object.keys(this._changed).forEach((element) => {
+            const temp = this.__proto__.rawAttributes[element];
+            if (temp.type.__proto__.__proto__.key == "STRING") {
+              if (this[element]) {
+                if (this[element].length > temp.type._length) {
+                  this[element] = this[element].substring(0, temp.type._length);
+                }
+              }
+            }
+        });
+      }
+    }
   },
   longMessage: {
     type: DataTypes.STRING(3096),
-    allowNull: true
+    allowNull: true,
+    validate: {
+      stringTruncate() {
+        Object.keys(this._changed).forEach((element) => {
+            const temp = this.__proto__.rawAttributes[element];
+            if (temp.type.__proto__.__proto__.key == "STRING") {
+              if (this[element]) {
+                if (this[element].length > temp.type._length) {
+                  this[element] = this[element].substring(0, temp.type._length);
+                }
+              }
+            }
+        });
+      }
+    }
   },
   isStaff: {
     type: DataTypes.BOOLEAN,

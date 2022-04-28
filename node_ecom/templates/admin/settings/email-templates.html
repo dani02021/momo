@@ -146,7 +146,9 @@
       </div>
       <div id="table1settings" class="row mt-1">
         <div class="col d-flex justify-content-center">
-          <input type="number" value="<%= payment.email_payment_table_border_weight %>" name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip" title="Table border weight">
+          <input type="number" value="<%= payment.email_payment_table_border_weight %>"
+          min="1" max="10" name="borderweight" placeholder="Table border weight (in px)"
+          data-bs-toggle="tooltip" title="Table border weight">
         </div>
         <div class="col d-flex justify-content-center">
           <input type="color" value="<%= payment.email_payment_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Table border color">
@@ -298,11 +300,12 @@
       </div>
       <div id="table1settings" class="row mt-1">
         <div class="col d-flex justify-content-center">
-          <input type="number" value="<%= payment.email_payment_table_border_weight %>"
-            min="1" max="10" name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip" title="Table border weight">
+          <input type="number" value="<%= order.email_order_table_border_weight %>"
+            min="1" max="10" name="borderweight" placeholder="Table border weight (in px)"
+            data-bs-toggle="tooltip" title="Table border weight">
         </div>
         <div class="col d-flex justify-content-center">
-          <input type="color" value="<%= payment.email_payment_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Table border color">
+          <input type="color" value="<%= order.email_order_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Table border color">
         </div>
       </div>
       <div class="row mt-5">
