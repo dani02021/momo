@@ -3869,13 +3869,8 @@ router.post('/admin/settings/other', async ctx => {
   }
 
   if (parseInt(ctx.request.fields.pagint))
-<<<<<<< HEAD
-      utilsEcom.PRODUCTS_PER_PAGE = parseInt(ctx.request.fields.pagint);
-  
-=======
     configEcom.PRODUCTS_PER_PAGE = parseInt(ctx.request.fields.pagint);
 
->>>>>>> origin/dev
   if (parseInt(ctx.request.fields.expire) ||
     parseInt(ctx.request.fields.expire) === 0)
     configEcom.SESSION_BACK_OFFICE_EXPIRE = parseInt(ctx.request.fields.expire) * 60 * 1000;
