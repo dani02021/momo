@@ -12,9 +12,9 @@ const models = require("./models.js");
 const { Sequelize } = require('./db.js');
 const Op = Sequelize.Op;
 const Session = models.session();
-const Staff = models.staff();
 const Role = models.role();
 const User = models.user();
+const Staff = models.staff();
 const Order = models.order();
 const OrderItem = models.orderitem();
 const Product = models.product();
@@ -158,9 +158,17 @@ function getHost() {
     return (process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : '10.20.1.159');
 }
 
+/**
+ * 
+ * @param {import('sequelize/dist').Order} cart 
+ * @param {string} table 
+ * @param {object} options 
+ * @return HTML of table 
+ */
 async function getOrderAsTableHTML(cart, table, options) {
-    assert(cart);
-    assert(table);
+    assert(cart instanceof Order);
+    assert(typeof table === "string");
+    assert(typeof options === "object");
 
     let orderitems = await cart.getOrderitems();
     let absTotal = 0.0;
@@ -233,7 +241,6 @@ async function getOrderAsTableHTML(cart, table, options) {
 }
 
 function givePages(page, lastPage) {
-
     assert(typeof page === "number");
     assert(typeof lastPage === "number");
 
@@ -282,19 +289,28 @@ function generateEmailVerfToken() {
 // Email functions
 function parseEmailPlaceholders(text, user, order) 
 {
-    assert(user)
-    assert(order)
+    assert(typeof user === "string");
+    assert(typeof order === "string");
 
     text = text.replaceAll(/\$user/gi, user.username);
     text = text.replaceAll(/\$orderid/gi, order.id);
 
     return text;
 }
+
+/**
+ * 
+ * @param {string} sender 
+ * @param {string} email 
+ * @param {string} subject 
+ * @param {string} text 
+ * @param {string} html 
+ */
 async function sendEmail(sender, email, subject, text, html) 
 {
-    assert(sender);
-    assert(email);
-    assert(subject);
+    assert(typeof sender === "string");
+    assert(typeof email === "string");
+    assert(typeof subject === "string");
 
     var message = {
         from: sender,
@@ -371,10 +387,10 @@ async function isAuthenticatedStaff(ctx) {
  * 
  * @param {*} ctx 
  * @param {string} permission 
- * @returns true if the staff has the permission
+ * @return true if the staff has the permission
  */
 async function hasPermission(ctx, permission) {
-    assert(ctx);
+    assert(typeof permission === "string");
 
     const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername }, include: Role });
 
@@ -427,9 +443,16 @@ async function getCartQuantity(ctx) {
 }
 
 // PayPal
+
+/**
+ * 
+ * @param {string | number} orderId 
+ * @param {boolean} debug 
+ * @return PayPal responce object
+ */
 async function captureOrder(orderId, debug) {
     try {
-        assert(orderId);
+        assert(typeof orderId === "string" || typeof orderId === "number");
 
         const request = new paypal.orders.OrdersCaptureRequest(orderId);
         request.requestBody({});
@@ -473,10 +496,10 @@ async function captureOrder(orderId, debug) {
  * 
  * @param {number|string} productid 
  * @param {number|string} qty 
- * @returns 1 if product's qty is bigger, 2 if they are equal, 0 otherwise
+ * @return 1 if product's qty is bigger, 2 if they are equal, 0 otherwise
  */
 async function compareQtyAndProductQty(productid, qty) {
-    assert(productid);
+    assert(parseInt(productid) || parseInt(productid) == 0);
 
     let product = await Product.findOne({ where: { id: productid } });
 
@@ -494,8 +517,14 @@ async function compareQtyAndProductQty(productid, qty) {
     return comp;
 }
 
+/**
+ * 
+ * @param {import('sequelize/dist').Order} cart 
+ * @return True if product's quantity is bigger than cart's product's quantity
+ */
 async function hasEnoughQtyOfProductsOfOrder(cart) {
-    assert(cart);
+    assert(cart instanceof Order);
+
     let cartOrderItems = await cart.getOrderitems();
     for (i = 0; i < cartOrderItems.length; i++) {
         let cartProduct = await cartOrderItems[i].getProduct();
@@ -507,8 +536,13 @@ async function hasEnoughQtyOfProductsOfOrder(cart) {
     return true;
 }
 
+/**
+ * 
+ * @param {import('sequelize/dist').Order} cart 
+ */
 async function addProductQtyFromOrder(cart) {
-    assert(cart);
+    assert(cart instanceof Order);
+
     let cartOrderItems = await cart.getOrderitems();
     for (i = 0; i < cartOrderItems.length; i++) {
         let cartProduct = await cartOrderItems[i].getProduct();
@@ -517,8 +551,13 @@ async function addProductQtyFromOrder(cart) {
     }
 }
 
+/**
+ * 
+ * @param {Order} cart 
+ */
 async function removeProductQtyFromOrder(cart) {
-    assert(cart);
+    assert(cart instanceof Order);
+
     let cartOrderItems = await cart.getOrderitems();
     for (i = 0; i < cartOrderItems.length; i++) {
         let cartProduct = await cartOrderItems[i].getProduct();
@@ -538,8 +577,9 @@ async function removeProductQtyFromOrder(cart) {
 }
 
 async function validateStatus(ctx, orderId, responce) {
-    assert(ctx);
-    assert(responce);
+    assert(typeof responce === "object");
+    assert(parseInt(orderId) || parseInt(orderId) == 0)
+
     if (responce.result.status == "COMPLETED") {
         // Order is completed
         const user = await User.findOne({
@@ -735,17 +775,18 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
 }
 
 function escapeCSVParam(param) {
-    assert(param);
+    assert(typeof(param) === "string");
 
     let escapedParam = param.replace(/"/g, `""`);
 
     return `"${escapedParam}"`;
 }
 
-async function saveReportCsv(reportRes, filters, time) {
-    assert(reportRes);
-    assert(filters);
-    assert(time);
+async function saveReportCsv(reportRes, filters, time, currency) {
+    assert(reportRes instanceof Array);
+    assert(typeof filters === "object");
+    assert(typeof time === "string");
+    assert(typeof currency === "string");
 
     var dataToWrite = escapeCSVParam(`From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`);
 
@@ -754,20 +795,21 @@ async function saveReportCsv(reportRes, filters, time) {
     for (i = 0; i < reportRes.length; i++) {
         dataToWrite += escapeCSVParam(reportRes[i].dataValues.startDate.toISOString()) + "," +
             escapeCSVParam(reportRes[i].dataValues.orders) + "," + escapeCSVParam(reportRes[i].dataValues.products) + "," +
-            escapeCSVParam(reportRes[i].dataValues.total) + "," + "USD" + "\n";
+            escapeCSVParam(reportRes[i].dataValues.total) + "," + currency + "\n";
     }
 
     // Total
     let absTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.total), 0).toFixed(2);
-    dataToWrite += ",,," + escapeCSVParam(absTotal) + ",USD";
+    dataToWrite += ",,," + escapeCSVParam(absTotal) + ","+currency;
 
     return createTempFile('excelReport.csv', dataToWrite);
 }
 
-async function saveReportPdf(reportRes, filters, time) {
-    assert(reportRes);
-    assert(filters);
-    assert(time);
+async function saveReportPdf(reportRes, filters, time, currency) {
+    assert(reportRes instanceof Array);
+    assert(typeof filters === "object");
+    assert(typeof time === "string");
+    assert(typeof currency === "string");
 
     let doc = new PDFDocument({ margin: 30, size: 'A4' });
     let temp = await createTempFile('excelReport.pdf');
@@ -778,12 +820,12 @@ async function saveReportPdf(reportRes, filters, time) {
         reportRes[i].dataValues.orders,
         reportRes[i].dataValues.products,
         reportRes[i].dataValues.total,
-            " USD"]);
+            " " + currency]);
     }
 
     // Total
     let absTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.total), 0).toFixed(2);
-    rows.push(["", "", "", absTotal, " USD"]);
+    rows.push(["", "", "", absTotal, " " + currency]);
 
     let subtitle = `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`
 
@@ -822,10 +864,11 @@ async function saveReportPdf(reportRes, filters, time) {
     return temp;
 }
 
-async function saveReportExcel(reportRes, filters, time) {
-    assert(reportRes);
-    assert(filters);
-    assert(time);
+async function saveReportExcel(reportRes, filters, time, currency) {
+    assert(reportRes instanceof Array);
+    assert(typeof filters === "object");
+    assert(typeof time === "string");
+    assert(typeof currency === "string");
 
     const workbook = new excelJS.Workbook();
     const worksheet = workbook.addWorksheet("Report Orders");
@@ -848,7 +891,7 @@ async function saveReportExcel(reportRes, filters, time) {
             parseInt(report.dataValues.orders),
             parseInt(report.dataValues.products),
             parseFloat(report.dataValues.total),
-            "USD"];
+            currency];
 
         worksheet.addRow(data);
     });
@@ -863,7 +906,7 @@ async function saveReportExcel(reportRes, filters, time) {
                     parseFloat(partialSum) +
                     parseFloat(a.dataValues.total), 0)
                 .toFixed(2)),
-        "USD"]);
+        currency]);
 
     /*TITLE*/
     worksheet.mergeCells('A1', 'E1');
@@ -892,8 +935,10 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
     let text = `SELECT products.id, products.name, products.description, products.image,
     products.price, products."discountPrice", products."categoryId",
     products."createdAt", products."deletedAt", count
-    FROM products INNER JOIN (SELECT products.name, count(products.name) FROM
-    orderitems INNER JOIN products on products.id = orderitems."productId"
+    FROM products
+    INNER JOIN (SELECT products.name, count(products.name)
+    FROM orderitems
+    INNER JOIN products on products.id = orderitems."productId"
     GROUP BY products.name order by count desc)
     as foo on products.name = foo.name
     WHERE products."deletedAt" IS NULL`;
@@ -941,7 +986,7 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
 }
 
 function isSessionExpired(staff) {
-    assert(staff);
+    assert(staff instanceof Staff);
 
     if (!staff.lastActivity)
         return false;
@@ -967,8 +1012,8 @@ function isSessionExpired(staff) {
  * If parseNum is true, then all values are parsed as int
  */
 function combineTwoObjects(obj1, obj2, parseNum) {
-    assert(obj1);
-    assert(obj2);
+    assert(typeof obj1 === "object");
+    assert(typeof obj2 === "object");
 
     let obj3 = obj1;
 
@@ -993,7 +1038,23 @@ function combineTwoObjects(obj1, obj2, parseNum) {
     return obj3;
 }
 
+/**
+ * @async
+ * @return Currency, as saved in the DB or if not set, default hard-coded currency
+ */
+async function getCurrency() 
+{
+    let currency = await Settings.findOne({where: { key: "currency" }});
+
+    if (!currency)
+        return configEcom.CURRENCY;
+    
+    return currency;
+}
+
 function getAge(dateString) {
+    assert(typeof dateString === "string");
+
     var today = new Date();
     var birthDate = new Date(dateString);
     var age = today.getFullYear() - birthDate.getFullYear();
@@ -1142,8 +1203,7 @@ async function generateLogs(x = 100) {
  * @param {boolean} fileOnly 
  */
 async function handleError(err, ctx, fileOnly = false) {
-    assert(err);
-    assert(ctx);
+    assert(err instanceof Error);
 
     let username;
     let staffUsername;
@@ -1165,6 +1225,37 @@ async function handleError(err, ctx, fileOnly = false) {
     );
 
     console.log(err);
+}
+
+// Events
+
+/**
+ * 
+ * @param {import('koa').Context} ctx 
+ * @param {string} message 
+ * @param {object} logOptions 
+ */
+function onNoPermission(ctx, message, logOptions, redirectLoc = "/admin")
+{
+    ctx.session.messages = { 'noPermission': message };
+
+    if (logOptions)
+        utilsEcom.logger.log(logOptions.level,
+            logOptions.message,
+            logOptions.options);
+    
+    ctx.redirect(redirectLoc);
+}
+
+function onNotAuthenticatedStaff(ctx, redirectLoc = "/admin/login") 
+{
+    ctx.redirect(redirectLoc);
+}
+
+function onNotAuthenticatedUser(ctx, redirectLoc = "/") 
+{
+    ctx.session.messages = { "noPermission": "You are not logged in!" };
+    ctx.redirect(redirectLoc);
 }
 
 /*
@@ -1236,6 +1327,10 @@ module.exports = {
     saveReportPdf,
     createTempFile,
     combineTwoObjects,
+    getCurrency,
     getAge,
     handleError,
+    onNoPermission,
+    onNotAuthenticatedStaff,
+    onNotAuthenticatedUser
 };
