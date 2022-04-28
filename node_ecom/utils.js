@@ -497,6 +497,7 @@ async function compareQtyAndProductQty(productid, qty) {
     }
     return comp;
 }
+
 async function hasEnoughQtyOfProductsOfOrder(cart) {
     assert(cart);
     let cartOrderItems = await cart.getOrderitems();
