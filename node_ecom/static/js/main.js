@@ -518,19 +518,26 @@ function sendUserPass() {
     });
 }
 
+// Methods for /products page
+
 function addCategory(index) {
+    moveToPage(1);
+    
     var searchParams = new URLSearchParams(window.location.search);
     searchParams.set("cat", index);
     window.location.search = searchParams.toString();
 }
 
 function addMinMax(min, max) {
+    moveToPage(1);
+
     var searchParams = new URLSearchParams(window.location.search);
     searchParams.set("minval", min);
     searchParams.set("maxval", max);
     window.location.search = searchParams.toString();
 }
 
+// Not used
 function addSearch(ele) {
     if(event.key === 'Enter') {
         var searchParams = new URLSearchParams(window.location.search);
@@ -549,29 +556,33 @@ function addSearchA(ele) {
     }
 }
 
-function addSearchC(ele) {
-    var searchParams = new URLSearchParams(window.location.search);
-    searchParams.set("search", $( "#searchProduct" ).val());
-    window.location.search = searchParams.toString();
-}
-
 function addSortByParams(ele, text) {
+    moveToPage(1);
+
+    console.log(window.location.pathname);
+
     var searchParams = new URLSearchParams(window.location.search);
     searchParams.set("sort", text);
     window.location.search = searchParams.toString();
 }
 
 function changeMin() {
+    moveToPage(1);
+
     $( "#slider-range" ).slider( "values", 0, $( "#amount1" ).val());
     addMinMax($( "#amount1" ).val(), $( "#amount2" ).val());
 }
 
 function changeMax() {
+    moveToPage(1);
+
     $( "#slider-range" ).slider( "values", 1, $( "#amount2" ).val());
     addMinMax($( "#amount1" ).val(), $( "#amount2" ).val());
 }
 
 function clearFilters() {
+    moveToPage(1);
+
     window.location.search = '';
 }
 
@@ -595,6 +606,8 @@ function clearFilter(filter) {
     var searchParams = new URLSearchParams(window.location.search);
     searchParams.delete(filterToClear);
     window.location.search = searchParams.toString();
+
+    moveToPage(1);
 }
 
 function moveToPage(page, prefix) {
