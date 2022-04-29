@@ -70,9 +70,12 @@
                 <th scope="col" class="clickable">USERNAME</th>
                 <th scope="col" class="clickable">FULL NAME</th>
                 <th scope="col" class="clickable">COUNTRY</th>
+                <th scope="col" class="clickable">ADDRESS</th>
                 <th scope="col" class="clickable">EMAIL</th>
                 <th scope="col" class="clickable">VERIFIED</th>
-                <th scope="col" class="clickable">ACTION</th>
+                <th scope="col" class="clickable">GENDER</th>
+                <th scope="col" class="clickable">BIRTHDAY</th>
+                <th scope="col" class="clickable">LAST LOGIN</th>
               </tr>
             </thead>
             <tbody>
@@ -84,16 +87,20 @@
                 <td><b><%= users[i].username %></b></td>
                 <td><b><%= users[i].firstName + ' ' + users[i].lastName %></b></td>
                 <td><b><%= users[i].country %></b></td>
+                <td><b><%= users[i].address %></b></td>
                 <td><b><%= users[i].email %></b></td>
                 <% if (users[i].emailConfirmed) { %>
                 <td><b>Yes</b></td>
                 <% } else { %>
                 <td><b>No</b></td>
                 <% } %>
-                <td><a href="/admin/accounts/edit/<%= users[i].id %>" class="tm-order-edit-link">
-                    <i class="far fa-edit tm-order-edit-icon"></i>
-                  </a>
-                </td>
+                <td><b><%= users[i].gender %></b></td>
+                <td><b><%= users[i].birthday %></b></td>
+                <% if (users[i].lastLogin) { %>
+                <td><b><%= users[i].lastLogin.toLocaleString('en-GB') %></b></td>
+                <% } else { %>
+                <td><b></b></td>
+                <% } %>
               </tr>
               <% } %>
             </tbody>

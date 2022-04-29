@@ -138,7 +138,7 @@ async function getProducts(ctx) {
 
 async function getMyAccount(ctx) {
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    onNotAuthenticatedUser(ctx);
+    utilsEcom.onNotAuthenticatedUser(ctx);
     return;
   }
 
@@ -192,6 +192,8 @@ async function getMyAccount(ctx) {
     products.push(productsArray);
   }
 
+  let currency = await utilsEcom.getCurrency();
+
   await ctx.render('my-account', {
     selected: 'my-account',
     session: ctx.session,
@@ -199,6 +201,7 @@ async function getMyAccount(ctx) {
     orders: result.rows,
     orderitems: orderitems,
     products: products,
+    currency: currency,
     page: page,
     pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.PRODUCTS_PER_PAGE)),
     statuses: utilsEcom.STATUS_DISPLAY
@@ -1066,7 +1069,7 @@ router.post("/register", async ctx => {
     if (!ctx.request.fields.gender ||
       !validGenders.includes(ctx.request.fields.gender)) {
       ctx.body = {
-        message: 'Invalid gender!'
+        message: 'Gender not selected!'
       };
 
       return;
@@ -1105,7 +1108,7 @@ router.post("/register", async ctx => {
       return;
     }
 
-    let msg = `Here is your link: https://` + utilsEcom.getHost() + `/verify_account/${token}`
+    let msg = `Here is your link: ` + utilsEcom.getHost() + `/verify_account/${token}`
 
     utilsEcom.sendEmail(utilsEcom.DEFAULT_EMAIL_SENDER, ctx.request.fields.email, `Email Verification NodeJS`, msg);
 
@@ -1803,118 +1806,6 @@ router.post('/admin/accounts/delete', async ctx => {
   ctx.session.messages = { 'accountDeleted': 'Selected accounts have been deleted!' }
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} deleted account/s with id/s ${ctx.request.fields.id}`,
-    { user: ctx.session.dataValues.staffUsername, isStaff: true });
-
-  ctx.redirect('/admin/accounts');
-});
-
-router.get('/admin/accounts/edit/:id', async ctx => {
-  // Check for admin rights
-  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
-    utilsEcom.onNotAuthenticatedStaff(ctx);
-    return;
-  }
-
-  if (!await utilsEcom.hasPermission(ctx, 'accounts.update')) {
-    utilsEcom.onNoPermission(ctx,
-      "You don\'t have permission to update an account",
-      {
-        level: "info",
-        message: `Staff ${ctx.session.dataValues.staffUsername} tried to update account #${ctx.params.id} without rights`,
-        options:
-        {
-          user: ctx.session.dataValues.staffUsername,
-          isStaff: true
-        }
-      });
-    return;
-  }
-
-  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
-
-  // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
-
-    ctx.redirect('/admin/login');
-    return;
-  } else {
-    await staff.update({
-      lastActivity: Sequelize.fn("NOW")
-    });
-  }
-
-  const user = await User.findOne({ where: { id: ctx.params.id } });
-
-  await ctx.render('admin/edit-account', {
-    layout: 'admin/base',
-    session: ctx.session,
-    selected: 'accounts',
-    user: user
-  });
-});
-
-router.post('/admin/accounts/edit/:id', async ctx => {
-  // Check for admin rights
-  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
-    utilsEcom.onNotAuthenticatedStaff(ctx);
-    return;
-  }
-
-  if (!await utilsEcom.hasPermission(ctx, 'accounts.update')) {
-    utilsEcom.onNoPermission(ctx,
-      "You don\'t have permission to update an account",
-      {
-        level: "info",
-        message: `Staff ${ctx.session.dataValues.staffUsername} tried to update account #${ctx.params.id} without rights`,
-        options:
-        {
-          user: ctx.session.dataValues.staffUsername,
-          isStaff: true
-        }
-      });
-    return;
-  }
-
-  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
-
-  // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
-
-    ctx.redirect('/admin/login');
-    return;
-  } else {
-    await staff.update({
-      lastActivity: Sequelize.fn("NOW")
-    });
-  }
-
-  let updateParams = {
-    username: ctx.request.fields.name,
-    email: ctx.request.fields.email,
-    address: ctx.request.fields.address,
-    country: ctx.request.fields.country
-  }
-
-  if (ctx.request.fields.emailConfirmed == 'on') {
-    updateParams.emailConfirmed = true;
-  } else {
-    updateParams.emailConfirmed = false;
-  }
-
-  await User.update(updateParams,
-    {
-      where: {
-        id: ctx.params.id
-      }
-    });
-
-  ctx.session.messages = { 'accountEdited': `User with id ${ctx.params.id} was edited!` }
-  utilsEcom.logger.log('info',
-    `Staff ${ctx.session.dataValues.staffUsername} updated account #${ctx.params.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
   ctx.redirect('/admin/accounts');
@@ -3279,7 +3170,7 @@ router.get('/cart', async ctx => {
 router.get('/checkout', async ctx => {
   // Currently working only for registered users
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    onNotAuthenticatedUser(ctx);
+    utilsEcom.onNotAuthenticatedUser(ctx);
     return;
   }
 
@@ -3417,33 +3308,19 @@ router.post('/captureOrder', async ctx => {
   } else {
     await transaction.createCodtransaction({});
 
-    const user = await User.findOne({
-      where: {
-        username: ctx.session.dataValues.username
-      }
-    });
-
-    const cart = await Order.findOne({
-      where: {
-        status: 0,
-      },
-      include: [{
-        model: User,
-        required: true,
-        where: {
-          'username': ctx.session.dataValues.username
-        }
-      }],
-    });
-
     /*if (!cart) {
       ctx.redirect('/');
       return;
     }*/
 
-    await cart.update({ status: 5, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal() });
+    for(let i = 0; i<orderitems.length; i++) 
+    {
+      orderitems[i].update({price: (await orderitems[i].getProduct()).discountPrice});
+    }
 
-    await utilsEcom.removeProductQtyFromOrder(cart);
+    await order.update({ status: 5, orderedAt: Sequelize.fn('NOW') });
+
+    await utilsEcom.removeProductQtyFromOrder(order);
 
     ctx.body = { 'msg': 'Your order is completed!', 'status': 'ok' };
     // ctx.redirect('/');

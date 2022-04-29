@@ -31,6 +31,8 @@ const { id, user } = require('rangen');
 
 const db = require("./db.js");
 
+const stacktrace = require("stack-trace");
+
 const excelJS = require("exceljs");
 const configEcom = require("./config.js");
 
@@ -58,7 +60,7 @@ const STATUS_DISPLAY = [
     "Shipped",
     "Declined",
     "Completed",
-    "Not paid",
+    "Ordered",
     "Payer action needed"
 ]
 const LOG_LEVELS = {
@@ -155,7 +157,11 @@ const logger = winston.createLogger({
 });
 
 function getHost() {
-    return (process.env.HEROKU_DB_URI ? `telebidpro-nodejs-ecommerce.herokuapp.com` : '10.20.1.159');
+    if (process.env.HEROKU_DB_URI)
+        return `https://telebidpro-nodejs-ecommerce.herokuapp.com`;
+    if (process.env.ENV == "TEST")
+        return `http://10.20.1.159:3322`;
+    return `https://10.20.1.159`;
 }
 
 /**
@@ -1216,8 +1222,10 @@ async function handleError(err, ctx, fileOnly = false) {
         session = JSON.stringify(ctx.session.dataValues);
     }
 
+    let stackerr = stacktrace.parse(err);
+
     logger.error(
-        `User: ${username}, Staff User: ${staffUsername}, URL: ${ctx.url}, Error message: ${err.message}`,
+        `File: ${stackerr[0].fileName} on function ${stackerr[0].functionName} on line ${stackerr[0].lineNumber} User: ${username}, Staff User: ${staffUsername}, URL: ${ctx.url}, Error message: ${err.message}`,
         {
             longMessage: `Unhandled exception: ${err}, Session: ${session}`,
             fileOnly: fileOnly,

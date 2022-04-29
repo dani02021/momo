@@ -92,7 +92,7 @@ const User = db.define("user", {
     validate: {
       is: {
         args: /^([a-zA-Z0-9]{4,14})$/i,
-        msg: "Username must contains only alphabetical characters and numbers and should be of size 4-14"
+        msg: "Username must contains only alphabetical characters or numbers and should be of size 4-14"
       }
     }
   },
@@ -101,7 +101,10 @@ const User = db.define("user", {
     unique: true,
     allowNull: false,
     validate: {
-      isEmail: true
+      isEmail: {
+        args: true,
+        msg: "Email is not valid!"
+      }
     }
   },
   firstName: {
@@ -110,7 +113,8 @@ const User = db.define("user", {
     validate: {
       notEmpty: true,
       is: {
-        args: /^[a-zA-Zа-яА-Я]{2,50}$/i
+        args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
+        msg: "First name should contain only latin or cyrillic symbols with length 2-50"
       }
     }
   },
@@ -120,7 +124,8 @@ const User = db.define("user", {
     validate: {
       notEmpty: true,
       is: {
-        args: /^[a-zA-Zа-яА-Я]{2,50}$/i
+        args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
+        msg: "Last name should contain only latin or cyrillic symbols with length 2-50"
       }
     }
   },
@@ -142,14 +147,20 @@ const User = db.define("user", {
     type: DataTypes.STRING,
     allowNull: true,
     validate: {
-      notEmpty: true
+      notEmpty: {
+        args: true,
+        msg: "Address cannot be empty!" 
+      }
     }
   },
   country: {
     type: DataTypes.STRING,
     allowNull: true,
     validate: {
-      notEmpty: true
+      notEmpty: {
+        args: true,
+        msg: "Country cannot be empty!"
+      }
     }
   },
   gender: {
@@ -417,6 +428,11 @@ const OrderItem = db.define("orderitem", {
   quantity: {
     type: DataTypes.INTEGER,
     defaultValue: 1
+  },
+  price: {
+    type: DataTypes.DECIMAL(7, 2),
+    defaultValue: 0,
+    allowNull: false
   }
 },
   {
@@ -430,6 +446,9 @@ OrderItem.belongsTo(Product, {
 });
 
 OrderItem.prototype.getTotal = async function () {
+  if (this.price != 0)
+    return price;
+
   let product = await this.getProduct();
 
   assert(product);
@@ -450,10 +469,6 @@ const Order = db.define("order", {
   },
   status: {
     type: DataTypes.SMALLINT,
-    defaultValue: 0
-  },
-  price: {
-    type: DataTypes.DECIMAL(12, 2),
     defaultValue: 0
   }
 },
@@ -491,12 +506,29 @@ Order.prototype.getItemsCount = function () {
 }*/
 
 Order.prototype.getTotal = async function () {
+  // Big possibility for a bug
+  // If Order is not complete
+  // calculate by current product
+  // prices, if the order is ocmplete
+  // calculate by it's orderitems
+  // prices
+
+  if (this.status == 0)
+    return parseFloat((await db.query(
+      `SELECT SUM(orderitems.quantity * products."discountPrice") FROM orders
+      INNER JOIN orderitems ON orders.id = orderitems."orderId"
+      INNER JOIN products ON orderitems."productId" = products.id
+      WHERE orders.id = ${this.id} AND
+      orderitems."deletedAt" is NULL;`, {
+      type: 'SELECT',
+      plain: true,
+    })).sum);
+
   return parseFloat((await db.query(
-    `SELECT SUM(orderitems.quantity * products.price) FROM orders
+    `SELECT SUM(orderitems.quantity * orderitems.price) FROM orders
     INNER JOIN orderitems ON orders.id = orderitems."orderId"
-    INNER JOIN products ON orderitems."productId" = products.id
     WHERE orders.id = ${this.id} AND
-    orderitems."deletedAt" is Null;`, {
+    orderitems."deletedAt" is NULL;`, {
     type: 'SELECT',
     plain: true,
   })).sum);
