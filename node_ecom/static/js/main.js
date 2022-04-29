@@ -520,21 +520,28 @@ function sendUserPass() {
 
 // Methods for /products page
 
+function setHref(oritin, pathname, search) 
+{
+    window.location.href = oritin + pathname + "?" + search;
+}
+
 function addCategory(index) {
-    moveToPage(1);
+    let pathname = moveToPage(1, false, true);
     
     var searchParams = new URLSearchParams(window.location.search);
     searchParams.set("cat", index);
-    window.location.search = searchParams.toString();
+
+    setHref(window.location.origin, pathname, searchParams.toString());
 }
 
 function addMinMax(min, max) {
-    moveToPage(1);
+    let pathname = moveToPage(1, false, true);
 
     var searchParams = new URLSearchParams(window.location.search);
     searchParams.set("minval", min);
     searchParams.set("maxval", max);
-    window.location.search = searchParams.toString();
+
+    setHref(window.location.origin, pathname, searchParams.toString());
 }
 
 // Not used
@@ -557,13 +564,12 @@ function addSearchA(ele) {
 }
 
 function addSortByParams(ele, text) {
-    moveToPage(1);
-
-    console.log(window.location.pathname);
+    let pathname = moveToPage(1, false, true);
 
     var searchParams = new URLSearchParams(window.location.search);
     searchParams.set("sort", text);
-    window.location.search = searchParams.toString();
+
+    setHref(window.location.origin, pathname, searchParams.toString());
 }
 
 function changeMin() {
@@ -581,9 +587,9 @@ function changeMax() {
 }
 
 function clearFilters() {
-    moveToPage(1);
+    let pathname = moveToPage(1, false, true);
 
-    window.location.search = '';
+    setHref(window.location.origin, pathname, "");
 }
 
 function clearFilter(filter) {
@@ -605,16 +611,21 @@ function clearFilter(filter) {
     }
     var searchParams = new URLSearchParams(window.location.search);
     searchParams.delete(filterToClear);
-    window.location.search = searchParams.toString();
 
-    moveToPage(1);
+    let pathname = moveToPage(1, false, true);
+
+    setHref(window.location.origin, pathname, window.location.search);
 }
 
-function moveToPage(page, prefix) {
+function moveToPage(page, prefix, ret = false) {
     if(hasPage()) {
-        replacePage(page, prefix);
+        if (ret)
+            return replacePage(page, prefix, ret);
+        else replacePage(page, prefix, ret);
     } else {
-        window.location.pathname += "/" + (prefix ? prefix + "/" : "") + page;
+        if (ret)
+            return window.location.pathname + "/" + (prefix ? prefix + "/" : "") + page;
+        else window.location.pathname += "/" + (prefix ? prefix + "/" : "") + page;
     }
 }
 
@@ -622,8 +633,13 @@ function hasPage() {
     return new RegExp("/[0-9]+/*").test(window.location.pathname);
 }
 
-function replacePage(page, prefix) {
-    window.location.pathname = window.location.pathname.replace(new RegExp(((prefix ? prefix : "")) + "/[0-9]+/*"), (prefix ? prefix + "/" : "/") + page);
+function replacePage(page, prefix, ret) {
+    console.log(window.location.pathname.replace(new RegExp(((prefix ? prefix : "")) + "/[0-9]+/*"), (prefix ? prefix + "/" : "/") + page));
+    
+    if (ret)
+        return window.location.pathname.replace(new RegExp(((prefix ? prefix : "")) + "/[0-9]+/*"), (prefix ? prefix + "/" : "/") + page);
+    else window.location.pathname = window.location.pathname.replace(new RegExp(((prefix ? prefix : "")) + "/[0-9]+/*"), (prefix ? prefix + "/" : "/") + page);
+    console.log(window.location.href);
 }
 
 function checkRegisterForm() {
