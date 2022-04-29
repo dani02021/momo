@@ -1241,7 +1241,7 @@ function onNoPermission(ctx, message, logOptions, redirectLoc = "/admin")
     ctx.session.messages = { 'noPermission': message };
 
     if (logOptions)
-        utilsEcom.logger.log(logOptions.level,
+        logger.log(logOptions.level,
             logOptions.message,
             logOptions.options);
     
