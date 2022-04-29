@@ -2911,8 +2911,6 @@ router.get('/addToCart', async ctx => {
 
     ctx.session.messages = { 'productAdded': 'Product added to the cart!' };
     ctx.redirect('/products');
-    // onNoPermission();
-    ctx.session.messages = { 'noPermission': 'You are not registered!' };
     // ctx.redirect('/');
     return;
   }
@@ -2997,9 +2995,6 @@ router.get('/removeFromCart', async ctx => {
     ctx.cookies.set('products', JSON.stringify(products), { httpOnly: true, expires: new Date(2147483647e3) });
 
     ctx.session.messages = { 'cartRemoved': 'Removed selected items from the cart' };
-
-    // onNoPermission();
-    ctx.session.messages = { 'noPermission': 'You are not registered!' };
     ctx.redirect('/cart');
     return;
   }
@@ -3284,7 +3279,7 @@ router.post('/captureOrder', async ctx => {
       paypalFee: responce.result.purchase_units[0].payments.captures[0].seller_receivable_breakdown.paypal_fee.value,
     });
 
-    await utilsEcom.validateStatus(ctx, null, responce);
+    await utilsEcom.validateStatus(ctx, order.id, responce);
   } else {
     await transaction.createCodtransaction({});
 

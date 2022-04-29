@@ -289,8 +289,9 @@ function generateEmailVerfToken() {
 // Email functions
 function parseEmailPlaceholders(text, user, order) 
 {
-    assert(typeof user === "string");
-    assert(typeof order === "string");
+    assert(typeof text === "string");
+    assert(user instanceof User);
+    assert(order instanceof Order);
 
     text = text.replaceAll(/\$user/gi, user.username);
     text = text.replaceAll(/\$orderid/gi, order.id);
