@@ -6,12 +6,6 @@
   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 <% } %>
-<% if(i == 'validationError') { %>
-  <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <strong><%= session.dataValues.messages[i] %></strong>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
-<% } %>
 <% if(i == 'accountCreated') { %>
 <div class="alert alert-success alert-dismissible fade show" role="alert">
   <strong>Account is created!</strong>
@@ -285,7 +279,7 @@
     document.getElementById('add-order-items').add(option);
   }
 
-  function toAJAX(form) {
+  function toAJAX() {
     if (!checkPass())
       return false;
     
@@ -296,6 +290,8 @@
       }).done(function(data) {
         if (data.error)  {
           document.getElementById("err").innerHTML = data.error;
+        } else if (data.ok) {
+          window.location.reload();
         }
         // Optionally alert the user of success here...
       }).fail(function(data) {

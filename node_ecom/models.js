@@ -610,6 +610,7 @@ Order.prototype.getTotal = async function () {
   // calculate by it's orderitems
   // prices
 
+  // If not ordered
   if (this.status == 0)
     return parseFloat((await db.query(
       `SELECT SUM(orderitems.quantity * products."discountPrice") FROM orders

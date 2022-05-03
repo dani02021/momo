@@ -137,12 +137,11 @@ function getHost() {
  */
 async function getOrderAsTableHTML(cart, table, options) {
     assert(cart instanceof Order);
-    assert(typeof table === "string");
+    assert(table instanceof Array);
     assert(typeof options === "object");
 
     let orderitems = await cart.getOrderitems();
     let absTotal = 0.0;
-    let template = table.split(",");
 
     let html = `<table style="width: 100%; border: 1px solid black">`;
 
@@ -167,9 +166,9 @@ async function getOrderAsTableHTML(cart, table, options) {
         html +=
             `<tr>\n`;
 
-        for(z=0;z<template.length;z++) 
+        for(z=0;z<table.length;z++) 
         {
-            switch(template[z]) 
+            switch(table[z]) 
             {
                 case "name":
                     html += `<td style="border: 1px solid black">${product.name}</td>\n`;
@@ -192,9 +191,9 @@ async function getOrderAsTableHTML(cart, table, options) {
     html +=
         `<tr>\n`;
     
-    for(z=0;z<template.length;z++) 
+    for(z=0;z<table.length;z++) 
     {
-        if (template[z] == "subtotal") 
+        if (table[z] == "subtotal") 
         {
             html += `<td style="text-align: right; border: 1px solid black">$${absTotal.toFixed(2)}</td>\n`;
         } else 
@@ -582,7 +581,13 @@ async function validateStatus(ctx, orderId, responce) {
         sendEmail(configEcom.SETTINGS.email_payment_sender, user.dataValues.email,
             parseEmailPlaceholders(configEcom.SETTINGS.email_payment_subject, user, cart), null,
             parseEmailPlaceholders(configEcom.SETTINGS.email_payment_upper, user, cart) +
-            (await getOrderAsTableHTML(cart, configEcom.SETTINGS.email_payment_table,
+            (await getOrderAsTableHTML(cart,
+                [
+                    configEcom.SETTINGS.email_payment_table_h0,
+                    configEcom.SETTINGS.email_payment_table_h1,
+                    configEcom.SETTINGS.email_payment_table_h2,
+                    configEcom.SETTINGS.email_payment_table_h3
+                ],
                 {color: configEcom.SETTINGS.email_payment_table_border_color, borderweight: configEcom.SETTINGS.email_payment_table_border_weight})) +
             parseEmailPlaceholders(configEcom.SETTINGS.email_payment_lower, user, cart));
 

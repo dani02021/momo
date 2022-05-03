@@ -188,6 +188,13 @@
             </div>
         </div>
         <% } %>
+        <% if(i == 'validationError') { %>
+            <div class="alert alert-danger alert-dismissible fade show align-items-center" role="alert">
+                <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
+              <strong><%= session.dataValues.messages[i] %></strong>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          <% } %>
         <% } %>
         <% } %>
         <% } %>

@@ -15,7 +15,10 @@ const DEFAULT_PAYMENT_EMAIL_TEMPLATE = Object.freeze({
     email_payment_sender: 'danielgudjenev@gmail.com',
     email_payment_subject: 'Платена поръчка #$orderid',
     email_payment_upper: '$user, вашата поръчка #$orderid беше платена успешно',
-    email_payment_table: 'name,price,quantity,subtotal',
+    email_payment_table_h0: 'name',
+    email_payment_table_h1: 'price',
+    email_payment_table_h2: 'quantity',
+    email_payment_table_h3: 'subtotal',
     email_payment_lower: 'Благодаря за вашата поръчка'
 });
 
@@ -23,7 +26,10 @@ const DEFAULT_ORDER_EMAIL_TEMPLATE = Object.freeze({
     email_order_sender: 'danielgudjenev@gmail.com',
     email_order_subject: 'Регистрирана поръчка #$orderid',
     email_order_upper: '$user, вашата поръчка #$orderid беше регистрирана успешно',
-    email_order_table: 'name,price,quantity,subtotal',
+    email_order_table_h0: 'name',
+    email_order_table_h1: 'price',
+    email_order_table_h2: 'quantity',
+    email_order_table_h3: 'subtotal',
     email_order_lower: 'Благодаря за вашата поръчка'
 });
 
