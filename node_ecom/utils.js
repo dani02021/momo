@@ -36,42 +36,6 @@ const stacktrace = require("stack-trace");
 const excelJS = require("exceljs");
 const configEcom = require("./config.js");
 
-const DEFAULT_EMAIL_SENDER = "danielgudjenev@gmail.com";
-
-const DEFAULT_PAYMENT_EMAIL_TEMPLATE = Object.freeze({
-    email_payment_sender: 'danielgudjenev@gmail.com',
-    email_payment_subject: 'Платена поръчка #$orderid',
-    email_payment_upper: '$user, вашата поръчка #$orderid беше платена успешно',
-    email_payment_table: 'name,price,quantity,subtotal',
-    email_payment_lower: 'Благодаря за вашата поръчка'
-});
-
-const DEFAULT_ORDER_EMAIL_TEMPLATE = Object.freeze({
-    email_order_sender: 'danielgudjenev@gmail.com',
-    email_order_subject: 'Регистрирана поръчка #$orderid',
-    email_order_upper: '$user, вашата поръчка #$orderid беше регистрирана успешно',
-    email_order_table: 'name,price,quantity,subtotal',
-    email_order_lower: 'Благодаря за вашата поръчка'
-});
-
-const STATUS_DISPLAY = [
-    "Not Ordered",
-    "Paid",
-    "Shipped",
-    "Declined",
-    "Completed",
-    "Ordered",
-    "Payer action needed"
-]
-const LOG_LEVELS = {
-    alert: 0,
-    error: 1,
-    warn: 2,
-    info: 3,
-    verbose: 4,
-    debug: 5
-}
-
 // Exceptions
 class NotEnoughQuantityException extends Error {
     constructor(message) {
@@ -136,7 +100,7 @@ class SequelizeTransport extends WinstonTransport {
 };
 
 const logger = winston.createLogger({
-    levels: LOG_LEVELS,
+    levels: configEcom.LOG_LEVELS,
     transports: [
         new SequelizeTransport({
             level: "debug"
@@ -614,23 +578,13 @@ async function validateStatus(ctx, orderId, responce) {
         }
 
         // Order payed
-        let paymentSeq = await Settings.findAll({where: { type: "email_payment" }});
-
-        if (!paymentSeq)
-        paymentSeq = DEFAULT_PAYMENT_EMAIL_TEMPLATE;
         
-        let payment = {};
-
-        for (i = 0; i < paymentSeq.length; i++) {
-            payment[paymentSeq[i].key] = paymentSeq[i].value
-        }
-        
-        sendEmail(payment.email_payment_sender, user.dataValues.email,
-            parseEmailPlaceholders(payment.email_payment_subject, user, cart), null,
-            parseEmailPlaceholders(payment.email_payment_upper, user, cart) +
-            (await getOrderAsTableHTML(cart, payment.email_payment_table,
-                {color: payment.email_payment_table_border_color, borderweight: payment.email_payment_table_border_weight})) +
-            parseEmailPlaceholders(payment.email_payment_lower, user, cart));
+        sendEmail(configEcom.SETTINGS.email_payment_sender, user.dataValues.email,
+            parseEmailPlaceholders(configEcom.SETTINGS.email_payment_subject, user, cart), null,
+            parseEmailPlaceholders(configEcom.SETTINGS.email_payment_upper, user, cart) +
+            (await getOrderAsTableHTML(cart, configEcom.SETTINGS.email_payment_table,
+                {color: configEcom.SETTINGS.email_payment_table_border_color, borderweight: configEcom.SETTINGS.email_payment_table_border_weight})) +
+            parseEmailPlaceholders(configEcom.SETTINGS.email_payment_lower, user, cart));
 
         await cart.update({ status: 1, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal() });
 
@@ -992,7 +946,7 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
     ];
 }
 
-function isSessionExpired(staff) {
+function isSessionValid(staff) {
     assert(staff instanceof Staff);
 
     if (!staff.lastActivity)
@@ -1051,12 +1005,7 @@ function combineTwoObjects(obj1, obj2, parseNum) {
  */
 async function getCurrency() 
 {
-    let currency = await Settings.findOne({where: { key: "currency" }});
-
-    if (!currency)
-        return configEcom.CURRENCY;
-    
-    return currency;
+    return configEcom.SETTINGS["currency"];
 }
 
 function getAge(dateString) {
@@ -1256,14 +1205,43 @@ function onNoPermission(ctx, message, logOptions, redirectLoc = "/admin")
     ctx.redirect(redirectLoc);
 }
 
-function onNotAuthenticatedStaff(ctx, redirectLoc = "/admin/login") 
+/**
+ * 
+ * @param {import('koa').Context} ctx 
+ * @param {string} redirectLoc 
+ */
+function onNotAuthenticatedStaff(ctx, message = "You are not logged in as staff!", redirectLoc = "/admin/login") 
 {
+    assert(typeof redirectLoc === "string");
+    assert(typeof message === "string");
+
+    ctx.session.messages = { "noPermission": message };
     ctx.redirect(redirectLoc);
 }
 
-function onNotAuthenticatedUser(ctx, redirectLoc = "/") 
+/**
+ * 
+ * @param {import('koa').Context} ctx 
+ * @param {string} message
+ * @param {string} redirectLoc 
+ */
+function onNotAuthenticatedUser(ctx, message = "You are not logged in as user!", redirectLoc = "/") 
 {
-    ctx.session.messages = { "noPermission": "You are not logged in!" };
+    assert(typeof redirectLoc === "string");
+    assert(typeof message === "string");
+
+    ctx.session.messages = { "noPermission": message };
+    ctx.redirect(redirectLoc);
+}
+
+function onSessionExpired(ctx, message = "Session expired!", redirectLoc = "/admin/login") 
+{
+    assert(typeof redirectLoc === "string");
+    assert(typeof message === "string");
+
+    ctx.session.messages = { "sessionExpired": message };
+    ctx.session.staffUsername = null;
+
     ctx.redirect(redirectLoc);
 }
 
@@ -1303,11 +1281,6 @@ def validate_status(request, uid, order_id, order):
 */
 
 module.exports = {
-    STATUS_DISPLAY,
-    LOG_LEVELS,
-    DEFAULT_EMAIL_SENDER,
-    DEFAULT_PAYMENT_EMAIL_TEMPLATE,
-    DEFAULT_ORDER_EMAIL_TEMPLATE,
     logger,
     getHost,
     givePages,
@@ -1317,7 +1290,7 @@ module.exports = {
     parseEmailPlaceholders,
     sendEmail,
     getOrderAsTableHTML,
-    isSessionExpired,
+    isSessionValid,
     isAuthenticatedStaff,
     isAuthenticatedUser,
     hasPermission,
@@ -1341,5 +1314,6 @@ module.exports = {
     handleError,
     onNoPermission,
     onNotAuthenticatedStaff,
-    onNotAuthenticatedUser
+    onNotAuthenticatedUser,
+    onSessionExpired,
 };

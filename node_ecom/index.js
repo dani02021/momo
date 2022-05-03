@@ -110,7 +110,7 @@ async function getProducts(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = configEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.SETTINGS["elements_per_page"];
   let offset = 0;
 
   if (ctx.params.page) {
@@ -129,7 +129,7 @@ async function getProducts(ctx) {
     products: await products,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.SETTINGS["elements_per_page"]))
   });
 
   // Clear the messages
@@ -150,7 +150,7 @@ async function getMyAccount(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = configEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.SETTINGS["elements_per_page"];
   let offset = 0;
 
   if (ctx.params.page) {
@@ -203,8 +203,8 @@ async function getMyAccount(ctx) {
     products: products,
     currency: currency,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.PRODUCTS_PER_PAGE)),
-    statuses: utilsEcom.STATUS_DISPLAY
+    pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS["elements_per_page"])),
+    statuses: configEcom.STATUS_DISPLAY
   });
 
   // Clear old messages
@@ -236,11 +236,9 @@ async function getAdminProducts(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    await ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -282,7 +280,7 @@ async function getAdminProducts(ctx) {
   // Paginator
   let page = 1;
 
-  let limit = configEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.SETTINGS["elements_per_page"];
   let offset = 0;
   if (ctx.params.page) {
     page = parseInt(ctx.params.page);
@@ -309,7 +307,7 @@ async function getAdminProducts(ctx) {
     categoriesNames: categoriesNames, // Find better way
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.SETTINGS["elements_per_page"]))
   });
 
   // Clear old messages
@@ -341,11 +339,9 @@ async function getAdminAccounts(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    await ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -381,7 +377,7 @@ async function getAdminAccounts(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = configEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.SETTINGS["elements_per_page"];
   let offset = 0;
 
   if (ctx.params.page) {
@@ -418,7 +414,7 @@ async function getAdminAccounts(ctx) {
     users: result,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS["elements_per_page"]))
   });
 
   // Clear the messages
@@ -450,11 +446,9 @@ async function getAdminStaffs(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    await ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -484,7 +478,7 @@ async function getAdminStaffs(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = configEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.SETTINGS["elements_per_page"];
   let offset = 0;
 
   if (ctx.params.page) {
@@ -519,7 +513,7 @@ async function getAdminStaffs(ctx) {
     staff: result,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS["elements_per_page"]))
   });
 
   // Clear the messages
@@ -551,11 +545,9 @@ async function getAdminRoles(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    await ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -569,7 +561,7 @@ async function getAdminRoles(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = configEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.SETTINGS["elements_per_page"];
   let offset = 0;
 
   if (ctx.params.page) {
@@ -590,7 +582,7 @@ async function getAdminRoles(ctx) {
     session: ctx.session,
     roles: result.rows,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS["elements_per_page"]))
   });
 
   // Clear the messages
@@ -622,11 +614,9 @@ async function getAdminOrders(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    await ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -673,7 +663,7 @@ async function getAdminOrders(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = configEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.SETTINGS["elements_per_page"];
   let offset = 0;
 
   if (ctx.params.page) {
@@ -707,10 +697,10 @@ async function getAdminOrders(ctx) {
     session: ctx.session,
     selected: "orders",
     orders: result,
-    statuses: utilsEcom.STATUS_DISPLAY,
+    statuses: configEcom.STATUS_DISPLAY,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS["elements_per_page"]))
   });
 
   // Clear the messages
@@ -742,11 +732,9 @@ async function getAdminReport(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    await ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -782,7 +770,7 @@ async function getAdminReport(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = configEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.SETTINGS["elements_per_page"];
   let offset = 0;
 
   if (ctx.params.page) {
@@ -819,7 +807,7 @@ async function getAdminReport(ctx) {
     report: await reportRes,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].count / configEcom.PRODUCTS_PER_PAGE)),
+    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].count / configEcom.SETTINGS["elements_per_page"])),
   });
 }
 
@@ -848,11 +836,9 @@ async function getAdminAudit(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    await ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -925,7 +911,7 @@ async function getAdminAudit(ctx) {
     page = parseInt(ctx.params.page)
   }
 
-  let limit = configEcom.PRODUCTS_PER_PAGE;
+  let limit = configEcom.SETTINGS["elements_per_page"];
   let offset = 0;
 
   if (ctx.params.page) {
@@ -973,7 +959,7 @@ async function getAdminAudit(ctx) {
     filters: filtersToReturn,
     levels: utilsEcom.LOG_LEVELS,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.PRODUCTS_PER_PAGE))
+    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS["elements_per_page"]))
   });
 
   // Clear the messages
@@ -1297,11 +1283,9 @@ router.get('/admin', async ctx => {
     let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
     // Auto session expire
-    if (utilsEcom.isSessionExpired(staff)) {
-      ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-      ctx.session.staffUsername = null;
+    if (utilsEcom.isSessionValid(staff)) {
+      utilsEcom.onSessionExpired(ctx);
 
-      ctx.redirect('/admin/login');
       return;
     } else {
       await staff.update({
@@ -1444,11 +1428,9 @@ router.post('/admin/products/add', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -1555,11 +1537,9 @@ router.get('/admin/products/edit/:id', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -1614,11 +1594,9 @@ router.post('/admin/products/edit/:id', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -1706,12 +1684,9 @@ router.post('/admin/products/delete', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
+  if (utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -1783,11 +1758,9 @@ router.post('/admin/accounts/delete', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -1836,11 +1809,9 @@ router.post('/admin/accounts/add', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -1873,8 +1844,10 @@ router.post('/admin/accounts/add', async ctx => {
     });
   } catch (e) {
     if (e instanceof ValidationError) {
-      ctx.session.messages = { 'validationError': e.message };
-      ctx.redirect('/admin/accounts');
+      // ctx.session.messages = { 'validationError': e.message };
+      // ctx.redirect('/admin/accounts');
+
+      ctx.body = {"error": e.errors[0].message};
       return;
     } else {
       throw e;
@@ -1883,8 +1856,9 @@ router.post('/admin/accounts/add', async ctx => {
 
   if (!created) {
     if (!user.deletedAt) {
-      ctx.session.messages = { 'accountExist': `The user ${ctx.request.fields.username} already exists!` };
-      ctx.redirect('/admin/accounts');
+      // ctx.session.messages = { 'accountExist': `The user ${ctx.request.fields.username} already exists!` };
+      // ctx.redirect("/admin/accounts");
+      ctx.body = {"msg": `The user ${ctx.request.fields.username} already exists!`};
       return;
     } else {
       await user.restore();
@@ -1892,12 +1866,15 @@ router.post('/admin/accounts/add', async ctx => {
       await user.update(defaultParams);
     }
   }
-  ctx.session.messages = { 'accountCreated': `User with id ${user.id} has been created!` };
+  // ctx.session.messages = { 'accountCreated': `User with id ${user.id} has been created!` };
+  
+  ctx.body = {"msg": `User with id ${user.id} has been created!`};
+
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} created account #${user.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
-  ctx.redirect('/admin/accounts');
+  // ctx.redirect('/admin/accounts');
 });
 
 router.get('/admin/staff', async ctx => getAdminStaffs(ctx));
@@ -1928,11 +1905,9 @@ router.post('/admin/staff/add', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -1966,8 +1941,6 @@ router.post('/admin/staff/add', async ctx => {
       ctx.session.messages = { 'validationError': e.message };
       ctx.redirect('/admin/staff');
       return;
-    } else {
-      throw e;
     }
   }
 
@@ -1982,6 +1955,7 @@ router.post('/admin/staff/add', async ctx => {
       await user.update(defaultParams);
     }
   }
+
   ctx.session.messages = { 'staffCreated': `Staff with id ${user.id} has been created!` };
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} created staff #${user.id}`,
@@ -2015,11 +1989,9 @@ router.post('/admin/staff/delete', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -2068,11 +2040,9 @@ router.get('/admin/staff/edit/:id', async ctx => {
   let staffc = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staffc)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staffc)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staffc.update({
@@ -2119,11 +2089,9 @@ router.post('/admin/staff/edit/:id', async ctx => {
   let staffc = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staffc)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staffc)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staffc.update({
@@ -2183,11 +2151,9 @@ router.post('/admin/categories/add', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -2240,11 +2206,9 @@ router.post('/admin/categories/delete', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -2290,11 +2254,9 @@ router.post('/admin/roles/add', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -2302,12 +2264,18 @@ router.post('/admin/roles/add', async ctx => {
     });
   }
 
-  const [role, created] = await Role.findOrCreate({
-    where: {
-      name: ctx.request.fields.role,
-    },
-    include: Permission
-  });
+  try {
+    const [role, created] = await Role.findOrCreate({
+      where: {
+        name: ctx.request.fields.role,
+      },
+      include: Permission
+    });
+  } catch (e) {
+    if (e instanceof ValidationError) {
+
+    }
+  }
 
   if (ctx.request.fields.permissions instanceof Array) {
     for (permid in ctx.request.fields.permissions) {
@@ -2357,11 +2325,9 @@ router.post('/admin/roles/delete', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -2407,11 +2373,9 @@ router.get('/admin/roles/edit/:id', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -2459,11 +2423,9 @@ router.post('/admin/roles/edit/:id', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -2608,11 +2570,9 @@ router.post('/admin/orders/add', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -2689,11 +2649,9 @@ router.post('/admin/orders/delete', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -2750,11 +2708,9 @@ router.get('/admin/orders/edit/:id', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -2788,7 +2744,7 @@ router.get('/admin/orders/edit/:id', async ctx => {
     orderitems: orderitems,
     products: products,
     user: user,
-    statuses: utilsEcom.STATUS_DISPLAY
+    statuses: configEcom.STATUS_DISPLAY
   });
 
   // Clear the messages
@@ -2820,11 +2776,9 @@ router.post('/admin/orders/edit/:id', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -3272,23 +3226,12 @@ router.post('/captureOrder', async ctx => {
   const transaction = await Transaction.create({ type: ctx.request.fields.type });
 
   // Order complete
-  let orderSeq = await Settings.findAll({ where: { type: "email_order" } });
-
-  if (orderSeq.length === 0)
-    orderSeq = utilsEcom.DEFAULT_ORDER_EMAIL_TEMPLATE;
-
-  let orderEm = {};
-
-  for (i = 0; i < orderSeq.length; i++) {
-    orderEm[orderSeq[i].key] = orderSeq[i].value
-  }
-
-  utilsEcom.sendEmail(orderEm.email_order_sender, user.dataValues.email,
-    utilsEcom.parseEmailPlaceholders(orderEm.email_order_subject, user, order), null,
-    utilsEcom.parseEmailPlaceholders(orderEm.email_order_upper, user, order) +
-    (await utilsEcom.getOrderAsTableHTML(order, orderEm.email_order_table,
-      { color: orderEm.email_order_table_border_color, borderweight: orderEm.email_order_table_border_weight })) +
-    utilsEcom.parseEmailPlaceholders(orderEm.email_order_lower, user, order));
+  utilsEcom.sendEmail(configEcom.SETTINGS.email_order_sender, user.dataValues.email,
+    utilsEcom.parseEmailPlaceholders(configEcom.SETTINGS.email_order_subject, user, order), null,
+    utilsEcom.parseEmailPlaceholders(configEcom.SETTINGS.email_order_upper, user, order) +
+    (await utilsEcom.getOrderAsTableHTML(order, configEcom.SETTINGS.email_order_table,
+      { color: configEcom.SETTINGS.email_order_table_border_color, borderweight: configEcom.SETTINGS.email_order_table_border_weight })) +
+    utilsEcom.parseEmailPlaceholders(configEcom.SETTINGS.email_order_lower, user, order));
 
   if (ctx.request.fields.type == "paypal") {
     let responce = await utilsEcom.captureOrder(ctx.request.fields.orderID);
@@ -3313,9 +3256,8 @@ router.post('/captureOrder', async ctx => {
       return;
     }*/
 
-    for(let i = 0; i<orderitems.length; i++) 
-    {
-      orderitems[i].update({price: (await orderitems[i].getProduct()).discountPrice});
+    for (let i = 0; i < orderitems.length; i++) {
+      orderitems[i].update({ price: (await orderitems[i].getProduct()).discountPrice });
     }
 
     await order.update({ status: 5, orderedAt: Sequelize.fn('NOW') });
@@ -3357,11 +3299,9 @@ router.get('/admin/export/report/pdf', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -3458,11 +3398,9 @@ router.get('/admin/export/report/excel', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -3557,11 +3495,9 @@ router.get('/admin/export/report/csv', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -3659,11 +3595,9 @@ router.get('/admin/settings/email', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -3671,31 +3605,11 @@ router.get('/admin/settings/email', async ctx => {
     });
   }
 
-  let paymentSeq = await Settings.findAll({ where: { type: 'email_payment' } });
-  let orderSeq = await Settings.findAll({ where: { type: 'email_order' } });
-
-  let payment = {};
-  let order = {};
-
-  for (i = 0; i < paymentSeq.length; i++) {
-    payment[paymentSeq[i].key] = paymentSeq[i].value
-  }
-
-  for (i = 0; i < orderSeq.length; i++) {
-    order[orderSeq[i].key] = orderSeq[i].value
-  }
-
-  if (paymentSeq.length == 0)
-    payment = utilsEcom.DEFAULT_PAYMENT_EMAIL_TEMPLATE;
-  if (orderSeq.length == 0)
-    order = utilsEcom.DEFAULT_ORDER_EMAIL_TEMPLATE;
-
   await ctx.render('admin/settings/email-templates', {
     layout: 'admin/base',
     selected: 'settings',
     session: ctx.session,
-    payment: payment,
-    order: order,
+    settings: configEcom.SETTINGS
   });
 
   // Clear old messages
@@ -3727,11 +3641,9 @@ router.post('/admin/settings/email', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -3841,6 +3753,8 @@ router.post('/admin/settings/email', async ctx => {
     updateOnDuplicate: ["type", "key", "value"]
   });
 
+  configEcom.loadSettings();
+
   ctx.session.messages = { "emailOk": type == "payment" ? "Payment template is set!" : "Order template is set!" };
   ctx.redirect("/admin/settings/email");
 });
@@ -3870,11 +3784,9 @@ router.get('/admin/settings/other', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -3882,26 +3794,11 @@ router.get('/admin/settings/other', async ctx => {
     });
   }
 
-  let otherSettings = await Settings.findAll({ where: { type: "settings" } });
-
-  let settings = {};
-
-  for (i = 0; i < otherSettings.length; i++) {
-    settings[otherSettings[i].key] = otherSettings[i].value
-  }
-
-  if (!settings["pagint"])
-    settings["pagint"] = configEcom.PRODUCTS_PER_PAGE;
-
-  if (settings["backoffice_expire"] || settings["backoffice_expire"] === 0)
-    settings["backoffice_expire"] = parseInt(parseInt(settings["backoffice_expire"]) / (1000 * 60));
-  else settings["backoffice_expire"] = parseInt(configEcom.SESSION_BACK_OFFICE_EXPIRE / (1000 * 60));
-
   await ctx.render('admin/settings/other-settings', {
     layout: 'admin/base',
     selected: 'settings',
     session: ctx.session,
-    settings: settings,
+    settings: configEcom.SETTINGS,
   });
 
   // Clear old messages
@@ -3933,11 +3830,9 @@ router.post('/admin/settings/other', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionExpired(staff)) {
-    ctx.session.messages = { 'sessionExpired': 'Session expired!' };
-    ctx.session.staffUsername = null;
+  if (utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
 
-    ctx.redirect('/admin/login');
     return;
   } else {
     await staff.update({
@@ -3945,36 +3840,39 @@ router.post('/admin/settings/other', async ctx => {
     });
   }
 
-  // Validate values
-  if (parseInt(ctx.request.fields.pagint) < 1 ||
-    parseInt(ctx.request.fields.pagint) > 1000) {
-    ctx.session.messages = { "invalidVal": "Pagination number must be in range [1-1000]" };
+  if (ctx.request.fields.pagint) {
+    // Validate values
+    if (parseInt(ctx.request.fields.pagint) < 1 ||
+      parseInt(ctx.request.fields.pagint) > 1000) {
+      ctx.session.messages = { "invalidVal": "Pagination number must be in range [1-1000]" };
 
-    ctx.redirect("/admin/settings/other");
-    return;
+      ctx.redirect("/admin/settings/other");
+      return;
+    }
+
+    Settings.upsert({
+      type: "settings",
+      key: "elements_per_page",
+      value: parseInt(ctx.request.fields.pagint)
+    });
+  } else if (ctx.request.fields.expire) {
+    // Validate values
+    if (parseInt(ctx.request.fields.expire) < 0 ||
+      parseInt(ctx.request.fields.expire) > 1440) {
+      ctx.session.messages = { "invalidVal": "Back-office expire time must be between [0-1440] minutes" };
+
+      ctx.redirect("/admin/settings/other");
+      return;
+    }
+
+    Settings.upsert({
+      type: "settings",
+      key: "backoffice_expire",
+      value: parseInt(ctx.request.fields.expire)
+    });
   }
 
-  if (parseInt(ctx.request.fields.expire) < 0 ||
-    parseInt(ctx.request.fields.expire) > 1440) {
-    ctx.session.messages = { "invalidVal": "Back-office expire time must be between [0-1440] minutes" };
-
-    ctx.redirect("/admin/settings/other");
-    return;
-  }
-
-  if (parseInt(ctx.request.fields.pagint))
-    configEcom.PRODUCTS_PER_PAGE = parseInt(ctx.request.fields.pagint);
-
-  if (parseInt(ctx.request.fields.expire) ||
-    parseInt(ctx.request.fields.expire) === 0)
-    configEcom.SESSION_BACK_OFFICE_EXPIRE = parseInt(ctx.request.fields.expire) * 60 * 1000;
-
-  Settings.bulkCreate([
-    { type: 'settings', key: "pagint", value: configEcom.PRODUCTS_PER_PAGE },
-    { type: 'settings', key: "backoffice_expire", value: configEcom.SESSION_BACK_OFFICE_EXPIRE }
-  ], {
-    updateOnDuplicate: ["type", "key", "value"]
-  });
+  configEcom.loadSettings();
 
   ctx.session.messages = { 'settingsOK': 'Settings changed!' };
   ctx.redirect('/admin/settings/other');
@@ -3984,7 +3882,7 @@ router.post('/admin/settings/other', async ctx => {
    The session can be null at any request
    I don't fking know why, but check for empty session
    on each request
-  */
+*/
 
 app.use(session({
   store: utilsEcom.configPostgreSessions(),

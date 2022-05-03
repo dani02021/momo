@@ -32,7 +32,13 @@ const Log = db.define("log", {
   user: {
     type: DataTypes.STRING(50),
     allowNull: true,
-    defaultValue: ""
+    defaultValue: "",
+    validate: {
+      len: {
+        args: [0, 50],
+        msg: "Username must be within range [0-50]"
+      }
+    }
   },
   level: {
     type: DataTypes.STRING(50),
@@ -93,17 +99,28 @@ const User = db.define("user", {
       is: {
         args: /^([a-zA-Z0-9]{4,14})$/i,
         msg: "Username must contains only alphabetical characters or numbers and should be of size 4-14"
+      },
+      notNull: {
+        msg: "Username cannot be null!"
       }
     }
   },
   email: {
     type: DataTypes.STRING(100),
-    unique: true,
+    unique: {
+      msg: "This email already exists!"
+    },
     allowNull: false,
     validate: {
       isEmail: {
-        args: true,
-        msg: "Email is not valid!"
+        msg: "Email is not in valid format!"
+      },
+      len: {
+        args: [1, 50],
+        msg: "Email length must be within range [1-50]"
+      },
+      notNull: {
+        msg: "Email cannot be null!"
       }
     }
   },
@@ -115,6 +132,9 @@ const User = db.define("user", {
       is: {
         args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
         msg: "First name should contain only latin or cyrillic symbols with length 2-50"
+      },
+      notNull: {
+        msg: "First name cannot be null!"
       }
     }
   },
@@ -126,6 +146,9 @@ const User = db.define("user", {
       is: {
         args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
         msg: "Last name should contain only latin or cyrillic symbols with length 2-50"
+      },
+      notNull: {
+        msg: "Last name cannot be null!"
       }
     }
   },
@@ -133,9 +156,14 @@ const User = db.define("user", {
     type: DataTypes.STRING(100),
     allowNull: false,
     set(pass) {
+      if (!pass) 
+      {
+        throw new ValidationError("Password is invalid!");
+      }
+
       if (/^(?=.*[0-9])(?=.*[a-zA-Z])(?!.*\s).{8,32}$/i.exec(pass) == null) 
       {
-        throw new ValidationError("Password must contain a digit and a character, with size 8-32");
+        throw new ValidationError("Password must contain a digit and a character, with size 8-32!");
       }
 
       const salt = bcrypt.genSaltSync(5);
@@ -150,26 +178,51 @@ const User = db.define("user", {
       notEmpty: {
         args: true,
         msg: "Address cannot be empty!" 
+      },
+      len: {
+        args: [0, 200],
+        msg: "Address length must be within range [0-200]"
       }
     }
   },
   country: {
     type: DataTypes.STRING,
-    allowNull: true,
+    allowNull: false,
     validate: {
       notEmpty: {
         args: true,
-        msg: "Country cannot be empty!"
-      }
+        msg: "Country name cannot be empty!"
+      },
+      len: {
+        args: [1, 200],
+        msg: "Country name length must be within range [1-200]!"
+      },
+      notNull: {
+        msg: "County cannot be null!"
+      } 
     }
   },
   gender: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: {
+      len: {
+        args: [1, 100],
+        msg: "Gender length must be within range [1-100]"
+      },
+      notNull: {
+        msg: "Gender cannot be null!"
+      } 
+    }
   },
   birthday: {
     type: DataTypes.DATEONLY,
     allowNull: false,
+    validate: {
+      notNull: {
+        msg: "Birthday cannot be null!"
+      } 
+    }
   },
   emailConfirmed: {
     type: DataTypes.BOOLEAN,
@@ -199,28 +252,60 @@ const Staff = db.define("staff", {
   username: {
     type: DataTypes.STRING(50),
     unique: true,
-    allowNull: false
+    allowNull: false,
+    validate: {
+      is: {
+        args: /^([a-zA-Z0-9]{4,14})$/i,
+        msg: "Username must contains only alphabetical characters or numbers and should be of size 4-14"
+      },
+      notNull: {
+        msg: "Username cannot be null!"
+      } 
+    }
   },
   email: {
     type: DataTypes.STRING(50),
-    unique: true,
+    unique: {
+      msg: "This email already exists!"
+    },
     allowNull: true,
     validate: {
-      isEmail: true
+      isEmail: {
+        msg: "Email is not in valid format!"
+      }
     }
   },
   firstName: {
     type: DataTypes.STRING(50),
-    allowNull: false
+    allowNull: false,
+    is: {
+      args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
+      msg: "First name should contain only latin or cyrillic symbols with length 2-50"
+    },
+    notNull: {
+      msg: "First name cannot be null!"
+    } 
   },
   lastName: {
     type: DataTypes.STRING(50),
-    allowNull: false
+    allowNull: false,
+    is: {
+      args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
+      msg: "Last name should contain only latin or cyrillic symbols with length 2-50"
+    },
+    notNull: {
+      msg: "Last name cannot be null!"
+    } 
   },
   password: {
     type: DataTypes.STRING(100),
     allowNull: false,
     set(pass) {
+      if (!pass) 
+      {
+        throw new ValidationError("Password is invalid!");
+      }
+
       if (/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{7,32}$/i.exec(pass) == null) 
       {
         throw new ValidationError("Password must contain at least 1 digit, 1 uppercase and 1 lowercase character, with size 7-32");
@@ -254,7 +339,13 @@ const Permission = db.define('permission', {
   name: {
     type: DataTypes.STRING(50),
     allowNull: false,
-    unique: true
+    unique: true,
+    validate: {
+      len: {
+        args: [1, 50],
+        msg: "Permission length must be within range [1-50]"
+      }
+    }
   }
 },
   {
@@ -266,7 +357,13 @@ const Role = db.define("role", {
   name: {
     type: DataTypes.STRING(25),
     allowNull: false,
-    unique: true
+    unique: true,
+    validate: {
+      len: {
+        args: [1,25],
+        msg: "Role name length must be within range [1-25]"
+      }
+    }
   }
 },
   {

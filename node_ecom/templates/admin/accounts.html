@@ -161,7 +161,7 @@
         <h5 class="modal-title">Add Account</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="add-account-form" action="/admin/accounts/add" onsubmit="return checkPass();" method="post">
+      <form id="add-account-form" action="/admin/accounts/add" method="post">
         <div class="modal-body">
           <div class="row">
             <div class="col-md-5 mx-auto">
@@ -214,14 +214,29 @@
               <label>Country:</label>
               <input id="country" name="country" required>
             </div>
+          </div>
+          <div class="row">
+            <div class="col-md-5 mx-auto">
+              <label>Gender:</label>
+              <br>
+              <select name="gender" id="gender" required>
+                <option value="Select gebder" selected disabled>Select gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            <div class="col-md-5 mx-auto">
+              <label>Birthday:</label>
+              <input type="date" name="birthday" id="birthday" required>
+            </div>
             <div class="row">
-              <div class="col-md-11 mx-auto"><label id="pass-err" style="color: red; font-weight: 300;"></label></div>
+              <div class="col-md-11 mx-auto"><label id="err" style="color: red; font-weight: 300;"></label></div>
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary">Add</button>
+          <button type="button" onclick="toAJAX();" class="btn btn-primary">Add</button>
         </div>
       </form>
     </div>
@@ -270,12 +285,30 @@
     document.getElementById('add-order-items').add(option);
   }
 
+  function toAJAX(form) {
+    if (!checkPass())
+      return false;
+    
+    $.ajax({
+        type: "POST",
+        url: "/admin/accounts/add",
+        data: $("#add-account-form").serialize()
+      }).done(function(data) {
+        if (data.error)  {
+          document.getElementById("err").innerHTML = data.error;
+        }
+        // Optionally alert the user of success here...
+      }).fail(function(data) {
+        // Optionally alert the user of an error here...
+      });
+  }
+
   function checkPass() {
     pass = document.getElementById('password').value
     pass2 = document.getElementById('password2').value
 
     if (pass != pass2) {
-      document.getElementById('pass-err').innerHTML = "Passwords don't match!"
+      document.getElementById('err').innerHTML = "Passwords don't match!"
       return false;
     }
 

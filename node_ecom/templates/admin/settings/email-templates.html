@@ -45,12 +45,8 @@
       </div>
       <div class="row mt-1">
         <div class="col mx-auto d-flex justify-content-center">
-          <% if (payment) { %>
-            <input disabled name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;"
-              value="<%= payment.email_payment_sender %>">
-            <% } else { %>
-              <input disabled name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;">
-              <% } %>
+          <input disabled name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;"
+            value="<%= settings.email_payment_sender %>">
         </div>
       </div>
       <div class="row mt-3">
@@ -60,12 +56,8 @@
       </div>
       <div class="row mt-1">
         <div class="col mx-auto d-flex justify-content-center">
-          <% if (payment) { %>
-            <input name="subject" placeholder="Subject" maxlength="255" style="width: 30%;"
-              value="<%= payment.email_payment_subject %>">
-            <% } else { %>
-              <input name="subject" placeholder="Subject" maxlength="255" style="width: 30%;">
-              <% } %>
+          <input name="subject" placeholder="Subject" maxlength="255" style="width: 30%;"
+            value="<%= settings.email_payment_subject %>">
         </div>
       </div>
       <div class="row mt-3">
@@ -75,13 +67,8 @@
       </div>
       <div class="row mt-1">
         <div class="col mx-auto d-flex justify-content-center">
-          <% if (payment) { %>
-            <textarea name="uppercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
-              placeholder="Upper Content (Above the table)"><%= payment.email_payment_upper %></textarea>
-            <% } else { %>
-              <textarea name="uppercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
-                placeholder="Upper Content (Above the table)"></textarea>
-              <% } %>
+          <textarea name="uppercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
+            placeholder="Upper Content (Above the table)"><%= settings.email_payment_upper %></textarea>
         </div>
       </div>
       <div class="row mt-5">
@@ -146,12 +133,13 @@
       </div>
       <div id="table1settings" class="row mt-1">
         <div class="col d-flex justify-content-center">
-          <input type="number" value="<%= payment.email_payment_table_border_weight %>"
-          min="1" max="10" name="borderweight" placeholder="Table border weight (in px)"
-          data-bs-toggle="tooltip" title="Table border weight">
+          <input type="number" value="<%= settings.email_payment_table_border_weight %>" min="1" max="10"
+            name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip"
+            title="Table border weight">
         </div>
         <div class="col d-flex justify-content-center">
-          <input type="color" value="<%= payment.email_payment_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Table border color">
+          <input type="color" value="<%= settings.email_payment_table_border_color %>" name="bordercolor"
+            data-bs-toggle="tooltip" title="Table border color">
         </div>
       </div>
       <div class="row mt-5">
@@ -161,13 +149,8 @@
       </div>
       <div class="row mt-1">
         <div class="col mx-auto d-flex justify-content-center">
-          <% if (payment) { %>
-            <textarea name="lowercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
-              placeholder="Lower Content (Below the table)"><%= payment.email_payment_lower %></textarea>
-            <% } else { %>
-              <textarea name="lowercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
-                placeholder="Lower Content (Below the table)"></textarea>
-              <% } %>
+          <textarea name="lowercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
+            placeholder="Lower Content (Below the table)"><%= settings.email_payment_lower %></textarea>
         </div>
       </div>
       <div class="row mt-4">
@@ -199,12 +182,8 @@
       </div>
       <div class="row mt-1">
         <div class="col mx-auto d-flex justify-content-center">
-          <% if (order) { %>
-            <input disabled name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;"
-              value="<%= order.email_order_sender %>">
-            <% } else { %>
-              <input name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;">
-              <% } %>
+          <input disabled name="sender" placeholder="Sender" type="email" required maxlength="255" style="width: 30%;"
+            value="<%= settings.email_order_sender %>">
         </div>
       </div>
       <div class="row mt-3">
@@ -214,12 +193,8 @@
       </div>
       <div class="row mt-1">
         <div class="col mx-auto d-flex justify-content-center">
-          <% if (order) { %>
-            <input name="subject" placeholder="Subject" maxlength="255" style="width: 30%;"
-              value="<%= order.email_order_subject %>">
-            <% } else { %>
-              <input name="subject" placeholder="Subject" maxlength="255" style="width: 30%;">
-              <% } %>
+          <input name="subject" placeholder="Subject" maxlength="255" style="width: 30%;"
+            value="<%= settings.email_order_subject %>">
         </div>
       </div>
       <div class="row mt-3">
@@ -229,13 +204,8 @@
       </div>
       <div class="row mt-1">
         <div class="col mx-auto d-flex justify-content-center">
-          <% if (order) { %>
-            <textarea name="uppercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
-              placeholder="Upper Content (Above the table)"><%= order.email_order_upper %></textarea>
-            <% } else { %>
-              <textarea name="uppercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
-                placeholder="Upper Content (Above the table)"></textarea>
-              <% } %>
+          <textarea name="uppercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
+            placeholder="Upper Content (Above the table)"><%= settings.email_order_upper %></textarea>
         </div>
       </div>
       <div class="row mt-5">
@@ -300,12 +270,13 @@
       </div>
       <div id="table1settings" class="row mt-1">
         <div class="col d-flex justify-content-center">
-          <input type="number" value="<%= order.email_order_table_border_weight %>"
-            min="1" max="10" name="borderweight" placeholder="Table border weight (in px)"
-            data-bs-toggle="tooltip" title="Table border weight">
+          <input type="number" value="<%= settings.email_order_table_border_weight %>" min="1" max="10"
+            name="borderweight" placeholder="Table border weight (in px)" data-bs-toggle="tooltip"
+            title="Table border weight">
         </div>
         <div class="col d-flex justify-content-center">
-          <input type="color" value="<%= order.email_order_table_border_color %>" name="bordercolor" data-bs-toggle="tooltip" title="Table border color">
+          <input type="color" value="<%= settings.email_order_table_border_color %>" name="bordercolor"
+            data-bs-toggle="tooltip" title="Table border color">
         </div>
       </div>
       <div class="row mt-5">
@@ -315,13 +286,8 @@
       </div>
       <div class="row mt-1">
         <div class="col mx-auto d-flex justify-content-center">
-          <% if (order) { %>
-            <textarea name="lowercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
-              placeholder="Lower Content (Below the table)"><%= order.email_order_lower %></textarea>
-            <% } else { %>
-              <textarea name="lowercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
-                placeholder="Lower Content (Below the table)"></textarea>
-              <% } %>
+          <textarea name="lowercontent" style="min-height: 300px; width: 100%;" cols="30" rows="10"
+            placeholder="Lower Content (Below the table)"><%= settings.email_order_lower %></textarea>
         </div>
       </div>
       <div class="row mt-4">
@@ -404,26 +370,23 @@
     }
   }
 
-    <% if (payment) { %>
-    let selects = document.getElementById("table1").getElementsByTagName("select");
+  let selects = document.getElementById("table1").getElementsByTagName("select");
 
-    let values = "<%= payment.email_payment_table %>".split(",");
+  let values = "<%= settings.email_payment_table %>".split(",");
 
-    if (values.length == selects.length) {
-      for (i = 0; i < values.length; i++) {
-        selects[i].value = values[i]
-      }
+  if (values.length == selects.length) {
+    for (i = 0; i < values.length; i++) {
+      selects[i].value = values[i]
     }
-    <% } %>
-    <% if (order) { %>
-    selects = document.getElementById("table2").getElementsByTagName("select");
+  }
 
-    values = "<%= order.email_order_table %>".split(",");
+  selects = document.getElementById("table2").getElementsByTagName("select");
 
-    if (values.length == selects.length) {
-      for (i = 0; i < values.length; i++) {
-        selects[i].value = values[i]
-      }
+  values = "<%= settings.email_order_table %>".split(",");
+
+  if (values.length == selects.length) {
+    for (i = 0; i < values.length; i++) {
+      selects[i].value = values[i]
     }
-    <% } %>
+  }
 </script>
