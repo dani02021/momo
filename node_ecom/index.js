@@ -1096,7 +1096,7 @@ router.post("/register", async ctx => {
 
     let msg = `Here is your link: ` + utilsEcom.getHost() + `/verify_account/${token}`
 
-    utilsEcom.sendEmail(utilsEcom.DEFAULT_EMAIL_SENDER, ctx.request.fields.email, `Email Verification NodeJS`, msg);
+    utilsEcom.sendEmail(configEcom.SETTINGS.sender_email_parent, ctx.request.fields.email, `Email Verification NodeJS`, msg);
 
     let message = { 'registerSuccess': 'Please validate your e-mail!' };
     ctx.session.messages = message;
@@ -1323,7 +1323,7 @@ router.get('/admin', async ctx => {
       orders: orders,
       orderitems: orderitems,
       users: users,
-      statusDisplay: utilsEcom.STATUS_DISPLAY
+      statusDisplay: configEcom.STATUS_DISPLAY
     });
 
     // Clear old messages
