@@ -139,7 +139,7 @@
         <h5 class="modal-title">Add Staff</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="add-account-form" action="/admin/staff/add" onsubmit="return checkPass();" method="post">
+      <form id="add-account-form" action="/admin/staff/add" method="post">
         <div class="modal-body">
           <div class="row">
             <div class="col-md-5 mx-auto">
@@ -189,7 +189,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary">Add</button>
+          <button type="button" class="btn btn-primary" onclick="toAJAX();">Add</button>
         </div>
       </form>
     </div>
@@ -236,6 +236,26 @@
     option.value = e.options[e.selectedIndex].value + ', ' + q.value;
     option.selected = 'true'
     document.getElementById('add-order-items').add(option);
+  }
+
+  function toAJAX() {
+    if (!checkPass())
+      return false;
+    
+    $.ajax({
+        type: "POST",
+        url: "/admin/accounts/add",
+        data: $("#add-account-form").serialize()
+      }).done(function(data) {
+        if (data.error)  {
+          document.getElementById("err").innerHTML = data.error;
+        } else if (data.ok) {
+          window.location.reload();
+        }
+        // Optionally alert the user of success here...
+      }).fail(function(data) {
+        // Optionally alert the user of an error here...
+      });
   }
 
   function checkPass() {

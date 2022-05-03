@@ -635,11 +635,11 @@ async function getAdminOrders(ctx) {
   }
   if (ctx.query.status) {
     filters['status'] = ctx.query.status;
-    filtersToReturn['status'] = utilsEcom.STATUS_DISPLAY[ctx.query.status];
+    filtersToReturn['status'] = configEcom.STATUS_DISPLAY[ctx.query.status];
   } else {
     let stat = [];
 
-    for (i = 1; i < utilsEcom.STATUS_DISPLAY.length; i++)
+    for (i = 1; i < configEcom.STATUS_DISPLAY.length; i++)
       stat.push(i);
 
     filters['status'] = stat;
@@ -669,7 +669,7 @@ async function getAdminOrders(ctx) {
   if (ctx.params.page) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
-
+  
   const result = await db.query(`SELECT foo.id, foo.status, foo."userId", foo."orderedAt", foo.price,
     users."firstName",
     users."lastName", users.country, users.address, username
@@ -1079,17 +1079,9 @@ router.post("/register", async ctx => {
       });
     } catch (e) {
       if (e instanceof ValidationError) {
-        // ctx.redirect('/register');
-        // ctx.session.messages = { 'validationError': e.message };
-        if (e.errors.length != 0) {
-          ctx.body = {
-            message: e.errors[0].message
-          };
-        } else {
-          ctx.body = {
-            message: e.message
-          };
-        }
+        ctx.body = {
+          message: e.errors[0].message
+        };
       }
       return;
     }
@@ -1441,9 +1433,11 @@ router.post('/admin/products/add', async ctx => {
   let price = parseFloat(parseFloat(ctx.request.fields.price).toFixed(2));
   let discountPrice = parseFloat(parseFloat(ctx.request.fields.discountPrice).toFixed(2));
 
-  if (price > 9999.99 || price < 0 || discountPrice > 9999.99 || discountPrice < 0) {
-    ctx.session.messages = { 'productErrorPrice': 'Product has invalid price (0 - 9999.99)' };
-    ctx.redirect('/admin/products/');
+  if (price > 9999.99 || price <= 0 || discountPrice > 9999.99 || discountPrice <= 0) {
+    // ctx.session.messages = { 'productErrorPrice': 'Product has invalid price (0 - 9999.99)' };
+    // ctx.redirect('/admin/products/');
+
+    ctx.body = {"error": "Product's price must be within range (0 - 9999.99]"}
     return;
   }
 
@@ -1472,8 +1466,10 @@ router.post('/admin/products/add', async ctx => {
 
   if (!created) {
     if (!product.deletedAt) {
-      ctx.session.messages = { 'productExist': `The product with name ${ctx.request.fields.name} already exists!` };
-      ctx.redirect('/admin/products');
+      // ctx.session.messages = { 'productExist': `The product with name ${ctx.request.fields.name} already exists!` };
+      // ctx.redirect('/admin/products');
+
+      ctx.body = {"error": `The product with name ${ctx.request.fields.name} already exists!`};
       return;
     } else {
       await product.restore();
@@ -1506,10 +1502,12 @@ router.post('/admin/products/add', async ctx => {
     }
   }
   ctx.session.messages = { 'productCreated': `Product with id ${product.id} has been created!` };
+  ctx.body = {"ok": "ok"};
+
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} created product #${product.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
-  ctx.redirect('/admin/products');
+  // ctx.redirect('/admin/products');
 });
 
 router.get('/admin/products/edit/:id', async ctx => {
@@ -1827,10 +1825,13 @@ router.post('/admin/accounts/add', async ctx => {
     lastName: ctx.request.fields.lastname,
     address: ctx.request.fields.address,
     country: ctx.request.fields.country,
+    gender: ctx.request.fields.gender,
+    birthday: ctx.request.fields.birthday,
     emailConfirmed: true
   };
 
   let [user, created] = [null, null];
+
   try {
     [user, created] = await User.findOrCreate({
       where: {
@@ -1844,9 +1845,6 @@ router.post('/admin/accounts/add', async ctx => {
     });
   } catch (e) {
     if (e instanceof ValidationError) {
-      // ctx.session.messages = { 'validationError': e.message };
-      // ctx.redirect('/admin/accounts');
-
       ctx.body = {"error": e.errors[0].message};
       return;
     } else {
@@ -1858,7 +1856,7 @@ router.post('/admin/accounts/add', async ctx => {
     if (!user.deletedAt) {
       // ctx.session.messages = { 'accountExist': `The user ${ctx.request.fields.username} already exists!` };
       // ctx.redirect("/admin/accounts");
-      ctx.body = {"msg": `The user ${ctx.request.fields.username} already exists!`};
+      ctx.body = {"error": `The user ${ctx.request.fields.username} already exists!`};
       return;
     } else {
       await user.restore();
@@ -1866,9 +1864,9 @@ router.post('/admin/accounts/add', async ctx => {
       await user.update(defaultParams);
     }
   }
-  // ctx.session.messages = { 'accountCreated': `User with id ${user.id} has been created!` };
-  
-  ctx.body = {"msg": `User with id ${user.id} has been created!`};
+
+  ctx.session.messages = { 'accountCreated': `User with id ${user.id} has been created!` };
+  ctx.body = {"ok": "ok"};
 
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} created account #${user.id}`,
@@ -1938,7 +1936,7 @@ router.post('/admin/staff/add', async ctx => {
     });
   } catch (e) {
     if (e instanceof ValidationError) {
-      ctx.session.messages = { 'validationError': e.message };
+      ctx.body = { 'error': e.errors[0].message };
       ctx.redirect('/admin/staff');
       return;
     }
@@ -1946,7 +1944,7 @@ router.post('/admin/staff/add', async ctx => {
 
   if (!created) {
     if (!user.deletedAt) {
-      ctx.session.messages = { 'staffExist': `The Staff ${ctx.session.dataValues.staffUsername} already exists!` };
+      ctx.body = { 'error': `The Staff ${ctx.session.dataValues.staffUsername} already exists!` };
       ctx.redirect('/admin/staff');
       return;
     } else {
@@ -2273,18 +2271,24 @@ router.post('/admin/roles/add', async ctx => {
     });
   } catch (e) {
     if (e instanceof ValidationError) {
-
+      ctx.body = {"error": e.errors[0].message};
+      return;
     }
   }
 
   if (ctx.request.fields.permissions instanceof Array) {
     for (permid in ctx.request.fields.permissions) {
       const permission = await Permission.findOne({ where: { id: ctx.request.fields.permissions[permid] } });
-      await role.addPermission(permission);
+      
+      if (permission)
+        await role.addPermission(permission);
     }
   }
   else if (ctx.request.fields.permissions) {
-    await role.addPermission(await Permission.findOne({ where: { id: ctx.request.fields.permissions } }));
+    const permission = await Permission.findOne({ where: { id: ctx.request.fields.permissions } });
+
+    if(permission)
+      await role.addPermission(permission);
   }
 
   if (created) {
@@ -2294,7 +2298,7 @@ router.post('/admin/roles/add', async ctx => {
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
   }
   else {
-    ctx.session.messages = { 'roleExist': `Role with id ${role.id} already exists!` };
+    ctx.body = { 'error': `Role with name ${role.name} already exists!` };
   }
 
   ctx.redirect('/admin/roles');
@@ -2828,7 +2832,7 @@ router.post('/admin/orders/edit/:id', async ctx => {
         user: ctx.session.dataValues.staffUsername,
         isStaff: true,
         longMessage:
-          `Staff ${ctx.session.dataValues.staffUsername} updated status of order #${ctx.params.id} from ${utilsEcom.STATUS_DISPLAY[order.status]} to ${utilsEcom.STATUS_DISPLAY[ctx.request.fields.status]}`
+          `Staff ${ctx.session.dataValues.staffUsername} updated status of order #${ctx.params.id} from ${configEcom.STATUS_DISPLAY[order.status]} to ${configEcom.STATUS_DISPLAY[ctx.request.fields.status]}`
       });
   }
 
@@ -3229,7 +3233,13 @@ router.post('/captureOrder', async ctx => {
   utilsEcom.sendEmail(configEcom.SETTINGS.email_order_sender, user.dataValues.email,
     utilsEcom.parseEmailPlaceholders(configEcom.SETTINGS.email_order_subject, user, order), null,
     utilsEcom.parseEmailPlaceholders(configEcom.SETTINGS.email_order_upper, user, order) +
-    (await utilsEcom.getOrderAsTableHTML(order, configEcom.SETTINGS.email_order_table,
+    (await utilsEcom.getOrderAsTableHTML(order,
+      [
+        configEcom.SETTINGS.email_order_table_h0,
+        configEcom.SETTINGS.email_order_table_h1,
+        configEcom.SETTINGS.email_order_table_h2,
+        configEcom.SETTINGS.email_order_table_h3
+      ],
       { color: configEcom.SETTINGS.email_order_table_border_color, borderweight: configEcom.SETTINGS.email_order_table_border_weight })) +
     utilsEcom.parseEmailPlaceholders(configEcom.SETTINGS.email_order_lower, user, order));
 
@@ -3735,7 +3745,10 @@ router.post('/admin/settings/email', async ctx => {
       { type: 'email_payment', key: "email_payment_subject", value: subject },
       { type: 'email_payment', key: "email_payment_upper", value: ctx.request.fields.uppercontent },
       { type: 'email_payment', key: "email_payment_lower", value: ctx.request.fields.lowercontent },
-      { type: 'email_payment', key: "email_payment_table", value: table.toString() },
+      { type: 'email_payment', key: "email_payment_table_h0", value: table[0] },
+      { type: 'email_payment', key: "email_payment_table_h1", value: table[1] },
+      { type: 'email_payment', key: "email_payment_table_h2", value: table[2] },
+      { type: 'email_payment', key: "email_payment_table_h3", value: table[3] },
       { type: 'email_payment', key: "email_payment_table_border_weight", value: ctx.request.fields.borderweight },
       { type: 'email_payment', key: "email_payment_table_border_color", value: ctx.request.fields.bordercolor },
     ], {
@@ -3746,7 +3759,10 @@ router.post('/admin/settings/email', async ctx => {
     { type: 'email_order', key: "email_order_subject", value: subject },
     { type: 'email_order', key: "email_order_upper", value: ctx.request.fields.uppercontent },
     { type: 'email_order', key: "email_order_lower", value: ctx.request.fields.lowercontent },
-    { type: 'email_order', key: "email_order_table", value: table.toString() },
+    { type: 'email_order', key: "email_order_table_h0", value: table[0] },
+    { type: 'email_order', key: "email_order_table_h1", value: table[1] },
+    { type: 'email_order', key: "email_order_table_h2", value: table[2] },
+    { type: 'email_order', key: "email_order_table_h3", value: table[3] },
     { type: 'email_order', key: "email_order_table_border_weight", value: ctx.request.fields.borderweight },
     { type: 'email_order', key: "email_order_table_border_color", value: ctx.request.fields.bordercolor },
   ], {
