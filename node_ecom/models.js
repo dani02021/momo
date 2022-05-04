@@ -2,7 +2,10 @@ const db = require("./db.js");
 const { Sequelize, Model, DataTypes, ValidationError, STRING } = require("sequelize");
 const bcrypt = require("bcrypt");
 const assert = require('assert/strict');
+const configEcom = require("./config.js");
+const utilsEcom = require("./utils.js");
 const { validate } = require("./db.js");
+const { AssertionError } = require("assert");
 
 const Settings = db.define('settings', {
   key: {
@@ -165,9 +168,7 @@ const User = db.define("user", {
       {
         throw new ValidationError("Password must contain a digit and a character, with size 8-32!");
       }
-
-      const salt = bcrypt.genSaltSync(5);
-      const hash = bcrypt.hashSync(pass, salt, 5);
+      const hash = bcrypt.hashSync(pass, configEcom.DEFAULT_SALT_ROUNDS);
       this.setDataValue('password', hash);
     }
   },
@@ -208,7 +209,11 @@ const User = db.define("user", {
       },
       notNull: {
         msg: "Gender cannot be null!"
-      } 
+      },
+      isIn: {
+        args: configEcom.VALID_GENDERS,
+        msg: "Gender is not valid!"
+      }
     }
   },
   birthday: {
@@ -217,7 +222,17 @@ const User = db.define("user", {
     validate: {
       notNull: {
         msg: "Birthday cannot be null!"
-      } 
+      },
+
+      isOldEnough(value) {
+        let age = utilsEcom.getAge(value);
+
+        if (age < 18)
+          throw new AssertionError("You have to be at least 18 years old!");
+
+        if (age > 120)
+          throw new AssertionError("Invalid age!");
+      }
     }
   },
   emailConfirmed: {

@@ -1009,7 +1009,7 @@ router.post("/register", async ctx => {
     // let message = { 'userExists': 'User already exists with this email or username' };
     // ctx.session.messages = message;
 
-    utilsEcom.logger.info(`Someone tried to register already existing user ${ctx.request.fields.username}`);
+    utilsEcom.logger.info(`Someone tried to register as already existing user ${ctx.request.fields.username}`);
     // ctx.redirect('/register');
 
     ctx.body = {
@@ -1022,40 +1022,6 @@ router.post("/register", async ctx => {
     if (ctx.request.fields.password !== ctx.request.fields.password1) {
       ctx.body = {
         message: 'Passwords does not match!'
-      };
-
-      return;
-    }
-
-    // Age between 18 - 120
-    let age = utilsEcom.getAge(ctx.request.fields.birthday);
-
-    if (age < 18) {
-      ctx.body = {
-        message: 'You have to be at least 18 years old!'
-      };
-
-      return;
-    }
-
-    if (age > 120) {
-      ctx.body = {
-        message: 'Invalid age!'
-      };
-
-      return;
-    }
-
-    let validGenders = [
-      'Male',
-      'Female'
-    ];
-
-    // Check table for invalid gender
-    if (!ctx.request.fields.gender ||
-      !validGenders.includes(ctx.request.fields.gender)) {
-      ctx.body = {
-        message: 'Gender not selected!'
       };
 
       return;
@@ -1862,7 +1828,7 @@ router.post('/admin/accounts/add', async ctx => {
     if (!user.deletedAt) {
       // ctx.session.messages = { 'accountExist': `The user ${ctx.request.fields.username} already exists!` };
       // ctx.redirect("/admin/accounts");
-      ctx.body = {"error": `The user ${ctx.request.fields.username} already exists!`};
+      ctx.body = {"error": `A user with that username or email already exists!`};
       return;
     } else {
       await user.restore();

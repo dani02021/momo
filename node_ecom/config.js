@@ -7,6 +7,8 @@ const DEFAULT_PRODUCTS_PER_PAGE = 12;
 
 const DEFAULT_SESSION_BACK_OFFICE_EXPIRE = 5 * 60 * 1000; // 5 minutes
 
+const DEFAULT_SALT_ROUNDS = 10;
+
 const DEFAULT_CURRENCY = "USD";
 
 const DEFAULT_EMAIL_SENDER = "danielgudjenev@gmail.com";
@@ -63,6 +65,11 @@ const LOG_LEVELS = {
     debug: 5
 };
 
+const VALID_GENDERS = [
+    'Male',
+    'Female'
+];
+
 var loadSettings;
 
 (loadSettings = async function loadSettings() 
@@ -82,9 +89,11 @@ module.exports = {
     DEFAULT_PAYMENT_EMAIL_TEMPLATE,
     DEFAULT_PRODUCTS_PER_PAGE,
     DEFAULT_SESSION_BACK_OFFICE_EXPIRE,
+    DEFAULT_SALT_ROUNDS,
     DEFAULT_CURRENCY,
     SETTINGS,
     STATUS_DISPLAY,
     LOG_LEVELS,
+    VALID_GENDERS,
     loadSettings,
 }
