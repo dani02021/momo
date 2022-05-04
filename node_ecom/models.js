@@ -98,7 +98,7 @@ const User = db.define("user", {
     validate: {
       is: {
         args: /^([a-zA-Z0-9]{4,14})$/i,
-        msg: "Username must contains only alphabetical characters or numbers and should be of size 4-14"
+        msg: "Username must contains only Latin symbols or numbers and should be of size 4-14"
       },
       notNull: {
         msg: "Username cannot be null!"
@@ -175,10 +175,6 @@ const User = db.define("user", {
     type: DataTypes.STRING,
     allowNull: true,
     validate: {
-      notEmpty: {
-        args: true,
-        msg: "Address cannot be empty!" 
-      },
       len: {
         args: [0, 200],
         msg: "Address length must be within range [0-200]"
@@ -256,7 +252,7 @@ const Staff = db.define("staff", {
     validate: {
       is: {
         args: /^([a-zA-Z0-9]{4,14})$/i,
-        msg: "Username must contains only alphabetical characters or numbers and should be of size 4-14"
+        msg: "Username must contains only Latin symbols or numbers and should be of size 4-14"
       },
       notNull: {
         msg: "Username cannot be null!"
