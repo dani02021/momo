@@ -1554,6 +1554,12 @@ router.get('/admin/products/edit/:id', async ctx => {
       id: ctx.params.id
     }
   }).then(async product => {
+    if (!product) 
+    {
+      ctx.session.messages = {"invalidVal": "Product with this id doesn't exist!"};
+      ctx.redirect("/admin/products");
+      return;
+    }
     await ctx.render('admin/edit-product', {
       layout: 'admin/base',
       session: ctx.session,
