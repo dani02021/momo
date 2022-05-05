@@ -766,7 +766,7 @@ async function saveReportCsv(reportRes, filters, time, currency) {
 
     // Total
     let absTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.total), 0).toFixed(2);
-    dataToWrite += ",,," + escapeCSVParam(absTotal) + ","+currency;
+    dataToWrite += ",,," + escapeCSVParam(absTotal) + "," + currency;
 
     return createTempFile('excelReport.csv', dataToWrite);
 }
