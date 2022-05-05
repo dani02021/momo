@@ -3,7 +3,6 @@ const { Sequelize, Model, DataTypes, ValidationError, STRING } = require("sequel
 const bcrypt = require("bcrypt");
 const assert = require('assert/strict');
 const configEcom = require("./config.js");
-const utilsEcom = require("./utils.js");
 const { validate } = require("./db.js");
 const { AssertionError } = require("assert");
 
@@ -168,6 +167,7 @@ const User = db.define("user", {
       {
         throw new ValidationError("Password must contain a digit and a character, with size 8-32!");
       }
+      
       const hash = bcrypt.hashSync(pass, configEcom.DEFAULT_SALT_ROUNDS);
       this.setDataValue('password', hash);
     }
@@ -225,7 +225,13 @@ const User = db.define("user", {
       },
 
       isOldEnough(value) {
-        let age = utilsEcom.getAge(value);
+        var today = new Date();
+        var birthDate = new Date(value);
+        var age = today.getFullYear() - birthDate.getFullYear();
+        var m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
 
         if (age < 18)
           throw new AssertionError("You have to be at least 18 years old!");

@@ -670,17 +670,26 @@ async function getAdminOrders(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
   
-  const result = await db.query(`SELECT foo.id, foo.status, foo."userId", foo."orderedAt", foo.price,
+  const result = await db.query(`
+  SELECT DISTINCT foo.id, foo.status, foo."userId", foo."orderedAt",
     users."firstName",
-    users."lastName", users.country, users.address, username
+    users."lastName", users.country, users.address, username, goo.sum
     FROM (SELECT ord.id, ord.status, "userId",
-    ord."orderedAt", price FROM orders AS ord
+    ord."orderedAt" FROM orders AS ord
     INNER JOIN user_orders AS uo ON "orderId" = ord.id) AS foo
     INNER JOIN users ON "userId" = users.id
-    WHERE status IN (${filters.status}) AND
+    INNER JOIN
+    (SELECT orders.id, SUM(orderitems.quantity * orderitems.price)
+    FROM orders
+    INNER JOIN orderitems ON orders.id = orderitems."orderId"
+    INNER JOIN products on orderitems."productId" = products.id
+    WHERE orderitems."deletedAt" is NULL AND
+    status IN (${filters.status}) AND
     "orderedAt" BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}' AND
-    position(upper($1) in upper(username)) > 0
-    AND "deletedAt" is NULL ORDER BY "orderedAt" DESC
+    position(upper($1) in upper(users.username)) > 0
+    AND "deletedAt" is NULL
+    GROUP BY orders.id) goo ON goo.id = foo.id
+    ORDER BY "orderedAt" DESC
     LIMIT ${limit} OFFSET ${offset};`, {
     type: 'SELECT',
     plain: false,
@@ -1045,8 +1054,9 @@ router.post("/register", async ctx => {
       });
     } catch (e) {
       if (e instanceof ValidationError) {
+        // undefined on /register
         ctx.body = {
-          message: e.errors[0].message
+          message: e.errors.length != 0 ? e.errors[0].message : e.message
         };
       }
       return;
@@ -1817,7 +1827,7 @@ router.post('/admin/accounts/add', async ctx => {
     });
   } catch (e) {
     if (e instanceof ValidationError) {
-      ctx.body = {"error": e.errors[0].message};
+      ctx.body = {"error": e.errors.length != 0 ? e.errors[0].message : e.message};
       return;
     } else {
       throw e;
@@ -1908,7 +1918,7 @@ router.post('/admin/staff/add', async ctx => {
     });
   } catch (e) {
     if (e instanceof ValidationError) {
-      ctx.body = { 'error': e.errors[0].message };
+      ctx.body = { 'error': e.errors.length != 0 ? e.errors[0].message : e.message };
       ctx.redirect('/admin/staff');
       return;
     }
@@ -2234,8 +2244,10 @@ router.post('/admin/roles/add', async ctx => {
     });
   }
 
+  let [role, created] = [null, null];
+
   try {
-    const [role, created] = await Role.findOrCreate({
+    [role, created] = await Role.findOrCreate({
       where: {
         name: ctx.request.fields.role,
       },
@@ -2243,7 +2255,7 @@ router.post('/admin/roles/add', async ctx => {
     });
   } catch (e) {
     if (e instanceof ValidationError) {
-      ctx.body = {"error": e.errors[0].message};
+      ctx.body = {"error": e.errors.length != 0 ? e.errors[0].message : e.message};
       return;
     }
   }
@@ -2264,13 +2276,14 @@ router.post('/admin/roles/add', async ctx => {
   }
 
   if (created) {
-    ctx.session.messages = { 'roleCreated': `Role with id ${role.id} has been created!` };
+    ctx.session.messages = { 'roleCreated': `Role ${role.name} has been created!` };
     utilsEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} created role #${role.id}`,
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
   }
   else {
     ctx.body = { 'error': `Role with name ${role.name} already exists!` };
+    return;
   }
 
   ctx.redirect('/admin/roles');
@@ -3712,7 +3725,7 @@ router.post('/admin/settings/email', async ctx => {
   */
 
   if (type == "payment")
-    Settings.bulkCreate([
+    await Settings.bulkCreate([
       { type: 'email_payment', key: "email_payment_sender", value: "danielgudjenev@gmail.com" }, // HARD-CODED, FOR NOW
       { type: 'email_payment', key: "email_payment_subject", value: subject },
       { type: 'email_payment', key: "email_payment_upper", value: ctx.request.fields.uppercontent },
@@ -3726,7 +3739,7 @@ router.post('/admin/settings/email', async ctx => {
     ], {
       updateOnDuplicate: ["type", "key", "value"]
     });
-  else Settings.bulkCreate([
+  else await Settings.bulkCreate([
     { type: 'email_order', key: "email_order_sender", value: "danielgudjenev@gmail.com" }, // HARD-CODED, FOR NOW
     { type: 'email_order', key: "email_order_subject", value: subject },
     { type: 'email_order', key: "email_order_upper", value: ctx.request.fields.uppercontent },
@@ -3741,7 +3754,7 @@ router.post('/admin/settings/email', async ctx => {
     updateOnDuplicate: ["type", "key", "value"]
   });
 
-  configEcom.loadSettings();
+  await configEcom.loadSettings(Settings.findAll());
 
   ctx.session.messages = { "emailOk": type == "payment" ? "Payment template is set!" : "Order template is set!" };
   ctx.redirect("/admin/settings/email");
@@ -3838,7 +3851,7 @@ router.post('/admin/settings/other', async ctx => {
       return;
     }
 
-    Settings.upsert({
+    await Settings.upsert({
       type: "settings",
       key: "elements_per_page",
       value: parseInt(ctx.request.fields.pagint)
@@ -3853,14 +3866,14 @@ router.post('/admin/settings/other', async ctx => {
       return;
     }
 
-    Settings.upsert({
+    await Settings.upsert({
       type: "settings",
       key: "backoffice_expire",
       value: parseInt(ctx.request.fields.expire)
     });
   }
 
-  configEcom.loadSettings();
+  await configEcom.loadSettings(Settings.findAll());
 
   ctx.session.messages = { 'settingsOK': 'Settings changed!' };
   ctx.redirect('/admin/settings/other');

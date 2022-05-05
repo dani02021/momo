@@ -111,7 +111,7 @@
         <h5 class="modal-title">Add Role</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="add-order-form" action="/admin/roles/add" onsubmit="selectAll();" method="post">
+      <form id="add-role-form" action="/admin/roles/add" onsubmit="selectAll();" method="post">
         <div class="modal-body">
           <label>Permissions:</label>
           <div>
@@ -127,7 +127,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary">Add</button>
+          <button type="button" class="btn btn-primary" onclick="toAJAX();">Add</button>
         </div>
       </form>
     </div>
@@ -146,6 +146,9 @@
           <div>
             <input name="roleitem-select" id="roleitem-select" placeholder="Permission">
           </div>
+        </div>
+        <div class="row">
+          <div class="col-md-11 mx-auto"><label id="err" style="color: red; font-weight: 300;"></label></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-target="#add-role" data-bs-toggle="modal"
@@ -201,6 +204,23 @@
     option.value = id[e.value];
     option.selected = 'true'
     items.add(option);
+  }
+
+  function toAJAX() {
+    $.ajax({
+        type: "POST",
+        url: "/admin/roles/add",
+        data: $("#add-role-form").serialize()
+      }).done(function(data) {
+        if (data.error)  {
+          document.getElementById("err").innerHTML = data.error;
+        } else if (data.ok) {
+          window.location.reload();
+        }
+        // Optionally alert the user of success here...
+      }).fail(function(data) {
+        // Optionally alert the user of an error here...
+      });
   }
 
   function selectAll() {

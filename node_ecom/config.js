@@ -1,5 +1,4 @@
-const models = require("./models.js");
-const Settings = models.settings();
+const assert = require("assert");
 
 const SESSION_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000; // 2 weeks;
 
@@ -70,17 +69,23 @@ const VALID_GENDERS = [
     'Female'
 ];
 
-var loadSettings;
 
-(loadSettings = async function loadSettings() 
+/**
+ * 
+ * @param {object} settings 
+ */
+async function loadSettings(settings) 
 {
-    let settings = await Settings.findAll();
+    assert(typeof settings === "object");
+    
+    if (settings instanceof Promise)
+        settings = await settings;
 
     for (i = 0; i < settings.length; i++) 
     {
         SETTINGS[settings[i].key] = settings[i].value;
     }
-})();
+}
 
 module.exports = {
     SESSION_MAX_AGE,
@@ -95,5 +100,5 @@ module.exports = {
     STATUS_DISPLAY,
     LOG_LEVELS,
     VALID_GENDERS,
-    loadSettings,
+    loadSettings
 }

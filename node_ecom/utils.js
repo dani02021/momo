@@ -109,13 +109,13 @@ const logger = winston.createLogger({
             level: "error",
             // Create the log directory if it does not exist
             filename: 'logs/error.log',
-            format: winston.format.printf(log => `[${new Date().toString()}] ` + log.message),
+            format: winston.format.printf(log => `[${new Date().toLocaleString("en-GB")}] ` + log.message),
         }),
         new winston.transports.File({
             level: "error",
             // Create the log directory if it does not exist
             filename: 'logs/fullerror.log',
-            format: winston.format.printf(log => `[${new Date().toString()}] ` + log.stacktrace),
+            format: winston.format.printf(log => `[${new Date().toLocaleString("en-GB")}] ` + log.stacktrace),
         })
     ]
 });
@@ -338,6 +338,7 @@ async function isAuthenticatedUser(ctx) {
 
     return false;
 }
+
 async function isAuthenticatedStaff(ctx) {
     if (!ctx || !ctx.session.dataValues)
         return false;
@@ -625,20 +626,18 @@ async function validateStatus(ctx, orderId, responce) {
 }
 
 async function getReportResponce(filters, limit, offset, time) {
-    let text = `SELECT date_trunc('${time}', orders."orderedAt") as "startDate", 
+    let text = `SELECT date_trunc($1, orders."orderedAt") as "startDate", 
     SUM(orderitems.quantity) as products, 
     COUNT(distinct orders.id) as orders, 
     SUM(distinct price) as total 
     FROM orders 
-    INNER JOIN 
-    orderitems ON 
-    orderitems."orderId" = orders.id 
+    INNER JOIN orderitems
+    ON orderitems."orderId" = orders.id 
     WHERE status > 0 AND 
-    "orderedAt" BETWEEN '${filters.ordAfter}' 
-    AND '${filters.ordBefore}' 
+    "orderedAt" BETWEEN $2 AND $3
     GROUP BY "startDate" `;
 
-    let countText = `SELECT COUNT(*) FROM (${text}) AS foo;`;
+    let countText = `SELECT COUNT(*) FROM ($4) AS foo;`;
 
     text += `OFFSET ${offset}`;
 
@@ -654,6 +653,7 @@ async function getReportResponce(filters, limit, offset, time) {
             plain: false,
             model: OrderItem,
             mapToModel: true,
+            bind: [time, filters.ordAfter, filters.ordBefore, text]
         }),
         db.query(countText, {
             type: 'SELECT',
@@ -695,15 +695,15 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
         }
 
         if (cat && cat != '') {
-            text += ` AND "categoryId" = ${cat}\n`;
+            text += ` AND "categoryId" = $2\n`;
         }
 
         if (minval && minval != 0) {
-            text += ` AND "discountPrice" >= ${minval}\n`;
+            text += ` AND "discountPrice" >= $3\n`;
         }
 
         if (maxval && maxval != 99999) {
-            text += ` AND "discountPrice" <= ${maxval}\n`;
+            text += ` AND "discountPrice" <= $4\n`;
         }
     }
 
@@ -728,6 +728,7 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
         type: 'SELECT',
         plain: false,
         model: Product,
+        bind: [cat, minval, maxval]
     }
 
     if (name && name != '') {
@@ -896,7 +897,7 @@ async function saveReportExcel(reportRes, filters, time, currency) {
     return createTempFile('excel_report.xlsx', buffer);
 }
 
-// Returns every product and how many times its ordered
+// Returns every product and how many times its ordered - NOT WORKING - NOT FIXED
 async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval) {
     let text = `SELECT products.id, products.name, products.description, products.image,
     products.price, products."discountPrice", products."categoryId",
@@ -915,15 +916,15 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
         }
 
         if (cat && cat != '') {
-            text += ` AND "categoryId" = ${cat}\n`;
+            text += ` AND "categoryId" = $2\n`;
         }
 
         if (minval && minval != 0) {
-            text += ` AND "discountPrice" >= ${minval}\n`;
+            text += ` AND "discountPrice" >= $3\n`;
         }
 
         if (maxval && maxval != 99999) {
-            text += ` AND "discountPrice" <= ${maxval}\n`;
+            text += ` AND "discountPrice" <= $4\n`;
         }
     }
 
@@ -1249,6 +1250,9 @@ function onSessionExpired(ctx, message = "Session expired!", redirectLoc = "/adm
 
     ctx.redirect(redirectLoc);
 }
+
+// Settings
+configEcom.loadSettings(Settings.findAll());
 
 /*
 def validate_status(request, uid, order_id, order):
