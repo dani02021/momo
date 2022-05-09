@@ -10,6 +10,8 @@ const DEFAULT_SALT_ROUNDS = 10;
 
 const DEFAULT_CURRENCY = "USD";
 
+const DEFAULT_VAT = 20 / 100; // 20%
+
 const DEFAULT_EMAIL_SENDER = "danielgudjenev@gmail.com";
 
 const DEFAULT_PAYMENT_EMAIL_TEMPLATE = Object.freeze({
@@ -39,6 +41,7 @@ const SETTINGS = {
     elements_per_page: DEFAULT_PRODUCTS_PER_PAGE,
     backoffice_expire: DEFAULT_SESSION_BACK_OFFICE_EXPIRE,
     currency: DEFAULT_CURRENCY,
+    vat: DEFAULT_VAT,
     sender_email_parent: DEFAULT_EMAIL_SENDER
 };
 
@@ -96,6 +99,7 @@ module.exports = {
     DEFAULT_SESSION_BACK_OFFICE_EXPIRE,
     DEFAULT_SALT_ROUNDS,
     DEFAULT_CURRENCY,
+    DEFAULT_VAT,
     SETTINGS,
     STATUS_DISPLAY,
     LOG_LEVELS,

@@ -109,10 +109,18 @@
         <div class="d-grid gap-2">
           <a href="#" class="btn btn-primary text-uppercase mb-3" data-bs-target="#add-product"
             data-bs-toggle="modal">Add new product</a>
-          <button class="btn btn-primary text-uppercase" data-bs-target="#rem-product" data-bs-toggle="modal"
+        </div>
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary text-uppercase mb-3" data-bs-target="#rem-product" data-bs-toggle="modal"
             data-bs-dismiss="modal">
             Delete selected products
           </button>
+        </div>
+        <div class="d-grid gap-2">
+          <form id="csvImportForm" action="/admin/api/products/import/csv" method="post" enctype="multipart/form-data">
+            <input type="file" accept=".csv" name="csvFile" id="csvImportFile" onchange="document.getElementById('csvImportForm').submit();" hidden>
+            <button type="button" class="btn btn-primary text-uppercase" style="width: 100%;" onclick="document.getElementById('csvImportFile').click();">Import products from CSV</button>
+          </form>
         </div>
       </div>
     </div>
@@ -297,10 +305,13 @@
               <label>Hide</label>
             </div>
           </div>
+          <div class="row">
+            <div class="col-md-11 mx-auto"><label id="err" style="color: red; font-weight: 300;"></label></div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary">Add</button>
+          <button type="button" class="btn btn-primary" onclick="toAJAX();">Add</button>
       </form>
     </div>
   </div>
@@ -340,6 +351,20 @@
     myModal.toggle();
 
     return false;
+  }
+
+  function toAJAX() {
+    $.ajax({
+        type: "POST",
+        url: "/admin/products/add",
+        data: $("#add-product-form").serialize()
+      }).done(function(data) {
+        if (data.error)  {
+          document.getElementById("err").innerHTML = data.error;
+        } else if (data.ok) {
+          window.location.reload();
+        }
+      }).fail(function(data) { });
   }
 
   function showAddModal(elem) {

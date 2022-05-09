@@ -374,7 +374,10 @@ const Role = db.define("role", {
   name: {
     type: DataTypes.STRING(25),
     allowNull: false,
-    unique: true,
+    unique: {
+      name: true,
+      msg: "Role name must be unique"
+    },
     validate: {
       len: {
         args: [1,25],
@@ -576,6 +579,24 @@ OrderItem.prototype.getTotal = async function () {
   })).total);
 };
 
+// TODO: Test
+OrderItem.prototype.getTotalWithVAT = async function () {
+  if (this.price != 0)
+    return price;
+
+  let product = await this.getProduct();
+
+  assert(product);
+
+  return parseFloat((await db.query(`SELECT ("discountPrice" + ROUND("discountPrice" * ${configEcom.DEFAULT_VAT}, 2)) * orderitems.quantity
+    AS total FROM products, orderitems
+    WHERE products.id = ${product.id} AND orderitems.id = ${this.id}
+    AND products.id = orderitems."productId"`, {
+    type: 'SELECT',
+    plain: true,
+  })).total);
+};
+
 const Order = db.define("order", {
   orderedAt: {
     type: DataTypes.DATE,
@@ -634,7 +655,8 @@ Order.prototype.getTotal = async function () {
       INNER JOIN orderitems ON orders.id = orderitems."orderId"
       INNER JOIN products ON orderitems."productId" = products.id
       WHERE orders.id = ${this.id} AND
-      orderitems."deletedAt" is NULL;`, {
+      orderitems."deletedAt" is NULL AND
+      orders."deletedAt" is NULL;`, {
       type: 'SELECT',
       plain: true,
     })).sum);
@@ -643,7 +665,8 @@ Order.prototype.getTotal = async function () {
     `SELECT SUM(orderitems.quantity * orderitems.price) FROM orders
     INNER JOIN orderitems ON orders.id = orderitems."orderId"
     WHERE orders.id = ${this.id} AND
-    orderitems."deletedAt" is NULL;`, {
+    orderitems."deletedAt" is NULL AND
+    orders."deletedAt" is NULL;`, {
     type: 'SELECT',
     plain: true,
   })).sum);

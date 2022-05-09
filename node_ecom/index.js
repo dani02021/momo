@@ -12,6 +12,7 @@ const utilsEcom = require("./utils.js");
 const configEcom = require("./config.js");
 const session = require('koa-session');
 const assert = require('assert/strict');
+const csv = require('fast-csv');
 
 const fs = require('fs');
 const db = require("./db.js");
@@ -1836,8 +1837,6 @@ router.post('/admin/accounts/add', async ctx => {
 
   if (!created) {
     if (!user.deletedAt) {
-      // ctx.session.messages = { 'accountExist': `The user ${ctx.request.fields.username} already exists!` };
-      // ctx.redirect("/admin/accounts");
       ctx.body = {"error": `A user with that username or email already exists!`};
       return;
     } else {
@@ -1919,15 +1918,13 @@ router.post('/admin/staff/add', async ctx => {
   } catch (e) {
     if (e instanceof ValidationError) {
       ctx.body = { 'error': e.errors.length != 0 ? e.errors[0].message : e.message };
-      ctx.redirect('/admin/staff');
       return;
     }
   }
 
   if (!created) {
     if (!user.deletedAt) {
-      ctx.body = { 'error': `The Staff ${ctx.session.dataValues.staffUsername} already exists!` };
-      ctx.redirect('/admin/staff');
+      ctx.body = { 'error': `Staff ${ctx.request.fields.username} already exists!` };
       return;
     } else {
       await user.restore();
@@ -1937,11 +1934,11 @@ router.post('/admin/staff/add', async ctx => {
   }
 
   ctx.session.messages = { 'staffCreated': `Staff with id ${user.id} has been created!` };
+  ctx.body = { 'ok': 'ok'};
+
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} created staff #${user.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
-
-  ctx.redirect('/admin/staff');
 });
 
 router.post('/admin/staff/delete', async ctx => {
@@ -1987,7 +1984,7 @@ router.post('/admin/staff/delete', async ctx => {
     }
   });
 
-  ctx.session.messages = { 'staffDeleted': 'Selected staff are deleted!' }
+  ctx.session.messages = { 'staffDeleted': 'Selected staff were deleted!' }
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} deleted staff/s with id/s ${ctx.request.fields.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
@@ -2251,7 +2248,8 @@ router.post('/admin/roles/add', async ctx => {
       where: {
         name: ctx.request.fields.role,
       },
-      include: Permission
+      include: Permission,
+      paranoid: false
     });
   } catch (e) {
     if (e instanceof ValidationError) {
@@ -2275,8 +2273,13 @@ router.post('/admin/roles/add', async ctx => {
       await role.addPermission(permission);
   }
 
-  if (created) {
+  if (created || role.deletedAt) {
+    if (role.deletedAt)
+      await role.restore();
+
     ctx.session.messages = { 'roleCreated': `Role ${role.name} has been created!` };
+    ctx.body = {'ok': 'ok'};
+
     utilsEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} created role #${role.id}`,
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
@@ -2285,8 +2288,6 @@ router.post('/admin/roles/add', async ctx => {
     ctx.body = { 'error': `Role with name ${role.name} already exists!` };
     return;
   }
-
-  ctx.redirect('/admin/roles');
 });
 
 router.post('/admin/roles/delete', async ctx => {
@@ -2329,7 +2330,7 @@ router.post('/admin/roles/delete', async ctx => {
       id: ctx.request.fields.id
     }
   });
-  ctx.session.messages = { 'roleDeleted': 'Selected roles are deleted!' }
+  ctx.session.messages = { 'roleDeleted': 'Selected roles were deleted!' }
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} deleted role/s with id/s ${ctx.request.fields.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
@@ -2529,6 +2530,26 @@ router.get('/api/products/get', async ctx => {
       bind: [term]
     })
   );
+});
+
+router.post('/admin/api/products/import/csv', async ctx => {
+  console.log(ctx.request.files);
+
+  await new Promise((resolve, reject) => {
+    fs.createReadStream(ctx.request.files[0].path)
+      .pipe(csv.parse())
+      .on('error', error => {
+        utilsEcom.handleError(error);
+        reject(error);
+      })
+      .on('data', row => {
+        console.log(`ROW=${JSON.stringify(row)}`);
+      })
+      .on('end', rowCount => resolve(rowCount));
+  });
+  
+  ctx.session.messages = {"importedCSV": "CSV imported successfuly!"};
+  ctx.redirect("/admin/products");
 });
 
 router.get('/admin/orders', async ctx => getAdminOrders(ctx));
@@ -3260,7 +3281,6 @@ router.post('/captureOrder', async ctx => {
     await utilsEcom.removeProductQtyFromOrder(order);
 
     ctx.body = { 'msg': 'Your order is completed!', 'status': 'ok' };
-    // ctx.redirect('/');
   }
 
   await order.setTransacion(transaction);

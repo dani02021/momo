@@ -124,6 +124,9 @@
           </div><br>
           <button type="button" class="btn btn-primary" data-bs-target="#add-role-roleitem" data-bs-toggle="modal"
             data-bs-dismiss="modal">Add Permission</button>
+          <div class="row">
+            <div class="col-md-12 mx-auto"><label id="err" style="color: red; font-weight: 300;"></label></div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -146,9 +149,6 @@
           <div>
             <input name="roleitem-select" id="roleitem-select" placeholder="Permission">
           </div>
-        </div>
-        <div class="row">
-          <div class="col-md-11 mx-auto"><label id="err" style="color: red; font-weight: 300;"></label></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-target="#add-role" data-bs-toggle="modal"
@@ -212,6 +212,7 @@
         url: "/admin/roles/add",
         data: $("#add-role-form").serialize()
       }).done(function(data) {
+        console.log(data);
         if (data.error)  {
           document.getElementById("err").innerHTML = data.error;
         } else if (data.ok) {

@@ -5,6 +5,7 @@ const nodemailer = require("nodemailer");
 const winston = require('winston');
 const paypal = require('@paypal/checkout-server-sdk');
 const WinstonTransport = require('winston-transport');
+
 let environment = new paypal.core.SandboxEnvironment(process.env.PAYPAL_CLIENT_ID, process.env.PAYPAL_CLIENT_SECRET);
 let paypalClient = new paypal.core.PayPalHttpClient(environment);
 
@@ -637,7 +638,7 @@ async function getReportResponce(filters, limit, offset, time) {
     "orderedAt" BETWEEN $2 AND $3
     GROUP BY "startDate" `;
 
-    let countText = `SELECT COUNT(*) FROM ($4) AS foo;`;
+    let countText = `SELECT COUNT(*) FROM (${text}) AS foo;`;
 
     text += `OFFSET ${offset}`;
 
@@ -653,11 +654,12 @@ async function getReportResponce(filters, limit, offset, time) {
             plain: false,
             model: OrderItem,
             mapToModel: true,
-            bind: [time, filters.ordAfter, filters.ordBefore, text]
+            bind: [time, filters.ordAfter, filters.ordBefore]
         }),
         db.query(countText, {
             type: 'SELECT',
             plain: false,
+            bind: [time, filters.ordAfter, filters.ordBefore]
         })
     ]
 }
@@ -689,22 +691,26 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
     WHERE ("deletedAt" IS NULL) 
     AND (hide = false) \n`;
 
-    if (name != '' || cat != '' || minval != 0 || maxval != 99999) {
-        if (name && name != '') {
-            text += ` AND position(upper($1) in upper(name)) > 0 \n`
-        }
+    let returnParamsBind = {};
 
-        if (cat && cat != '') {
-            text += ` AND "categoryId" = $2\n`;
-        }
+    if (name && name != '') {
+        text += ` AND position(upper($name) in upper(name)) > 0 \n`;
+        returnParamsBind.name = name;
+    }
 
-        if (minval && minval != 0) {
-            text += ` AND "discountPrice" >= $3\n`;
-        }
+    if (cat && cat != '') {
+        text += ` AND "categoryId" = $cat\n`;
+        returnParamsBind.cat = cat;
+    }
 
-        if (maxval && maxval != 99999) {
-            text += ` AND "discountPrice" <= $4\n`;
-        }
+    if (minval && minval != 0) {
+        text += ` AND "discountPrice" >= $minPrice\n`;
+        returnParamsBind.minPrice = minval;
+    }
+
+    if (maxval && maxval != 99999) {
+        text += ` AND "discountPrice" <= $maxPrice\n`;
+        returnParamsBind.maxPrice = maxval;
     }
 
     // Count
@@ -728,11 +734,7 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
         type: 'SELECT',
         plain: false,
         model: Product,
-        bind: [cat, minval, maxval]
-    }
-
-    if (name && name != '') {
-        returnParams.bind = [name];
+        bind: returnParamsBind
     }
 
     return [
@@ -897,7 +899,7 @@ async function saveReportExcel(reportRes, filters, time, currency) {
     return createTempFile('excel_report.xlsx', buffer);
 }
 
-// Returns every product and how many times its ordered - NOT WORKING - NOT FIXED
+// Returns every product and how many times its ordered - NOT USED - NOT WORKING
 async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval) {
     let text = `SELECT products.id, products.name, products.description, products.image,
     products.price, products."discountPrice", products."categoryId",
@@ -910,21 +912,27 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
     as foo on products.name = foo.name
     WHERE products."deletedAt" IS NULL`;
 
+    let bindParams = {};
+
     if (name != '' || cat != '' || minval != 0 || maxval != 99999) {
         if (name && name != '') {
-            text += ` AND position(upper($1) in upper(name)) > 0 \n`
+            text += ` AND position(upper($name) in upper(name)) > 0 \n`;
+            bindParams.name = name;
         }
 
         if (cat && cat != '') {
-            text += ` AND "categoryId" = $2\n`;
+            text += ` AND "categoryId" = $cat\n`;
+            bindParams.cat = cat;
         }
 
         if (minval && minval != 0) {
-            text += ` AND "discountPrice" >= $3\n`;
+            text += ` AND "discountPrice" >= $minPrice\n`;
+            bindParams.minPrice = minPrice;
         }
 
         if (maxval && maxval != 99999) {
-            text += ` AND "discountPrice" <= $4\n`;
+            text += ` AND "discountPrice" <= $maxPrice\n`;
+            bindParams.maxPrice = maxval;
         }
     }
 
@@ -936,9 +944,6 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
 
     text += ` LIMIT ${limit}`;
 
-    if (name && name != '') {
-        returnParams.bind = [name];
-    }
     return [db.query(text, {
         type: 'SELECT',
         plain: false,
