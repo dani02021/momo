@@ -593,7 +593,12 @@ async function validateStatus(ctx, orderId, responce) {
                 {color: configEcom.SETTINGS.email_payment_table_border_color, borderweight: configEcom.SETTINGS.email_payment_table_border_weight})) +
             parseEmailPlaceholders(configEcom.SETTINGS.email_payment_lower, user, cart));
 
-        await cart.update({ status: 1, orderedAt: Sequelize.fn('NOW'), price: await cart.getTotal() });
+        await cart.update({ status: 1, orderedAt: Sequelize.fn('NOW') });
+
+        let orderitems = await cart.getOrderitems();
+
+        for (i=0; i<orderitems.length;i++)
+            orderitems[i].update({price: (await orderitems[i].getProduct()).discountPrice});
 
         await removeProductQtyFromOrder(cart);
 

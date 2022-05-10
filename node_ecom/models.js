@@ -477,6 +477,32 @@ const Session = db.define("session", {
     timestamp: false
   });
 
+Product.prototype.getPriceWithVAT = async function () {
+  return (await db.query(`SELECT price +
+    ROUND(price * ${configEcom.DEFAULT_VAT}, 2)
+    AS total
+    FROM products
+    WHERE id = ${this.id} AND
+    "deletedAt" is NULL`,
+    {
+      type: 'SELECT',
+      plain: true
+    })).total;
+}
+
+Product.prototype.getDiscountPriceWithVAT = async function () {
+  return ( await db.query(`SELECT "discountPrice" +
+    ROUND("discountPrice" * ${configEcom.DEFAULT_VAT}, 2)
+    AS total
+    FROM products
+    WHERE id = ${this.id} AND
+    "deletedAt" is NULL`,
+    {
+      type: 'SELECT',
+      plain: true
+    })).total;
+}
+
 Product.belongsTo(Category, {
   foreignKey: 'categoryId'
 });
@@ -572,26 +598,39 @@ OrderItem.prototype.getTotal = async function () {
 
   return parseFloat((await db.query(`SELECT "discountPrice" * orderitems.quantity
     AS total FROM products, orderitems
-    WHERE products.id = ${product.id} AND orderitems.id = ${this.id}
-    AND products.id = orderitems."productId"`, {
+    WHERE products.id = ${product.id} AND
+    orderitems.id = ${this.id} AND
+    products.id = orderitems."productId" AND
+    orderitems."deletedAt" is NULL AND
+    products."deletedAt" is NULL`, {
     type: 'SELECT',
     plain: true,
   })).total);
 };
 
-// TODO: Test
 OrderItem.prototype.getTotalWithVAT = async function () {
   if (this.price != 0)
-    return price;
+    return parseFloat((await db.query(`SELECT (price + ROUND(price * ${configEcom.DEFAULT_VAT}, 2) * quantity)
+      AS total
+      FROM orderitems
+      WHERE orderitems.id = ${this.id} AND
+      "deletedAt" is NULL`, {
+        type: 'SELECT',
+        plain: true,
+      })).total);
 
   let product = await this.getProduct();
 
   assert(product);
 
   return parseFloat((await db.query(`SELECT ("discountPrice" + ROUND("discountPrice" * ${configEcom.DEFAULT_VAT}, 2)) * orderitems.quantity
-    AS total FROM products, orderitems
-    WHERE products.id = ${product.id} AND orderitems.id = ${this.id}
-    AND products.id = orderitems."productId"`, {
+    AS total
+    FROM products, orderitems
+    WHERE products.id = ${product.id} AND
+    orderitems.id = ${this.id} AND
+    products.id = orderitems."productId" AND
+    orderitems."deletedAt" is NULL AND
+    products."deletedAt" is NULL`, {
     type: 'SELECT',
     plain: true,
   })).total);
@@ -672,8 +711,70 @@ Order.prototype.getTotal = async function () {
   })).sum);
 }
 
+Order.prototype.getTotalWithVAT = async function () {
+  // Big possibility for a bug
+  // If Order is not complete
+  // calculate by current product
+  // prices, if the order is ocmplete
+  // calculate by it's orderitems
+  // prices
+
+  // If not ordered
+  if (this.status == 0)
+    return parseFloat((await db.query(
+      `SELECT SUM(orderitems.quantity * (products."discountPrice" +
+      ROUND(products."discountPrice" * ${configEcom.DEFAULT_VAT}, 2))) FROM orders
+      INNER JOIN orderitems ON orders.id = orderitems."orderId"
+      INNER JOIN products ON orderitems."productId" = products.id
+      WHERE orders.id = ${this.id} AND
+      orderitems."deletedAt" is NULL AND
+      orders."deletedAt" is NULL;`, {
+      type: 'SELECT',
+      plain: true,
+    })).sum);
+
+  return parseFloat((await db.query(
+    `SELECT SUM(orderitems.quantity * (orderitems.price +
+    ROUND(orderitems.price * ${configEcom.DEFAULT_VAT}, 2))) FROM orders
+    INNER JOIN orderitems ON orders.id = orderitems."orderId"
+    WHERE orders.id = ${this.id} AND
+    orderitems."deletedAt" is NULL AND
+    orders."deletedAt" is NULL;`, {
+    type: 'SELECT',
+    plain: true,
+  })).sum);
+}
+
 Order.prototype.orderedAtHTML = function() {
   return this.orderedAt.toISOString().substring(0, 19);
+}
+
+Order.prototype.getVATSum = async function() {
+  if (this.status == 0)
+    return parseFloat(
+      (await db.query(
+        `SELECT SUM(ROUND(products."discountPrice" * ${configEcom.DEFAULT_VAT}, 2) * orderitems.quantity)
+        FROM orderitems
+        INNER JOIN orders ON orders.id = orderitems."orderId"
+        INNER JOIN products ON orderitems."productId" = products.id
+        WHERE orders.id = ${this.id} AND
+        orders."deletedAt" is NULL AND
+        orderitems."deletedAt" is NULL`, {
+          type: 'SELECT',
+          plain: true,
+      })).sum);
+  
+  return parseFloat(
+    (await db.query(
+      `SELECT SUM(ROUND(orderitems.price * ${configEcom.DEFAULT_VAT}, 2) * orderitems.quantity)
+      FROM orderitems
+      INNER JOIN orders ON orders.id = orderitems."orderId"
+      WHERE orders.id = ${this.id} AND
+      orders."deletedAt" is NULL AND
+      orderitems."deletedAt" is NULL`, {
+        type: 'SELECT',
+        plain: true,
+      })).sum);
 }
 
 Order.hasOne(Transaction, {foreignKey: {name: 'orderid'}});

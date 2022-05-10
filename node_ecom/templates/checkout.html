@@ -47,12 +47,14 @@
                                     </span>
                             </p>
                             <% } %>
-                                <p>Sub Total<span>
-                                        $<%= orderTotal %>
+                                <p>Sub Total<span id="subtotal">
+                                        $<%= subTotal %>
                                     </span></p>
-                                <p>Shipping Cost<span>$0</span></p>
+                                <p>VAT<span id="subvat">
+                                        $<%= orderVATSum %>
+                                    </span></p>
                                 <h2>Grand Total<span>
-                                        $<%= orderTotal %>
+                                        $<%= grandTotal %>
                                     </span></h2>
                     </div>
 
@@ -105,7 +107,7 @@
                 return actions.order.create({
                     purchase_units: [{
                         amount: {
-                            value: '<%= orderTotal %>'
+                            value: '<%= grandTotal %>'
                         }
                     }]
                 });

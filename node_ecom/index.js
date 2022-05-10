@@ -176,23 +176,6 @@ async function getMyAccount(ctx) {
     ]
   });
 
-  let orderitems = [];
-  let products = [];
-
-  for (i = 0; i < result.rows.length; i++) {
-    orderitems.push(await result.rows[i].getOrderitems());
-  }
-
-  for (i = 0; i < orderitems.length; i++) {
-    let productsArray = [];
-
-    for (z = 0; z < orderitems[i].length; z++) {
-      productsArray.push(await (orderitems[i][z].getProduct()));
-    }
-
-    products.push(productsArray);
-  }
-
   let currency = await utilsEcom.getCurrency();
 
   await ctx.render('my-account', {
@@ -200,8 +183,6 @@ async function getMyAccount(ctx) {
     session: ctx.session,
     cartQty: cartQty,
     orders: result.rows,
-    orderitems: orderitems,
-    products: products,
     currency: currency,
     page: page,
     pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS["elements_per_page"])),
@@ -671,46 +652,27 @@ async function getAdminOrders(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
   
-  const result = await db.query(`
-  SELECT DISTINCT foo.id, foo.status, foo."userId", foo."orderedAt",
-    users."firstName",
-    users."lastName", users.country, users.address, username, goo.sum
-    FROM (SELECT ord.id, ord.status, "userId",
-    ord."orderedAt" FROM orders AS ord
-    INNER JOIN user_orders AS uo ON "orderId" = ord.id) AS foo
-    INNER JOIN users ON "userId" = users.id
-    INNER JOIN
-    (SELECT orders.id, SUM(orderitems.quantity * orderitems.price)
-    FROM orders
-    INNER JOIN orderitems ON orders.id = orderitems."orderId"
-    INNER JOIN products on orderitems."productId" = products.id
-    WHERE orderitems."deletedAt" is NULL AND
-    status IN (${filters.status}) AND
-    "orderedAt" BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}' AND
-    position(upper($1) in upper(users.username)) > 0
-    AND "deletedAt" is NULL
-    GROUP BY orders.id) goo ON goo.id = foo.id
-    ORDER BY "orderedAt" DESC
-    LIMIT ${limit} OFFSET ${offset};`, {
-    type: 'SELECT',
-    plain: false,
-    bind: [filters.user]
-  });
-
-  const count = await db.query(`SELECT COUNT(*) FROM orders;`, {
-    type: 'SELECT',
-    plain: true
+  const result = await Order.findAndCountAll({
+    where: {
+      status: { [Op.gte]: 1 },
+    },
+    limit: limit,
+    offset: offset,
+    include: User,
+    order: [
+      ['orderedAt', 'DESC']
+    ]
   });
 
   await ctx.render("/admin/orders", {
     layout: "/admin/base",
     session: ctx.session,
     selected: "orders",
-    orders: result,
+    orders: result.rows,
     statuses: configEcom.STATUS_DISPLAY,
     filters: filtersToReturn,
     page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS["elements_per_page"]))
+    pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS["elements_per_page"]))
   });
 
   // Clear the messages
@@ -2957,6 +2919,9 @@ router.get('/addToCart', async ctx => {
   }
   if (createdorder)
     await user.addOrder(order);
+  
+  // TODO: RECODE ADDTOCART AND REMOVEFROMCART !!!
+  // Return it's product price, it's total price, subtotal. vatsum and grandtotal
 
   ctx.session.messages = { 'productAdded': 'Product added to cart!' };
   ctx.redirect('/products');
@@ -3046,6 +3011,7 @@ router.get('/cart', async ctx => {
     let products = [];
     let totals = [];
     let orderTotal = "0.00";
+    let orderVATSum = "0.00";
 
     if (ctx.cookies.get("products")) {
       var cookieProducts = JSON.parse(ctx.cookies.get("products"));
@@ -3056,11 +3022,12 @@ router.get('/cart', async ctx => {
         if (product) {
           orderitems.push({ 'id': i, 'productId': i, 'quantity': cookieProducts[i] });
           products.push(product);
-          totals.push((parseFloat(cookieProducts[i]) * parseFloat(product.discountPrice)).toFixed(2));
+          totals.push((parseFloat(cookieProducts[i]) * parseFloat(await product.discountPrice)).toFixed(2));
         }
       }
 
       orderTotal = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a), 0).toFixed(2);
+      orderVATSum = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a * configEcom.DEFAULT_VAT), 0).toFixed(2);
     }
 
     let cartQty = await utilsEcom.getCartQuantity(ctx);
@@ -3073,6 +3040,7 @@ router.get('/cart', async ctx => {
       products: products,
       totals: totals,
       orderTotal: orderTotal,
+      orderVATSum: orderVATSum,
     });
 
     // Clear the messages
@@ -3110,10 +3078,15 @@ router.get('/cart', async ctx => {
     totals.push((await (orderitems[i].getTotal())).toFixed(2));
   }
 
-  let orderTotal = "0.00";
+  let subTotal = "0.00";
+  let grandTotal = "0.00";
+  let orderVATSum = "0.00";
 
-  if (order)
-    orderTotal = await order.getTotal();
+  if (order) {
+    subTotal = await order.getTotal();
+    grandTotal = await order.getTotalWithVAT();
+    orderVATSum = await order.getVATSum();
+  }
 
   let cartQty = await utilsEcom.getCartQuantity(ctx);
 
@@ -3124,7 +3097,9 @@ router.get('/cart', async ctx => {
     items: orderitems,
     products: products,
     totals: totals,
-    orderTotal: orderTotal,
+    subTotal: subTotal,
+    grandTotal: grandTotal,
+    orderVATSum: orderVATSum,
   });
 
   // Clear the messages
@@ -3184,7 +3159,9 @@ router.get('/checkout', async ctx => {
     totals.push(await (orderitems[i].getTotal()));
   }
 
-  let orderTotal = await order.getTotal();
+  let subTotal = await order.getTotal();
+  let grandTotal = await order.getTotalWithVAT();
+  let orderVATSum = await order.getVATSum();
 
   let cartQty = await utilsEcom.getCartQuantity(ctx);
 
@@ -3196,7 +3173,9 @@ router.get('/checkout', async ctx => {
     items: orderitems,
     products: products,
     totals: totals,
-    orderTotal: orderTotal
+    subTotal: subTotal,
+    grandTotal: grandTotal,
+    orderVATSum: orderVATSum,
   });
 
   // Clear the messages
@@ -3922,6 +3901,7 @@ render(app, {
   viewExt: "html",
   debug: false,
   cache: true,
+  async: true,
 });
 
 app.use(router.routes()).use(router.allowedMethods());
