@@ -230,6 +230,15 @@
 
                 document.getElementById("server-time").innerHTML = "Server time: " + server.toLocaleString('en-GB', {timeZone: timezone});
             }, 1000);
+
+            $("button").mouseup(function() {
+                $(this).blur();
+            });
+
+            $("a").mouseup(function() {
+                alert("mouseup");
+                $(this).blur();
+            });
         </script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.2/dist/js/bootstrap.bundle.js"></script>
         <script src="/js/tooplate-scripts.js"></script>

@@ -893,14 +893,14 @@ async function getAdminAudit(ctx) {
   let query = `SELECT * FROM logs WHERE
   position(upper($1) in upper(user)) > 0 AND
   position(upper($2) in upper(level)) > 0 AND
-  timestamp BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}'
+  timestamp BETWEEN '$3' AND '$4'
   ORDER BY timestamp DESC`;
 
   if (filters.datetrunc != '-1') {
     query = `SELECT count(*), date_trunc('${time}', timestamp) t FROM logs WHERE
       position(upper($1) in upper(user)) > 0 AND
       position(upper($2) in upper(level)) > 0 AND
-      timestamp BETWEEN '${filters.ordAfter}' AND '${filters.ordBefore}'
+      timestamp BETWEEN '$3' AND '$4'
       GROUP BY t
       ORDER BY t DESC`;
   }
@@ -914,13 +914,13 @@ async function getAdminAudit(ctx) {
     plain: false,
     model: Log,
     mapToModel: true,
-    bind: [filters.user, filters.level]
+    bind: [filters.user, filters.level, filters.ordAfter, filters.ordBefore]
   });
 
   const count = await db.query(queryC, {
     type: 'SELECT',
     plain: true,
-    bind: [filters.user, filters.level]
+    bind: [filters.user, filters.level, filters.ordAfter, filters.ordBefore]
   });
 
   await ctx.render("/admin/audit", {
@@ -2832,12 +2832,6 @@ router.get('/addToCart', async ctx => {
         qty = parseInt(json[ctx.query.id]) + parseInt(ctx.query.quantity);
     }
 
-    if (!await utilsEcom.compareQtyAndProductQty(ctx.query.id, qty) == 1) {
-      ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
-      ctx.redirect('/products');
-      return;
-    }
-
     if (!ctx.cookies.get('products'))
       ctx.cookies.set('products', `{"${ctx.query.id}": ${ctx.query.quantity}}`, { httpOnly: true, expires: new Date(2147483647e3) });
     else {
@@ -2845,6 +2839,17 @@ router.get('/addToCart', async ctx => {
         var cooks = JSON.parse(ctx.cookies.get('products'));
       } catch (e) {
         var cooks = {};
+      }
+
+      if (await utilsEcom.compareQtyAndProductQty(ctx.query.id, qty + cooks[ctx.query.id]) == 0) {
+        if (ctx.query.cart) {
+          ctx.status = 400;
+        } else {
+          ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
+          ctx.redirect('/products');
+        }
+
+        return;
       }
 
       if (!cooks[ctx.query.id])
@@ -2907,13 +2912,14 @@ router.get('/addToCart', async ctx => {
       ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
       ctx.redirect('/products');
     }
+
     return;
   }
 
   if (createdorderitem)
     await order.addOrderitem(orderitem);
   else {
-    orderitem.update({
+    await orderitem.update({
       quantity: parseInt(orderitem.quantity) + parseInt(ctx.query.quantity)
     });
   }
@@ -2923,8 +2929,19 @@ router.get('/addToCart', async ctx => {
   // TODO: RECODE ADDTOCART AND REMOVEFROMCART !!!
   // Return it's product price, it's total price, subtotal. vatsum and grandtotal
 
-  ctx.session.messages = { 'productAdded': 'Product added to cart!' };
-  ctx.redirect('/products');
+  if (ctx.query.cart) {
+    ctx.body = {
+      'status': 'ok',
+      'prodPrice': await (await orderitem.getProduct()).getDiscountPriceWithVAT(),
+      'totalProdPrice': await orderitem.getTotalWithVAT(),
+      'subTotal': await order.getTotal(),
+      'vatSum': await order.getVATSum(),
+      'grandTotal': await order.getTotalWithVAT(),
+    };
+  } else {
+    ctx.session.messages = { 'productAdded': 'Product added to cart!' };
+    ctx.redirect('/products');
+  }
 });
 
 router.get('/removeFromCart', async ctx => {
@@ -2999,9 +3016,14 @@ router.get('/removeFromCart', async ctx => {
     await orderitem.destroy();
   }
 
-  ctx.session.messages = { 'cartRemoved': 'Removed selected items from the cart' };
-
-  ctx.redirect('/cart');
+  ctx.body = {
+    'status': 'ok',
+    'prodPrice': await (await orderitem.getProduct()).getDiscountPriceWithVAT(),
+    'totalProdPrice': await orderitem.getTotalWithVAT(),
+    'subTotal': await order.getTotal(),
+    'vatSum': await order.getVATSum(),
+    'grandTotal': await order.getTotalWithVAT(),
+  };
 });
 
 router.get('/cart', async ctx => {

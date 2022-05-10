@@ -478,7 +478,7 @@ const Session = db.define("session", {
   });
 
 Product.prototype.getPriceWithVAT = async function () {
-  return (await db.query(`SELECT price +
+  return parseFloat((await db.query(`SELECT price +
     ROUND(price * ${configEcom.DEFAULT_VAT}, 2)
     AS total
     FROM products
@@ -487,11 +487,11 @@ Product.prototype.getPriceWithVAT = async function () {
     {
       type: 'SELECT',
       plain: true
-    })).total;
+    })).total);
 }
 
 Product.prototype.getDiscountPriceWithVAT = async function () {
-  return ( await db.query(`SELECT "discountPrice" +
+  return parseFloat((await db.query(`SELECT "discountPrice" +
     ROUND("discountPrice" * ${configEcom.DEFAULT_VAT}, 2)
     AS total
     FROM products
@@ -500,7 +500,7 @@ Product.prototype.getDiscountPriceWithVAT = async function () {
     {
       type: 'SELECT',
       plain: true
-    })).total;
+    })).total);
 }
 
 Product.belongsTo(Category, {

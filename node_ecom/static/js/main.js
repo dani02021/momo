@@ -682,28 +682,25 @@ function buyProduct(id, qty, variation = '') {
     return true
 }
 
-function recalculateTotals() {
+function recalculateTotals(obj) {
     let table = document.getElementById("table");
 
-    let subtotal = 0;
     for (i=1;i<table.rows.length;i++) {
-        let qty = parseInt(table.rows[i].getElementsByClassName("qty")[0].getElementsByTagName("input")[0].value);
         let price = parseFloat(table.rows[i].getElementsByClassName("price")[0].innerHTML.replaceAll("$", ""));
 
-        let total = (qty*price).toFixed(2);
-
-        subtotal += parseFloat(total);
-
-        table.rows[i].getElementsByClassName("total")[0].innerHTML = "$" + total;
+        if (price == obj.prodPrice)
+            table.rows[i].getElementsByClassName("total")[0].innerHTML = "$" + obj.totalProdPrice.toFixed(2);
     }
 
-    document.getElementById("subtotal").innerHTML = "$" + subtotal.toFixed(2);
-    document.getElementById("grandtotal").innerHTML = "$" + subtotal.toFixed(2);
+    document.getElementById("subtotal").innerHTML = "$" + obj.subTotal.toFixed(2);
+    document.getElementById("vatsum").innerHTML = "$" + obj.vatSum.toFixed(2);
+    document.getElementById("grandtotal").innerHTML = "$" + obj.grandTotal.toFixed(2);
 }
 
 function addToCart(elem, id, qty, isCart) {
     $.ajax({
         url: "/addToCart",
+        dataType: "json",
         data: { 'id': id, 'quantity': qty, 'cart': isCart },
         success: function (obj) {
             // alert(obj);
@@ -716,7 +713,7 @@ function addToCart(elem, id, qty, isCart) {
 
             $button.parent().find('input').val(newVal);
 
-            recalculateTotals();
+            recalculateTotals(obj);
         },
         error: function (obj) {
             // alert(JSON.stringify(obj));
@@ -727,6 +724,7 @@ function addToCart(elem, id, qty, isCart) {
 function removeFromCart(elem, id, qty) {
     $.ajax({
         url: "/removeFromCart",
+        dataType: "json",
         data: { 'id': id, 'quantity': qty },
         success: function (obj) {
             let $button = $(elem);
@@ -737,7 +735,7 @@ function removeFromCart(elem, id, qty) {
 
             $button.parent().find('input').val(newVal);
 
-            recalculateTotals();
+            recalculateTotals(obj);
         }
     });
 }
