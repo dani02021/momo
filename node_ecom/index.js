@@ -3075,7 +3075,7 @@ router.get('/cart', async ctx => {
   let totals = [];
 
   for (i = 0; i < orderitems.length; i++) {
-    totals.push((await (orderitems[i].getTotal())).toFixed(2));
+    totals.push((await (orderitems[i].getTotalWithVAT())).toFixed(2));
   }
 
   let subTotal = "0.00";
@@ -3156,7 +3156,7 @@ router.get('/checkout', async ctx => {
   let totals = [];
 
   for (i = 0; i < orderitems.length; i++) {
-    totals.push(await (orderitems[i].getTotal()));
+    totals.push(await (orderitems[i].getTotalWithVAT()));
   }
 
   let subTotal = await order.getTotal();

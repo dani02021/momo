@@ -142,7 +142,6 @@ async function getOrderAsTableHTML(cart, table, options) {
     assert(typeof options === "object");
 
     let orderitems = await cart.getOrderitems();
-    let absTotal = 0.0;
 
     let html = `<table style="width: 100%; border: 1px solid black">`;
 
@@ -160,9 +159,7 @@ async function getOrderAsTableHTML(cart, table, options) {
     for (i = 0; i < orderitems.length; i++) {
         let orderitem = orderitems[i];
         let product = await orderitems[i].getProduct();
-        let total = await orderitem.getTotal();
-
-        absTotal += total;
+        let total = await orderitem.getTotalWithVAT();
 
         html +=
             `<tr>\n`;
@@ -175,7 +172,7 @@ async function getOrderAsTableHTML(cart, table, options) {
                     html += `<td style="border: 1px solid black">${product.name}</td>\n`;
                     break;
                 case "price":
-                    html += `<td style="text-align: right; border: 1px solid black">$${product.discountPrice}</td>\n`;
+                    html += `<td style="text-align: right; border: 1px solid black">$${await product.getDiscountPriceWithVAT()}</td>\n`;
                     break;
                 case "quantity":
                     html += `<td style="text-align: right; border: 1px solid black">${orderitem.quantity}</td>\n`;
@@ -189,17 +186,51 @@ async function getOrderAsTableHTML(cart, table, options) {
         html += `</tr>\n`;
     }
 
-    html +=
-        `<tr>\n`;
+    // Sub Total
+    html += `<tr>\n`;
     
+    for(z=0;z<table.length;z++) 
+    {   
+        if (table[z] == "subtotal") 
+        {
+            html += `<td style="text-align: right; border: 1px solid black">$${(await cart.getTotal()).toFixed(2)}</td>\n`;
+        } else 
+        {
+            if (table[z+1] == "subtotal")
+                html += `<td style="border: 1px solid black">Sub Total:</td>\n`;
+            else html += `<td style="border: 1px solid black"></td>\n`;
+        }
+    }
+
+    // VAT
+    html += `<tr>\n`;
+
+    for(z=0;z<table.length;z++) 
+    {   
+        if (table[z] == "subtotal") 
+        {
+            html += `<td style="text-align: right; border: 1px solid black">$${(await cart.getVATSum()).toFixed(2)}</td>\n`;
+        } else 
+        {
+            if (table[z+1] == "subtotal")
+                html += `<td style="border: 1px solid black">VAT:</td>\n`;
+            else html += `<td style="border: 1px solid black"></td>\n`;
+        }
+    }
+
+    // Grand Total
+    html += `<tr>\n`;
+
     for(z=0;z<table.length;z++) 
     {
         if (table[z] == "subtotal") 
         {
-            html += `<td style="text-align: right; border: 1px solid black">$${absTotal.toFixed(2)}</td>\n`;
+            html += `<td style="text-align: right; border: 1px solid black">$${(await cart.getTotalWithVAT()).toFixed(2)}</td>\n`;
         } else 
         {
-            html += `<td style="border: 1px solid black"></td>\n`;
+            if (table[z+1] == "subtotal")
+                html += `<td style="border: 1px solid black">Grand Total:</td>\n`;
+            else html += `<td style="border: 1px solid black"></td>\n`;
         }
     }
 
