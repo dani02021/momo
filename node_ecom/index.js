@@ -893,14 +893,14 @@ async function getAdminAudit(ctx) {
   let query = `SELECT * FROM logs WHERE
   position(upper($1) in upper(user)) > 0 AND
   position(upper($2) in upper(level)) > 0 AND
-  timestamp BETWEEN '$3' AND '$4'
+  timestamp BETWEEN $3 AND $4
   ORDER BY timestamp DESC`;
 
   if (filters.datetrunc != '-1') {
     query = `SELECT count(*), date_trunc('${time}', timestamp) t FROM logs WHERE
       position(upper($1) in upper(user)) > 0 AND
       position(upper($2) in upper(level)) > 0 AND
-      timestamp BETWEEN '$3' AND '$4'
+      timestamp BETWEEN $3 AND $4
       GROUP BY t
       ORDER BY t DESC`;
   }
@@ -2970,6 +2970,13 @@ router.get('/removeFromCart', async ctx => {
     return;
   }
 
+  if (ctx.query.quantity == -1) {
+    ctx.body = {
+      'status': 'redirect',
+      'redirect': '/cart'};
+    return;
+  }
+
   const order = await Order.findOne({
     where: {
       status: 0
@@ -3035,10 +3042,22 @@ router.get('/cart', async ctx => {
     let orderTotal = "0.00";
     let orderVATSum = "0.00";
 
+    let ids = [];
+
     if (ctx.cookies.get("products")) {
       var cookieProducts = JSON.parse(ctx.cookies.get("products"));
 
       for (i in cookieProducts) {
+        let num = Number(i);
+
+        if (!Number.isNaN(num))
+          ids.push(num);
+        
+        let result = db.query(
+          `SELECT price, price 
+          `
+          );
+
         let product = await Product.findOne({ where: { id: i } });
 
         if (product) {
@@ -3049,7 +3068,7 @@ router.get('/cart', async ctx => {
       }
 
       orderTotal = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a), 0).toFixed(2);
-      orderVATSum = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a * configEcom.DEFAULT_VAT), 0).toFixed(2);
+      orderVATSum = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a * configEcom.SETTINGS.vat), 0).toFixed(2);
     }
 
     let cartQty = await utilsEcom.getCartQuantity(ctx);

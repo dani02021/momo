@@ -479,7 +479,7 @@ const Session = db.define("session", {
 
 Product.prototype.getPriceWithVAT = async function () {
   return parseFloat((await db.query(`SELECT price +
-    ROUND(price * ${configEcom.DEFAULT_VAT}, 2)
+    ROUND(price * ${configEcom.SETTINGS.vat}, 2)
     AS total
     FROM products
     WHERE id = ${this.id} AND
@@ -492,7 +492,7 @@ Product.prototype.getPriceWithVAT = async function () {
 
 Product.prototype.getDiscountPriceWithVAT = async function () {
   return parseFloat((await db.query(`SELECT "discountPrice" +
-    ROUND("discountPrice" * ${configEcom.DEFAULT_VAT}, 2)
+    ROUND("discountPrice" * ${configEcom.SETTINGS.vat}, 2)
     AS total
     FROM products
     WHERE id = ${this.id} AND
@@ -610,7 +610,7 @@ OrderItem.prototype.getTotal = async function () {
 
 OrderItem.prototype.getTotalWithVAT = async function () {
   if (this.price != 0)
-    return parseFloat((await db.query(`SELECT (price + ROUND(price * ${configEcom.DEFAULT_VAT}, 2) * quantity)
+    return parseFloat((await db.query(`SELECT (price + ROUND(price * ${configEcom.SETTINGS.vat}, 2) * quantity)
       AS total
       FROM orderitems
       WHERE orderitems.id = ${this.id} AND
@@ -623,7 +623,7 @@ OrderItem.prototype.getTotalWithVAT = async function () {
 
   assert(product);
 
-  return parseFloat((await db.query(`SELECT ("discountPrice" + ROUND("discountPrice" * ${configEcom.DEFAULT_VAT}, 2)) * orderitems.quantity
+  return parseFloat((await db.query(`SELECT ("discountPrice" + ROUND("discountPrice" * ${configEcom.SETTINGS.vat}, 2)) * orderitems.quantity
     AS total
     FROM products, orderitems
     WHERE products.id = ${product.id} AND
@@ -723,7 +723,7 @@ Order.prototype.getTotalWithVAT = async function () {
   if (this.status == 0)
     return parseFloat((await db.query(
       `SELECT SUM(orderitems.quantity * (products."discountPrice" +
-      ROUND(products."discountPrice" * ${configEcom.DEFAULT_VAT}, 2))) FROM orders
+      ROUND(products."discountPrice" * ${configEcom.SETTINGS.vat}, 2))) FROM orders
       INNER JOIN orderitems ON orders.id = orderitems."orderId"
       INNER JOIN products ON orderitems."productId" = products.id
       WHERE orders.id = ${this.id} AND
@@ -735,7 +735,7 @@ Order.prototype.getTotalWithVAT = async function () {
 
   return parseFloat((await db.query(
     `SELECT SUM(orderitems.quantity * (orderitems.price +
-    ROUND(orderitems.price * ${configEcom.DEFAULT_VAT}, 2))) FROM orders
+    ROUND(orderitems.price * ${configEcom.SETTINGS.vat}, 2))) FROM orders
     INNER JOIN orderitems ON orders.id = orderitems."orderId"
     WHERE orders.id = ${this.id} AND
     orderitems."deletedAt" is NULL AND
@@ -753,7 +753,7 @@ Order.prototype.getVATSum = async function() {
   if (this.status == 0)
     return parseFloat(
       (await db.query(
-        `SELECT SUM(ROUND(products."discountPrice" * ${configEcom.DEFAULT_VAT}, 2) * orderitems.quantity)
+        `SELECT SUM(ROUND(products."discountPrice" * ${configEcom.SETTINGS.vat}, 2) * orderitems.quantity)
         FROM orderitems
         INNER JOIN orders ON orders.id = orderitems."orderId"
         INNER JOIN products ON orderitems."productId" = products.id
@@ -766,7 +766,7 @@ Order.prototype.getVATSum = async function() {
   
   return parseFloat(
     (await db.query(
-      `SELECT SUM(ROUND(orderitems.price * ${configEcom.DEFAULT_VAT}, 2) * orderitems.quantity)
+      `SELECT SUM(ROUND(orderitems.price * ${configEcom.SETTINGS.vat}, 2) * orderitems.quantity)
       FROM orderitems
       INNER JOIN orders ON orders.id = orderitems."orderId"
       WHERE orders.id = ${this.id} AND

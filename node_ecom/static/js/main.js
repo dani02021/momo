@@ -735,7 +735,9 @@ function removeFromCart(elem, id, qty) {
 
             $button.parent().find('input').val(newVal);
 
-            recalculateTotals(obj);
+            if (obj.status == 'redirect')
+                window.location.pathname = obj.redirect;
+            else recalculateTotals(obj); 
         }
     });
 }

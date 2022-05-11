@@ -71,20 +71,22 @@
             <tbody>
               <% for(i = 0; i < report.length; i++) { %>
               <tr>
-                <% if (filters.datetrunc !== '-1') { %>
-                <td><b><%= report[i].dataValues.t.toLocaleString('en-GB') %></b></td>
-                <% } else {%>
+                <% if (filters.datetrunc !== -1) { %>
                 <td><b><%= report[i].dataValues.timestamp.toLocaleString('en-GB') %></b></td>
+                <% } else {%>
+                <td><b><%= report[i].dataValues.t.toLocaleString('en-GB') %></b></td>
                 <% } %>
                 <td><%= report[i].dataValues.level %></td>
                 <td><%= report[i].dataValues.user %></td>
-                <% if (filters.datetrunc) { %>
+                <% if (filters.datetrunc === -1) { %>
                 <td></td>
                 <% } else { %>
                 <% if (report[i].dataValues.isStaff === true) { %>
                 <td>STAFF</td>
-                <% } else { %>
+                <% } else if (report[i].dataValues.isStaff === false) { %>
                 <td>USER</td>
+                <% } else { %>
+                <td></td>
                 <% } %>
                 <% } %>
                 <td><%= report[i].dataValues.message %></td>

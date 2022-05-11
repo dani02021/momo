@@ -82,8 +82,9 @@
                 <th scope="col" class="clickable">USERNAME</th>
                 <th scope="col" class="clickable">COUNTRY</th>
                 <th scope="col" class="clickable">ADDRESS</th>
-                <th scope="col" class="clickable">TOTAL PRICE</th>
+                <th scope="col" class="clickable">SUB TOTAL</th>
                 <th scope="col" class="clickable">VAT</th>
+                <th scope="col" class="clickable">GRAND TOTAL</th>
                 <th scope="col">ACTION</th>
               </tr>
             </thead>
@@ -113,6 +114,7 @@
                 <td><b><%= (await orders[i].getUsers())[0].address %></b></td>
                 <td style="text-align: right;"><b>$<%= await orders[i].getTotal() %></b></td>
                 <td style="text-align: right;"><b>$<%= await orders[i].getVATSum() %></b></td>
+                <td style="text-align: right;"><b>$<%= await orders[i].getTotalWithVAT() %></b></td>
                 <td><a href="/admin/orders/edit/<%= orders[i].id %>" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>

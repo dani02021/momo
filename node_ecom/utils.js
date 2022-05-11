@@ -110,7 +110,7 @@ const logger = winston.createLogger({
             level: "error",
             // Create the log directory if it does not exist
             filename: 'logs/error.log',
-            format: winston.format.printf(log => `[${new Date().toLocaleString("en-GB")}] ` + log.message),
+            format: winston.format.printf(log => `[${new Date().toLocaleString("en-GB")}] ` + log.message.replaceAll('\n', '')),
         }),
         new winston.transports.File({
             level: "error",
