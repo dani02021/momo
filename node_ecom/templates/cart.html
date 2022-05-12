@@ -26,9 +26,9 @@
                                     </td>
                                     <td class="price" data-id="<%= products[i].id %>">
                                     <% if (products[i].discountPrice != products[i].price) { %>
-                                    $<%= await products[i].getDiscountPriceWithVAT() %>
+                                    $<%= await products[i].getDiscountPriceWithVATAsString() %>
                                     <% } else { %>
-                                    $<%= await products[i].getPriceWithVAT() %>
+                                    $<%= await products[i].getPriceWithVATAsString() %>
                                     <% } %>
                                     </td>
                                     <td>
