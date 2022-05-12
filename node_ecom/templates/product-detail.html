@@ -126,7 +126,7 @@
                         <ul class="navbar-nav">
                             <% for(i = 0; i < categories.length; i++) { %>
                             <li class="nav-item">
-                                <a class="nav-link" href="/products/?cat=<%= categories[i] %>">
+                                <a class="nav-link" href="/products/?cat=<%= categories[i].id %>">
                                     <i class="<%= categories[i].imageCss %>"></i><%= categories[i].name %></a>
                             </li>
                             <% } %>

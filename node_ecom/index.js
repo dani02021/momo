@@ -13,6 +13,7 @@ const configEcom = require("./config.js");
 const session = require('koa-session');
 const assert = require('assert/strict');
 const csv = require('fast-csv');
+const favicon = require('koa-favicon');
 
 const fs = require('fs');
 const db = require("./db.js");
@@ -76,20 +77,20 @@ async function getProducts(ctx) {
   // Get filters
   let filters = {}, filtersToReturn = {};
 
-  if (ctx.query.cat) {
-    filters['cat'] = ctx.query.cat
-    filtersToReturn['Category'] = ctx.query.cat
+  if (isFinite(ctx.query.cat)) {
+    filters['cat'] = ctx.query.cat;
+    filtersToReturn['Category'] = ctx.query.cat;
   } else {
     filters['cat'] = '';
   }
-  if (ctx.query.minval) {
+  if (isFinite(ctx.query.minval) && Math.sign(ctx.query.minval) >= 0) {
     filters['minval'] = ctx.query.minval
     filtersToReturn['Min price'] = ctx.query.minval
   }
   else {
     filters['minval'] = 0
   }
-  if (ctx.query.maxval) {
+  if (isFinite(ctx.query.maxval) && Math.sign(ctx.query.maxval) >= 0) {
     filters['maxval'] = ctx.query.maxval
     filtersToReturn['Max price'] = ctx.query.maxval
   }
@@ -104,8 +105,8 @@ async function getProducts(ctx) {
     filters['search'] = ''
   }
 
-  let categories, page = 1;
-  await Category.findAll().then((categoriesv) => categories = categoriesv);
+  let page = 1;
+  let categories = await Category.findAll();
 
   if (ctx.params.page) {
     page = parseInt(ctx.params.page)
@@ -231,18 +232,18 @@ async function getAdminProducts(ctx) {
   // Get filters
   let filters = {}, filtersToReturn = {};
 
-  if (ctx.query.category) {
+  if (isFinite(ctx.query.category)) {
     filters['category'] = ctx.query.category;
     filtersToReturn['category'] = ctx.query.category;
   }
-  if (ctx.query.minprice) {
+  if (isFinite(ctx.query.minprice) && Math.sign(ctx.query.minprice) >= 0) {
     filters['minprice'] = ctx.query.minprice;
     filtersToReturn['minprice'] = ctx.query.minprice;
   }
   else {
     filters['minprice'] = 0;
   }
-  if (ctx.query.maxprice) {
+  if (isFinite(ctx.query.maxprice) && Math.sign(ctx.query.maxprice) >= 0) {
     filters['maxprice'] = ctx.query.maxprice;
     filtersToReturn['maxprice'] = ctx.query.maxprice;
   }
@@ -2932,6 +2933,7 @@ router.get('/addToCart', async ctx => {
   if (ctx.query.cart) {
     ctx.body = {
       'status': 'ok',
+      'prodID': order.id,
       'prodPrice': await (await orderitem.getProduct()).getDiscountPriceWithVAT(),
       'totalProdPrice': await orderitem.getTotalWithVAT(),
       'subTotal': await order.getTotal(),
@@ -3050,22 +3052,26 @@ router.get('/cart', async ctx => {
       for (i in cookieProducts) {
         let num = Number(i);
 
-        if (!Number.isNaN(num))
+        if (isFinite(num))
           ids.push(num);
-        
-        let result = db.query(
-          `SELECT price, price 
-          `
-          );
-
-        let product = await Product.findOne({ where: { id: i } });
-
-        if (product) {
-          orderitems.push({ 'id': i, 'productId': i, 'quantity': cookieProducts[i] });
-          products.push(product);
-          totals.push((parseFloat(cookieProducts[i]) * parseFloat(await product.discountPrice)).toFixed(2));
-        }
       }
+
+      let products = await Product.findAll({
+        where: { id: { [Op.in]: ids } },
+        attributes: [
+          "id", "name", "price",
+          [Sequelize.literal(`price * ${cookieProducts[i]}`), 'totalPrice']
+        ]
+      });
+
+      for (i of products) {
+        console.log(i);
+
+        orderitems.push({ 'id': i.id, 'productId': i.id, 'quantity': cookieProducts[i] });
+        totals.push(parseFloat(i.dataValues.totalPrice).toFixed(2));
+      }
+
+      // TODO: console.log();
 
       orderTotal = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a), 0).toFixed(2);
       orderVATSum = totals.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a * configEcom.SETTINGS.vat), 0).toFixed(2);
@@ -3946,6 +3952,8 @@ render(app, {
 });
 
 app.use(router.routes()).use(router.allowedMethods());
+
+app.use(favicon(__dirname + '/static/img/favicon.ico'));
 
 // Global Unhandled Error Handler
 app.on("error", (err, ctx) => {

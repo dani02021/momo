@@ -686,9 +686,9 @@ function recalculateTotals(obj) {
     let table = document.getElementById("table");
 
     for (i=1;i<table.rows.length;i++) {
-        let price = parseFloat(table.rows[i].getElementsByClassName("price")[0].innerHTML.replaceAll("$", ""));
+        let id = table.rows[i].getElementsByClassName("price")[0].dataset.id;
 
-        if (price == obj.prodPrice)
+        if (id == obj.prodID)
             table.rows[i].getElementsByClassName("total")[0].innerHTML = "$" + obj.totalProdPrice.toFixed(2);
     }
 
