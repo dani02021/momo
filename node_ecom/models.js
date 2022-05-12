@@ -712,7 +712,7 @@ Order.prototype.getTotal = async function () {
   // If not ordered
   if (this.status == 0)
     return parseFloat((await db.query(
-      `SELECT SUM(orderitems.quantity * products."discountPrice") FROM orders
+      `SELECT COALESCE(SUM(orderitems.quantity * products."discountPrice"), 0.00) AS total FROM orders
       INNER JOIN orderitems ON orders.id = orderitems."orderId"
       INNER JOIN products ON orderitems."productId" = products.id
       WHERE orders.id = ${this.id} AND
@@ -720,17 +720,17 @@ Order.prototype.getTotal = async function () {
       orders."deletedAt" is NULL;`, {
       type: 'SELECT',
       plain: true,
-    })).sum);
+    })).total);
 
   return parseFloat((await db.query(
-    `SELECT SUM(orderitems.quantity * orderitems.price) FROM orders
+    `SELECT COALESCE(SUM(orderitems.quantity * orderitems.price), 0.00) AS total FROM orders
     INNER JOIN orderitems ON orders.id = orderitems."orderId"
     WHERE orders.id = ${this.id} AND
     orderitems."deletedAt" is NULL AND
     orders."deletedAt" is NULL;`, {
     type: 'SELECT',
     plain: true,
-  })).sum);
+  })).total);
 }
 
 Order.prototype.getTotalAsString = async function () {
@@ -748,8 +748,10 @@ Order.prototype.getTotalWithVAT = async function () {
   // If not ordered
   if (this.status == 0)
     return parseFloat((await db.query(
-      `SELECT SUM(orderitems.quantity * (products."discountPrice" +
-      (products."discountPrice" * ${configEcom.SETTINGS.vat}))) FROM orders
+      `SELECT COALESCE(SUM(orderitems.quantity * (products."discountPrice" +
+        (products."discountPrice" * ${configEcom.SETTINGS.vat}))), 0.00)
+      AS total
+      FROM orders
       INNER JOIN orderitems ON orders.id = orderitems."orderId"
       INNER JOIN products ON orderitems."productId" = products.id
       WHERE orders.id = ${this.id} AND
@@ -757,18 +759,20 @@ Order.prototype.getTotalWithVAT = async function () {
       orders."deletedAt" is NULL;`, {
       type: 'SELECT',
       plain: true,
-    })).sum);
+    })).total);
 
   return parseFloat((await db.query(
-    `SELECT SUM(orderitems.quantity * (orderitems.price +
-    (orderitems.price * ${configEcom.SETTINGS.vat}))) FROM orders
+    `SELECT COALESCE(SUM(orderitems.quantity * (orderitems.price +
+      (orderitems.price * ${configEcom.SETTINGS.vat}))), 0.00)
+    AS total
+    FROM orders
     INNER JOIN orderitems ON orders.id = orderitems."orderId"
     WHERE orders.id = ${this.id} AND
     orderitems."deletedAt" is NULL AND
     orders."deletedAt" is NULL;`, {
     type: 'SELECT',
     plain: true,
-  })).sum);
+  })).total);
 }
 
 Order.prototype.getTotalWithVATAsString = async function () {
@@ -783,8 +787,9 @@ Order.prototype.getVATSum = async function() {
   if (this.status == 0)
     return parseFloat(
       (await db.query(
-        `SELECT ROUND(SUM(products."discountPrice" *
-          ${configEcom.SETTINGS.vat} * orderitems.quantity), 2)
+        `SELECT COALESCE(ROUND(SUM(products."discountPrice" *
+          ${configEcom.SETTINGS.vat} * orderitems.quantity), 2), 0.00)
+        AS total
         FROM orderitems
         INNER JOIN orders ON orders.id = orderitems."orderId"
         INNER JOIN products ON orderitems."productId" = products.id
@@ -793,12 +798,13 @@ Order.prototype.getVATSum = async function() {
         orderitems."deletedAt" is NULL`, {
           type: 'SELECT',
           plain: true,
-      })).sum);
+      })).total);
   
   return parseFloat(
     (await db.query(
-      `SELECT ROUND(SUM(orderitems.price *
-          ${configEcom.SETTINGS.vat} * orderitems.quantity), 2)
+      `SELECT COALESCE(ROUND(SUM(orderitems.price *
+          ${configEcom.SETTINGS.vat} * orderitems.quantity), 2), 0.00)
+      AS total
       FROM orderitems
       INNER JOIN orders ON orders.id = orderitems."orderId"
       WHERE orders.id = ${this.id} AND
@@ -806,7 +812,7 @@ Order.prototype.getVATSum = async function() {
       orderitems."deletedAt" is NULL`, {
         type: 'SELECT',
         plain: true,
-      })).sum);
+      })).total);
 }
 
 Order.prototype.getVATSumAsString = async function() {
