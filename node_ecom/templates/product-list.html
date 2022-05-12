@@ -133,11 +133,11 @@
                             <div class="product-price">
                                 <div class="col">
                                     <% if(products[i].dataValues.discountPrice != products[i].dataValues.price) { %>
-                                    <h5 style="color: white; display: inline-block; margin: 0;"><s>$<%= await products[i].getPriceWithVAT() %></s>
+                                    <h5 style="color: white; display: inline-block; margin: 0;"><s>$<%= await products[i].getPriceWithVATAsString() %></s>
                                     </h5>
-                                    <h3 class="discount-price">$<%= await products[i].getDiscountPriceWithVAT() %></h3>
+                                    <h3 class="discount-price">$<%= await products[i].getDiscountPriceWithVATAsString() %></h3>
                                     <% } else { %>
-                                    <h3>$<%= await products[i].getPriceWithVAT() %></h3>
+                                    <h3>$<%= await products[i].getPriceWithVATAsString() %></h3>
                                     <% } %>
                                 </div>
                                 <div class="col">
