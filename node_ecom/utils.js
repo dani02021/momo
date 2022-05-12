@@ -724,8 +724,8 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
     LEFT JOIN (SELECT "productId", sum(quantity) FROM orderitems 
     GROUP BY "productId") foo 
     ON "productId" = products.id 
-    WHERE ("deletedAt" IS NULL) 
-    AND (hide = false) \n`;
+    WHERE "deletedAt" IS NULL 
+    AND hide = false \n`;
 
     let returnParamsBind = {};
 
@@ -946,7 +946,8 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
     INNER JOIN products on products.id = orderitems."productId"
     GROUP BY products.name order by count desc)
     as foo on products.name = foo.name
-    WHERE products."deletedAt" IS NULL`;
+    WHERE products."deletedAt" IS NULL AND
+    products.hide = false`;
 
     let bindParams = {};
 

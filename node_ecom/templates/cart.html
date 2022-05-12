@@ -16,7 +16,7 @@
                                 </tr>
                             </thead>
                             <tbody class="align-middle">
-                                <% for(i = 0; i < items.length; i++) { %>
+                                <% for(i = 0; i < products.length; i++) { %>
                                 <tr>
                                     <td>
                                         <div class="img">
@@ -39,11 +39,9 @@
                                         </div>
                                     </td>
                                     <td class="total">$<%= totals[i] %></td>
-                                    <td><form action="/removeFromCart" style="display: inline;" method="get">
-                                        <input type="hidden" value="<%= products[i].id %>" name="id" style="display: inline;">
-                                        <input type="hidden" value="-1" name="quantity" style="display: inline;">
-                                        <button type="submit" style="display: inline;"><i class="fa fa-trash"></i></button>
-                                    </form></td>
+                                    <td>
+                                        <button style="display: inline;" onclick="javascript:removeFromCart(this, <%= products[i].id %>, -1)"><i class="fa fa-trash"></i></button>
+                                    </td>
                                 </tr>
                                 <% } %>
                             </tbody>
