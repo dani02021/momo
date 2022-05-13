@@ -25,7 +25,7 @@
                                 <div class="price">
                                     <h4>Price:</h4>
                                     <p><% if(product.discountPrice != product.price ) { %>
-                                        <span>$<%= await product.getDiscountPriceWithVATAsString() %></span> <% } %> $<%= await product.getPriceWithVATAsString() %></p>
+                                        <span>$<%= await product.getDiscountPriceWithVATStr() %></span> <% } %> $<%= await product.getPriceWithVATStr() %></p>
                                 </div>
                                 <div class="quantity">
                                     <h4>Quantity:</h4>

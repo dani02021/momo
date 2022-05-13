@@ -689,12 +689,12 @@ function recalculateTotals(obj) {
         let id = table.rows[i].getElementsByClassName("price")[0].dataset.id;
 
         if (id == obj.prodID)
-            table.rows[i].getElementsByClassName("total")[0].innerHTML = "$" + obj.totalProdPrice.toFixed(2);
+            table.rows[i].getElementsByClassName("total")[0].innerHTML = "$" + obj.totalProdPrice;
     }
 
-    document.getElementById("subtotal").innerHTML = "$" + obj.subTotal.toFixed(2);
-    document.getElementById("vatsum").innerHTML = "$" + obj.vatSum.toFixed(2);
-    document.getElementById("grandtotal").innerHTML = "$" + obj.grandTotal.toFixed(2);
+    document.getElementById("subtotal").innerHTML = "$" + obj.subTotal;
+    document.getElementById("vatsum").innerHTML = "$" + obj.vatSum;
+    document.getElementById("grandtotal").innerHTML = "$" + obj.grandTotal;
 }
 
 function addToCart(elem, id, qty, isCart) {

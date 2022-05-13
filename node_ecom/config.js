@@ -2,6 +2,8 @@ const assert = require("assert");
 
 const SESSION_MAX_AGE = 2 * 7 * 24 * 60 * 60 * 1000; // 2 weeks;
 
+const COOKIE_PRODUCTS_EXPIRE = 2147483647e3;
+
 const DEFAULT_PRODUCTS_PER_PAGE = 12;
 
 const DEFAULT_SESSION_BACK_OFFICE_EXPIRE = 5 * 60 * 1000; // 5 minutes
@@ -92,6 +94,7 @@ async function loadSettings(settings)
 
 module.exports = {
     SESSION_MAX_AGE,
+    COOKIE_PRODUCTS_EXPIRE,
     DEFAULT_EMAIL_SENDER,
     DEFAULT_ORDER_EMAIL_TEMPLATE,
     DEFAULT_PAYMENT_EMAIL_TEMPLATE,

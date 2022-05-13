@@ -112,9 +112,9 @@
                 <td><b><%= (await orders[i].getUsers())[0].username %></b></td>
                 <td><b><%= (await orders[i].getUsers())[0].country %></b></td>
                 <td><b><%= (await orders[i].getUsers())[0].address %></b></td>
-                <td style="text-align: right;"><b>$<%= await orders[i].getTotal() %></b></td>
-                <td style="text-align: right;"><b>$<%= await orders[i].getVATSum() %></b></td>
-                <td style="text-align: right;"><b>$<%= await orders[i].getTotalWithVAT() %></b></td>
+                <td style="text-align: right;"><b>$<%= await orders[i].getTotalStr() %></b></td>
+                <td style="text-align: right;"><b>$<%= await orders[i].getVATSumStr() %></b></td>
+                <td style="text-align: right;"><b>$<%= await orders[i].getTotalWithVATStr() %></b></td>
                 <td><a href="/admin/orders/edit/<%= orders[i].id %>" class="tm-order-edit-link">
                     <i class="far fa-edit tm-order-edit-icon"></i>
                   </a>

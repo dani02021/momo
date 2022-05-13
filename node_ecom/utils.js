@@ -159,7 +159,7 @@ async function getOrderAsTableHTML(cart, table, options) {
     for (i = 0; i < orderitems.length; i++) {
         let orderitem = orderitems[i];
         let product = await orderitems[i].getProduct();
-        let total = await orderitem.getTotalWithVAT();
+        let total = await orderitem.getTotalWithVATStr();
 
         html +=
             `<tr>\n`;
@@ -172,13 +172,13 @@ async function getOrderAsTableHTML(cart, table, options) {
                     html += `<td style="border: 1px solid black">${product.name}</td>\n`;
                     break;
                 case "price":
-                    html += `<td style="text-align: right; border: 1px solid black">$${await product.getDiscountPriceWithVAT()}</td>\n`;
+                    html += `<td style="text-align: right; border: 1px solid black">$${await product.getDiscountPriceWithVATStr()}</td>\n`;
                     break;
                 case "quantity":
                     html += `<td style="text-align: right; border: 1px solid black">${orderitem.quantity}</td>\n`;
                     break;
                 case "subtotal":
-                    html += `<td style="text-align: right; border: 1px solid black">$${total.toFixed(2)}</td>\n`;
+                    html += `<td style="text-align: right; border: 1px solid black">$${total}</td>\n`;
                     break;
             }
         }
@@ -193,7 +193,7 @@ async function getOrderAsTableHTML(cart, table, options) {
     {   
         if (table[z] == "subtotal") 
         {
-            html += `<td style="text-align: right; border: 1px solid black">$${(await cart.getTotal()).toFixed(2)}</td>\n`;
+            html += `<td style="text-align: right; border: 1px solid black">$${await cart.getTotalStr()}</td>\n`;
         } else 
         {
             if (table[z+1] == "subtotal")
@@ -209,7 +209,7 @@ async function getOrderAsTableHTML(cart, table, options) {
     {   
         if (table[z] == "subtotal") 
         {
-            html += `<td style="text-align: right; border: 1px solid black">$${(await cart.getVATSum()).toFixed(2)}</td>\n`;
+            html += `<td style="text-align: right; border: 1px solid black">$${await cart.getVATSumStr()}</td>\n`;
         } else 
         {
             if (table[z+1] == "subtotal")
@@ -225,7 +225,7 @@ async function getOrderAsTableHTML(cart, table, options) {
     {
         if (table[z] == "subtotal") 
         {
-            html += `<td style="text-align: right; border: 1px solid black">$${(await cart.getTotalWithVAT()).toFixed(2)}</td>\n`;
+            html += `<td style="text-align: right; border: 1px solid black">$${await cart.getTotalWithVAT()}</td>\n`;
         } else 
         {
             if (table[z+1] == "subtotal")
@@ -663,15 +663,17 @@ async function validateStatus(ctx, orderId, responce) {
 }
 
 async function getReportResponce(filters, limit, offset, time) {
-    let text = `SELECT date_trunc($1, orders."orderedAt") as "startDate", 
-    SUM(orderitems.quantity) as products, 
-    COUNT(distinct orders.id) as orders, 
-    SUM(distinct price) as total 
+    let text = 
+    `SELECT
+        date_trunc($1, orders."orderedAt") as "startDate", 
+        SUM(orderitems.quantity) as products, 
+        COUNT(distinct orders.id) as orders, 
+        SUM(distinct price) as total 
     FROM orders 
     INNER JOIN orderitems
-    ON orderitems."orderId" = orders.id 
-    WHERE status > 0 AND 
-    "orderedAt" BETWEEN $2 AND $3
+        ON orderitems."orderId" = orders.id 
+    WHERE status > 0
+        AND "orderedAt" BETWEEN $2 AND $3
     GROUP BY "startDate" `;
 
     let countText = `SELECT COUNT(*) FROM (${text}) AS foo;`;
@@ -720,10 +722,12 @@ function createTempFile(name = 'temp_file', data = '', encoding = 'utf8') {
 }
 
 async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, sort) {
-    let text = `SELECT * FROM products 
-    LEFT JOIN (SELECT "productId", sum(quantity) FROM orderitems 
-    GROUP BY "productId") foo 
-    ON "productId" = products.id 
+    let text = 
+    `SELECT * FROM products 
+    LEFT JOIN (
+        SELECT "productId", sum(quantity) FROM orderitems 
+        GROUP BY "productId"
+    ) foo ON "productId" = products.id 
     WHERE "deletedAt" IS NULL 
     AND hide = false \n`;
 
@@ -877,7 +881,6 @@ async function saveReportExcel(reportRes, filters, time, currency) {
 
     const workbook = new excelJS.Workbook();
     const worksheet = workbook.addWorksheet("Report Orders");
-    const path = "./files";  // Path to download excel
 
     worksheet.getRow(2).values = ['Start Date', 'Orders', 'Products', 'Total Price', 'Currency'];
 
@@ -937,17 +940,19 @@ async function saveReportExcel(reportRes, filters, time, currency) {
 
 // Returns every product and how many times its ordered - NOT USED - NOT WORKING
 async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval) {
-    let text = `SELECT products.id, products.name, products.description, products.image,
-    products.price, products."discountPrice", products."categoryId",
-    products."createdAt", products."deletedAt", count
-    FROM products
-    INNER JOIN (SELECT products.name, count(products.name)
-    FROM orderitems
-    INNER JOIN products on products.id = orderitems."productId"
-    GROUP BY products.name order by count desc)
-    as foo on products.name = foo.name
-    WHERE products."deletedAt" IS NULL AND
-    products.hide = false`;
+    let text = 
+        `SELECT products.id, products.name, products.description, products.image,
+            products.price, products."discountPrice", products."categoryId",
+            products."createdAt", products."deletedAt", count
+        FROM products
+        INNER JOIN (
+            SELECT products.name, count(products.name)
+            FROM orderitems
+            INNER JOIN products on products.id = orderitems."productId"
+            GROUP BY products.name order by count desc
+        ) AS foo on products.name = foo.name
+        WHERE products."deletedAt" IS NULL
+            AND products.hide = false`;
 
     let bindParams = {};
 

@@ -2828,52 +2828,50 @@ router.post('/admin/orders/edit/:id', async ctx => {
 router.get('/addToCart', async ctx => {
   // Currently working only for registered users
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    let qty = ctx.query.quantity;
-
-    if (ctx.cookies.get('products')) {
-      const json = JSON.parse(ctx.cookies.get('products'));
-
-      if (json[ctx.query.id])
-        qty = parseInt(json[ctx.query.id]) + parseInt(ctx.query.quantity);
-    }
-
     if (!ctx.cookies.get('products'))
-      ctx.cookies.set('products', `{"${ctx.query.id}": ${ctx.query.quantity}}`, { httpOnly: true, expires: new Date(2147483647e3) });
+      ctx.cookies.set('products', `{"${ctx.query.id}": ${ctx.query.quantity}}`, { httpOnly: true, expires: new Date(configEcom.COOKIE_PRODUCTS_EXPIRE) });
     else {
       try {
-        var cooks = JSON.parse(ctx.cookies.get('products'));
+        var products = JSON.parse(ctx.cookies.get('products'));
       } catch (e) {
-        var cooks = {};
+        var products = {};
       }
+      
+      if (!products[ctx.query.id])
+        products[ctx.query.id] = ctx.query.quantity;
+      else {
+        products[ctx.query.id] = products[ctx.query.id] + ctx.query.quantity;
+      }
+      
+      if (await utilsEcom.compareQtyAndProductQty(ctx.query.id, products[ctx.query.id]) == 0) {
+        products[ctx.query.id] -= ctx.query.quantity;
 
-      if (await utilsEcom.compareQtyAndProductQty(ctx.query.id, qty + cooks[ctx.query.id]) == 0) {
+        ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
         if (ctx.query.cart) {
-          ctx.status = 400;
-        } else {
-          ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
-          ctx.redirect('/products');
+          ctx.body = {
+            'status': 'redirect',
+            'redirect': '/cart'
+          };
+
+          return;
         }
+
+        ctx.redirect('/products');
 
         return;
       }
 
-      if (!cooks[ctx.query.id])
-        cooks[ctx.query.id] = ctx.query.quantity;
-      else {
-        try {
-          cooks[ctx.query.id] = parseInt(cooks[ctx.query.id]) + parseInt(ctx.query.quantity);
-        } catch (e) {
-          cooks[ctx.query.id] = ctx.query.quantity;
-        }
+      ctx.cookies.set('products', JSON.stringify(products), { httpOnly: true, expires: new Date(configEcom.COOKIE_PRODUCTS_EXPIRE) });
+      
+      if (ctx.query.cart) {
+        // TODO
+  
+        return;
       }
-
-      ctx.cookies.set('products', JSON.stringify(cooks), { httpOnly: true, expires: new Date(2147483647e3) });
     }
 
     ctx.session.messages = { 'productAdded': 'Product added to the cart!' };
     ctx.redirect('/products');
-    // ctx.redirect('/');
-    return;
   }
 
   const user = await User.findOne({ where: { username: ctx.session.dataValues.username } });
@@ -2943,12 +2941,12 @@ router.get('/addToCart', async ctx => {
   if (ctx.query.cart) {
     ctx.body = {
       'status': 'ok',
-      'prodID': order.id,
-      'prodPrice': await (await orderitem.getProduct()).getDiscountPriceWithVATAsString(),
-      'totalProdPrice': await orderitem.getTotalWithVATAsString(),
-      'subTotal': await order.getTotalAsString(),
-      'vatSum': await order.getVATSumAsString(),
-      'grandTotal': await order.getTotalWithVATAsString(),
+      'prodID': orderitem.id,
+      'prodPrice': await (await orderitem.getProduct()).getDiscountPriceWithVATStr(),
+      'totalProdPrice': await orderitem.getTotalWithVATStr(),
+      'subTotal': await order.getTotalStr(),
+      'vatSum': await order.getVATSumStr(),
+      'grandTotal': await order.getTotalWithVATStr(),
     };
   } else {
     ctx.session.messages = { 'productAdded': 'Product added to cart!' };
@@ -2975,7 +2973,7 @@ router.get('/removeFromCart', async ctx => {
       }
     }
 
-    ctx.cookies.set('products', JSON.stringify(products), { httpOnly: true, expires: new Date(2147483647e3) });
+    ctx.cookies.set('products', JSON.stringify(products), { httpOnly: true, expires: new Date(configEcom.COOKIE_PRODUCTS_EXPIRE) });
 
     ctx.session.messages = { 'cartRemoved': 'Removed selected items from the cart' };
     ctx.redirect('/cart');
@@ -3031,18 +3029,20 @@ router.get('/removeFromCart', async ctx => {
 
     ctx.body = {
       'status': 'redirect',
-      'redirect': '/cart'};
+      'redirect': '/cart'
+    };
     
     return;
   }
 
   ctx.body = {
     'status': 'ok',
-    'prodPrice': await (await orderitem.getProduct()).getDiscountPriceWithVAT(),
-    'totalProdPrice': await orderitem.getTotalWithVAT(),
-    'subTotal': await order.getTotal(),
-    'vatSum': await order.getVATSum(),
-    'grandTotal': await order.getTotalWithVAT(),
+    'prodID': orderitem.id,
+    'prodPrice': await (await orderitem.getProduct()).getDiscountPriceWithVATStr(),
+    'totalProdPrice': await orderitem.getTotalWithVATStr(),
+    'subTotal': await order.getTotalStr(),
+    'vatSum': await order.getVATSumStr(),
+    'grandTotal': await order.getTotalWithVATStr(),
   };
 });
 
@@ -3052,7 +3052,9 @@ router.get('/cart', async ctx => {
     let orderitems = [];
     let products = [];
     let totals = [];
+    let totalsVAT = [];
     let subTotal = "0.00";
+    let grandTotal = "0.00";
     let orderVATSum = "0.00";
 
     let ids = [];
@@ -3067,54 +3069,44 @@ router.get('/cart', async ctx => {
           ids.push(num);
       }
 
-      // TODO: FIX
-
-      let products = await Product.findAll({
+      products = await Product.findAll({
         where: { id: { [Op.in]: ids } },
         attributes: [
-          "id", "name", "price",
-          [Sequelize.literal(`ROUND(price * ${cookieProducts[i]}, 2)`), 'totalPrice']
+          "id", "name", "price", "discountPrice", "image",
+          [Sequelize.literal(`ROUND("discountPrice" * ${cookieProducts[i]}, 2)`), 'totalPrice'],
+          [Sequelize.literal(`ROUND("discountPrice" * ${cookieProducts[i]} * ( 1 + ${configEcom.SETTINGS.vat}), 2)`), 'totalPriceVAT']
         ]
       });
 
       for (i of products) {
-        orderitems.push({ 'id': i.id, 'productId': i.id, 'quantity': cookieProducts[i] });
+        orderitems.push({ 'id': i.id, 'productId': i.id, 'quantity': cookieProducts[i.id] });
         totals.push(i.dataValues.totalPrice);
+        totalsVAT.push(i.dataValues.totalPriceVAT);
       }
-      
-      console.log(
-        (await db.query(
-          `SELECT ROUND(SUM(a), 2) FROM unnest(array[${products.map(x => x.price).toString()}]) AS s(a), unnest(array[${orderitems.map(x => x.quantity).toString()}]) AS s(b)`,
-          {
-            type: 'SELECT',
-            plain: true
-          }
-        )).round
-        );
 
       subTotal = (await db.query(
-        `SELECT ROUND(SUM(a), 2) FROM unnest(array[${totals.toString()}]) AS s(a)`,
+        `SELECT COALESCE(ROUND(SUM(a), 2), 0.00) AS total FROM unnest(array[${totals.toString()}]) AS s(a)`,
         {
           type: 'SELECT',
           plain: true
         }
-      )).round;
+      )).total;
 
       grandTotal = (await db.query(
-        `SELECT ROUND(SUM(a + a * ${configEcom.SETTINGS["vat"]}), 2) FROM unnest(array[${totals.toString()}]) AS s(a)`,
+        `SELECT COALESCE(ROUND(SUM(a), 2), 0.00) AS total FROM unnest(array[${totalsVAT.toString()}]) AS s(a)`,
         {
           type: 'SELECT',
           plain: true
         }
-      )).round;
+      )).total;
 
       orderVATSum = (await db.query(
-        `SELECT ROUND(SUM(a * ${configEcom.SETTINGS["vat"]}), 2) FROM unnest(array[${totals.toString()}]) AS s(a)`,
+        `SELECT COALESCE(ROUND(SUM(a * ${configEcom.SETTINGS.vat}), 2), 0.00) AS total FROM unnest(array[${totals.toString()}]) AS s(a)`,
         {
           type: 'SELECT',
           plain: true
         }
-      )).round;
+      )).total;
     }
 
     let cartQty = await utilsEcom.getCartQuantity(ctx);
@@ -3125,8 +3117,9 @@ router.get('/cart', async ctx => {
       cartQty: cartQty,
       items: orderitems,
       products: products,
-      totals: totals,
+      totals: totalsVAT,
       subTotal: subTotal,
+      grandTotal: grandTotal,
       orderVATSum: orderVATSum,
     });
 
@@ -3162,7 +3155,7 @@ router.get('/cart', async ctx => {
   let totals = [];
 
   for (i = 0; i < orderitems.length; i++) {
-    totals.push(await orderitems[i].getTotalWithVATAsString());
+    totals.push(await orderitems[i].getTotalWithVATStr());
   }
 
   let subTotal = "0.00";
@@ -3170,9 +3163,9 @@ router.get('/cart', async ctx => {
   let orderVATSum = "0.00";
 
   if (order) {
-    subTotal = await order.getTotalAsString();
-    grandTotal = await order.getTotalWithVATAsString();
-    orderVATSum = await order.getVATSumAsString();
+    subTotal = await order.getTotalStr();
+    grandTotal = await order.getTotalWithVATStr();
+    orderVATSum = await order.getVATSumStr();
   }
 
   let cartQty = await utilsEcom.getCartQuantity(ctx);
@@ -3243,12 +3236,12 @@ router.get('/checkout', async ctx => {
   let totals = [];
 
   for (i = 0; i < orderitems.length; i++) {
-    totals.push(await orderitems[i].getTotalWithVATAsString());
+    totals.push(await orderitems[i].getTotalWithVATStr());
   }
 
-  let subTotal = await order.getTotalAsString();
-  let grandTotal = await order.getTotalWithVATAsString();
-  let orderVATSum = await order.getVATSumAsString();
+  let subTotal = await order.getTotalStr();
+  let grandTotal = await order.getTotalWithVATStr();
+  let orderVATSum = await order.getVATSumStr();
 
   let cartQty = await utilsEcom.getCartQuantity(ctx);
 

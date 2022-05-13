@@ -478,39 +478,41 @@ const Session = db.define("session", {
   });
 
 Product.prototype.getPriceWithVAT = async function () {
-  return parseFloat((await db.query(`SELECT ROUND(price +
-    (price * ${configEcom.SETTINGS.vat}), 2)
-    AS total
+  return parseFloat(await this.getPriceWithVATStr());
+}
+
+Product.prototype.getPriceWithVATStr = async function () {
+  return (await db.query(
+    `SELECT
+      ROUND(price * ( 1 + ${configEcom.SETTINGS.vat} ), 2) AS total
     FROM products
-    WHERE id = ${this.id} AND
-    "deletedAt" is NULL AND
-    hide = false`,
+    WHERE id = ${this.id}
+      AND "deletedAt" is NULL
+      AND hide = false`,
     {
       type: 'SELECT',
       plain: true
-    })).total);
-}
-
-Product.prototype.getPriceWithVATAsString = async function () {
-  return (await this.getPriceWithVAT()).toFixed(2);
+    }
+    )).total;
 }
 
 Product.prototype.getDiscountPriceWithVAT = async function () {
-  return parseFloat((await db.query(`SELECT ROUND("discountPrice" +
-    ("discountPrice" * ${configEcom.SETTINGS.vat}), 2)
-    AS total
+  return parseFloat(await this.getDiscountPriceWithVATStr());
+}
+
+Product.prototype.getDiscountPriceWithVATStr = async function () {
+  return (await db.query(
+    `SELECT
+      ROUND("discountPrice" * ( 1 + ${configEcom.SETTINGS.vat} ), 2) AS total
     FROM products
-    WHERE id = ${this.id} AND
-    "deletedAt" is NULL AND
-    hide = false`,
+    WHERE id = ${this.id}
+      AND "deletedAt" is NULL
+      AND hide = false`,
     {
       type: 'SELECT',
       plain: true
-    })).total);
-}
-
-Product.prototype.getDiscountPriceWithVATAsString = async function () {
-  return (await this.getDiscountPriceWithVAT()).toFixed(2);
+    }
+    )).total;
 }
 
 Product.belongsTo(Category, {
@@ -599,6 +601,10 @@ OrderItem.belongsTo(Product, {
 });
 
 OrderItem.prototype.getTotal = async function () {
+  return parseFloat(await this.getTotalStr());
+};
+
+OrderItem.prototype.getTotalStr = async function () {
   if (this.price != 0)
     return price;
 
@@ -606,56 +612,62 @@ OrderItem.prototype.getTotal = async function () {
 
   assert(product);
 
-  return parseFloat((await db.query(`SELECT "discountPrice" * orderitems.quantity
-    AS total FROM products, orderitems
-    WHERE products.id = ${product.id} AND
-    orderitems.id = ${this.id} AND
-    products.id = orderitems."productId" AND
-    orderitems."deletedAt" is NULL AND
-    products."deletedAt" is NULL AND
-    hide = false`, {
-    type: 'SELECT',
-    plain: true,
-  })).total);
-};
-
-OrderItem.prototype.getTotalAsString = async function () {
-  return (await this.getTotal()).toFixed(2);
+  return (await db.query(
+   `SELECT
+      ROUND("discountPrice" * orderitems.quantity, 2) AS total
+    FROM products, orderitems
+    WHERE products.id = ${product.id} 
+      AND orderitems.id = ${this.id} 
+      AND products.id = orderitems."productId"
+      AND orderitems."deletedAt" is NULL
+      AND products."deletedAt" is NULL
+      AND hide = false`,
+    {
+      type: 'SELECT',
+      plain: true,
+    }
+  )).total;
 }
 
 OrderItem.prototype.getTotalWithVAT = async function () {
-  if (this.price != 0)
-    return parseFloat((await db.query(`SELECT ROUND((price +
-        (price * ${configEcom.SETTINGS.vat})) * quantity, 2)
-      AS total
+  return parseFloat(await this.getTotalWithVATStr());
+};
+
+OrderItem.prototype.getTotalWithVATStr = async function () {
+    if (this.price != 0)
+    return (await db.query(
+      `SELECT
+        calculate_vat(price * quantity,
+          ${configEcom.SETTINGS.vat}) AS total
       FROM orderitems
-      WHERE orderitems.id = ${this.id} AND
-      "deletedAt" is NULL`, {
+      WHERE orderitems.id = ${this.id}
+        AND "deletedAt" is NULL`,
+      {
         type: 'SELECT',
         plain: true,
-      })).total);
+      }
+      )).total;
 
   let product = await this.getProduct();
 
   assert(product);
 
-  return parseFloat((await db.query(`SELECT ROUND(("discountPrice" +
-    ("discountPrice" * ${configEcom.SETTINGS.vat})) * orderitems.quantity, 2)
-    AS total
+  return (await db.query(
+    `SELECT
+      calculate_vat("discountPrice" * orderitems.quantity,
+        ${configEcom.SETTINGS.vat}) AS total
     FROM products, orderitems
-    WHERE products.id = ${product.id} AND
-    orderitems.id = ${this.id} AND
-    products.id = orderitems."productId" AND
-    orderitems."deletedAt" is NULL AND
-    products."deletedAt" is NULL AND
-    hide = false`, {
-    type: 'SELECT',
-    plain: true,
-  })).total);
-};
-
-OrderItem.prototype.getTotalWithVATAsString = async function () {
-  return (await this.getTotalWithVAT()).toFixed(2);
+    WHERE products.id = ${product.id}
+      AND orderitems.id = ${this.id}
+      AND products.id = orderitems."productId"
+      AND orderitems."deletedAt" is NULL
+      AND products."deletedAt" is NULL
+      AND hide = false`,
+    {
+      type: 'SELECT',
+      plain: true,
+    }
+  )).total;
 }
 
 const Order = db.define("order", {
@@ -702,6 +714,10 @@ Order.prototype.getItemsCount = function () {
 }*/
 
 Order.prototype.getTotal = async function () {
+  return parseFloat(await this.getTotalStr());
+}
+
+Order.prototype.getTotalStr = async function () {
   // Big possibility for a bug
   // If Order is not complete
   // calculate by current product
@@ -711,72 +727,82 @@ Order.prototype.getTotal = async function () {
 
   // If not ordered
   if (this.status == 0)
-    return parseFloat((await db.query(
-      `SELECT COALESCE(SUM(orderitems.quantity * products."discountPrice"), 0.00) AS total FROM orders
-      INNER JOIN orderitems ON orders.id = orderitems."orderId"
-      INNER JOIN products ON orderitems."productId" = products.id
-      WHERE orders.id = ${this.id} AND
-      orderitems."deletedAt" is NULL AND
-      orders."deletedAt" is NULL;`, {
-      type: 'SELECT',
-      plain: true,
-    })).total);
-
-  return parseFloat((await db.query(
-    `SELECT COALESCE(SUM(orderitems.quantity * orderitems.price), 0.00) AS total FROM orders
-    INNER JOIN orderitems ON orders.id = orderitems."orderId"
-    WHERE orders.id = ${this.id} AND
-    orderitems."deletedAt" is NULL AND
-    orders."deletedAt" is NULL;`, {
-    type: 'SELECT',
-    plain: true,
-  })).total);
-}
-
-Order.prototype.getTotalAsString = async function () {
-  return (await this.getTotal()).toFixed(2);
-}
-
-Order.prototype.getTotalWithVAT = async function () {
-  // Big possibility for a bug
-  // If Order is not complete
-  // calculate by current product
-  // prices, if the order is ocmplete
-  // calculate by it's orderitems
-  // prices
-
-  // If not ordered
-  if (this.status == 0)
-    return parseFloat((await db.query(
-      `SELECT COALESCE(SUM(orderitems.quantity * (products."discountPrice" +
-        (products."discountPrice" * ${configEcom.SETTINGS.vat}))), 0.00)
-      AS total
+    return (await db.query(
+      `SELECT
+        COALESCE( ROUND( SUM(orderitems.quantity *
+          products."discountPrice" ), 2), 0.00 ) AS total
       FROM orders
       INNER JOIN orderitems ON orders.id = orderitems."orderId"
       INNER JOIN products ON orderitems."productId" = products.id
-      WHERE orders.id = ${this.id} AND
-      orderitems."deletedAt" is NULL AND
-      orders."deletedAt" is NULL;`, {
-      type: 'SELECT',
-      plain: true,
-    })).total);
+      WHERE orders.id = ${this.id}
+        AND orderitems."deletedAt" is NULL
+        AND orders."deletedAt" is NULL;`,
+      {
+        type: 'SELECT',
+        plain: true,
+      }
+    )).total;
 
-  return parseFloat((await db.query(
-    `SELECT COALESCE(SUM(orderitems.quantity * (orderitems.price +
-      (orderitems.price * ${configEcom.SETTINGS.vat}))), 0.00)
-    AS total
+  return (await db.query(
+    `SELECT
+      COALESCE(ROUND( SUM( orderitems.quantity *
+        orderitems.price ), 2), 0.00 ) AS total
     FROM orders
     INNER JOIN orderitems ON orders.id = orderitems."orderId"
-    WHERE orders.id = ${this.id} AND
-    orderitems."deletedAt" is NULL AND
-    orders."deletedAt" is NULL;`, {
-    type: 'SELECT',
-    plain: true,
-  })).total);
+    WHERE orders.id = ${this.id}
+      AND orderitems."deletedAt" is NULL
+      AND orders."deletedAt" is NULL;`,
+    {
+      type: 'SELECT',
+      plain: true,
+    }
+  )).total;
 }
 
-Order.prototype.getTotalWithVATAsString = async function () {
-  return (await this.getTotalWithVAT()).toFixed(2);
+Order.prototype.getTotalWithVAT = async function () {
+  return parseFloat(await this.getTotalWithVATStr());
+}
+
+Order.prototype.getTotalWithVATStr = async function () {
+    // Big possibility for a bug
+  // If Order is not complete
+  // calculate by current product
+  // prices, if the order is ocmplete
+  // calculate by it's orderitems
+  // prices
+
+  // If not ordered
+  if (this.status == 0)
+    return (await db.query(
+      `SELECT
+        COALESCE( ROUND( SUM( orderitems.quantity * products."discountPrice" *
+          ( 1 + ${configEcom.SETTINGS.vat} ) ), 2), 0.00) AS total
+      FROM orders
+      INNER JOIN orderitems ON orders.id = orderitems."orderId"
+      INNER JOIN products ON orderitems."productId" = products.id
+      WHERE orders.id = ${this.id}
+        AND orderitems."deletedAt" is NULL
+        AND orders."deletedAt" is NULL;`,
+      {
+        type: 'SELECT',
+        plain: true,
+      }
+    )).total;
+
+  return (await db.query(
+    `SELECT
+      COALESCE( ROUND( SUM( orderitems.quantity * orderitems.price *
+         ( 1 + ${configEcom.SETTINGS.vat} ) ), 2), 0.00) AS total
+    FROM orders
+    INNER JOIN orderitems ON orders.id = orderitems."orderId"
+    WHERE orders.id = ${this.id}
+      AND orderitems."deletedAt" is NULL
+      AND orders."deletedAt" is NULL;`,
+    {
+      type: 'SELECT',
+      plain: true,
+    }
+  )).total;
 }
 
 Order.prototype.orderedAtHTML = function() {
@@ -784,39 +810,41 @@ Order.prototype.orderedAtHTML = function() {
 }
 
 Order.prototype.getVATSum = async function() {
-  if (this.status == 0)
-    return parseFloat(
-      (await db.query(
-        `SELECT COALESCE(ROUND(SUM(products."discountPrice" *
-          ${configEcom.SETTINGS.vat} * orderitems.quantity), 2), 0.00)
-        AS total
+  return parseFloat(this.getVATSumStr());
+}
+
+Order.prototype.getVATSumStr = async function() {
+    if (this.status == 0)
+      return (await db.query(
+        `SELECT
+          COALESCE( ROUND( SUM( products."discountPrice" * orderitems.quantity *
+            ${configEcom.SETTINGS.vat}), 2), 0.00) AS total
         FROM orderitems
         INNER JOIN orders ON orders.id = orderitems."orderId"
         INNER JOIN products ON orderitems."productId" = products.id
-        WHERE orders.id = ${this.id} AND
-        orders."deletedAt" is NULL AND
-        orderitems."deletedAt" is NULL`, {
+        WHERE orders.id = ${this.id}
+          AND orders."deletedAt" is NULL
+          AND orderitems."deletedAt" is NULL`,
+        {
           type: 'SELECT',
           plain: true,
-      })).total);
+        }
+      )).total;
   
-  return parseFloat(
-    (await db.query(
-      `SELECT COALESCE(ROUND(SUM(orderitems.price *
-          ${configEcom.SETTINGS.vat} * orderitems.quantity), 2), 0.00)
-      AS total
+  return (await db.query(
+      `SELECT
+        COALESCE( ROUND( SUM( orderitems.price * orderitems.quantity *
+          ${configEcom.SETTINGS.vat}), 2), 0.00) AS total
       FROM orderitems
       INNER JOIN orders ON orders.id = orderitems."orderId"
-      WHERE orders.id = ${this.id} AND
-      orders."deletedAt" is NULL AND
-      orderitems."deletedAt" is NULL`, {
+      WHERE orders.id = ${this.id}
+        AND orders."deletedAt" is NULL
+        AND orderitems."deletedAt" is NULL`,
+      {
         type: 'SELECT',
         plain: true,
-      })).total);
-}
-
-Order.prototype.getVATSumAsString = async function() {
-  return (await this.getVATSum()).toFixed(2);
+      }
+      )).total;
 }
 
 Order.hasOne(Transaction, {foreignKey: {name: 'orderid'}});
