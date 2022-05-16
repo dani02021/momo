@@ -180,6 +180,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="add-order-form" action="/admin/orders/add" onsubmit="selectAll();" method="post">
+        <input type="hidden" name="data" id="data">
         <div class="modal-body">
           <label>Items:</label>
           <div>
@@ -283,12 +284,14 @@
 
     option.text = e.value + " x" + q.value;
     orderitems[id[e.value]] = q.value;
-    option.selected = 'true'
+    option.selected = 'true';
     items.add(option);
   }
 
   function selectAll() {
     options = document.getElementById('add-order-items').getElementsByTagName('option');
+    document.getElementById('data').value = JSON.stringify(orderitems);
+
     for (i = 0; i < options.length; i++) {
       options[i].selected = 'true';
     }

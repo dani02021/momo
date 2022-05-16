@@ -687,6 +687,12 @@ const Order = db.define("order", {
   },
   status: {
     type: DataTypes.SMALLINT,
+    allowNull: false,
+    validate: {
+      notNull: {
+        msg: "Order's status cannot be null"
+      }
+    },
     defaultValue: 0
   }
 },
@@ -695,8 +701,8 @@ const Order = db.define("order", {
   timestamp: true
 });
 
-Order.belongsToMany(User, { through: 'user_orders' });
-User.belongsToMany(Order, { through: 'user_orders' });
+Order.belongsToMany(User, { through: 'user_orders', allowNull: false });
+User.belongsToMany(Order, { through: 'user_orders', allowNull: false });
 
 Order.hasMany(OrderItem, { foreignKey: 'orderId' });
 OrderItem.belongsTo(Order);

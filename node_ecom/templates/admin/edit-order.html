@@ -16,6 +16,7 @@
         <div class="row tm-edit-product-row">
           <div class="col-xl-6 col-lg-6 col-md-12">
             <form id="edit-form" action="" onsubmit="return false;" method="post" class="tm-edit-product-form">
+              <input type="hidden" name="data" id="data">
               <div class="form-group mb-3">
                 <label for="user">Username
                 </label>
@@ -118,6 +119,7 @@
 
 <script>
   var id = {};
+  var orderitems = {}
 
   function removeSelected(elem) {
     var items = document.getElementById("edit-order-items");
@@ -136,17 +138,19 @@
     if(!q.value || !e.value)
       return;
 
-    for (var i = 0; i < items.length; i++) {
-      if (items.options[i].text.startsWith(e.value)) {
-        items.options[i].text = e.value + ', ' + (parseInt(items.options[i].text.split(', ')[1]) + parseInt(q.value));
-        items.options[i].value = e.value + ', ' + items.options[i].text.split(', ')[1];
+      for (var i = 0; i < items.length; i++) {
+      if (items.options[i].text == e.value) {
+        if (orderitems[id[e.value]])
+          orderitems[id[e.value]] += q.value;
+        
+        items.options[i].text = e.value + ' x' + (parseInt(orderitems[id[e.value]]) + parseInt(q.value));
         return;
       }
     }
 
-    option.text = e.value + ', ' + q.value;
-    option.value = id[e.value] + ', ' + q.value;
-    option.selected = 'true'
+    option.text = e.value + " x" + q.value;
+    orderitems[id[e.value]] = q.value;
+    option.selected = 'true';
     items.add(option);
   }
 

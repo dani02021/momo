@@ -2439,15 +2439,20 @@ router.get('/api/permissions/get', async ctx => {
   }
 
   ctx.body = JSON.stringify(
-    await db.query(`SELECT id, name as value FROM permissions WHERE
-      position(upper($1) in upper(name)) > 0 AND
-      "deletedAt" is NULL`, {
-      type: "SELECT",
-      plain: false,
-      model: Permission,
-      mapToModel: true,
-      bind: [term]
-    }).catch(err => utilsEcom.handleError(err))
+    await db.query(
+      `SELECT id, name as value
+      FROM permissions
+      WHERE
+        position(upper($1) in upper(name)) > 0
+        AND "deletedAt" is NULL`,
+      {
+        type: "SELECT",
+        plain: false,
+        model: Permission,
+        mapToModel: true,
+        bind: [term]
+      }
+    ).catch(err => utilsEcom.handleError(err))
   );
 });
 
@@ -2466,15 +2471,20 @@ router.get('/api/accounts/get', async ctx => {
   }
 
   ctx.body = JSON.stringify(
-    await db.query(`SELECT id, username as value FROM accounts WHERE
-      position(upper($1) in upper(name)) > 0 AND
-      "deletedAt" is NULL`, {
-      type: "SELECT",
-      plain: false,
-      model: Permission,
-      mapToModel: true,
-      bind: [term]
-    }).catch(err => utilsEcom.handleError(err))
+    await db.query(
+      `SELECT id, username as value
+      FROM users
+      WHERE
+        position(upper($1) in upper(username)) > 0
+        AND "deletedAt" is NULL`,
+      {
+        type: "SELECT",
+        plain: false,
+        model: Permission,
+        mapToModel: true,
+        bind: [term]
+      }
+    ).catch(err => utilsEcom.handleError(err))
   );
 });
 
@@ -2493,16 +2503,21 @@ router.get('/api/products/get', async ctx => {
   }
 
   ctx.body = JSON.stringify(
-    await db.query(`SELECT id, name as value FROM products WHERE
-      position(upper($1) in upper(name)) > 0 AND
-      "deletedAt" is NULL AND
-      hide = false`, {
-      type: "SELECT",
-      plain: false,
-      model: Permission,
-      mapToModel: true,
-      bind: [term]
-    }).catch(err => utilsEcom.handleError(err))
+    await db.query(
+      `SELECT id, name as value
+      FROM products
+      WHERE
+        position(upper($1) in upper(name)) > 0
+        AND "deletedAt" is NULL
+        AND hide = false`,
+      {
+        type: "SELECT",
+        plain: false,
+        model: Permission,
+        mapToModel: true,
+        bind: [term]
+      }
+    ).catch(err => utilsEcom.handleError(err))
   );
 });
 
@@ -2564,31 +2579,7 @@ router.post('/admin/orders/add', async ctx => {
     });
   }
 
-  let items = ctx.request.fields.items;
-
-  let order = await Order.create({
-    status: ctx.request.fields.status,
-    orderedAt: Sequelize.fn("NOW"),
-  });
-
-  if (items instanceof Array) {
-    for (i = 0; i < items.length; i++) {
-      let orderitem = await OrderItem.create({ quantity: parseInt(items[i].split(" ")[1]) });
-      let product = await Product.findOne({ where: { id: parseInt(items[i].split(" ")[0]) } });
-      await orderitem.setProduct(product);
-
-      await orderitem.update({ price: product.discountPrice});
-
-      await order.addOrderitem(orderitem);
-    }
-  }
-  else {
-    let orderitem = await OrderItem.create({ quantity: parseInt(items.split(" ")[1]) });
-    let product = await Product.findOne({ where: { id: parseInt(items.split(" ")[0]) } });
-    await orderitem.setProduct(product);
-
-    await order.addOrderitem(orderitem);
-  }
+  let items = ctx.request.fields.data;
 
   let user = await User.findOne({
     where: {
@@ -2596,7 +2587,40 @@ router.post('/admin/orders/add', async ctx => {
     }
   });
 
+  if (!user) {
+    ctx.session.messages = {'invalidVal': 'User does not exists!'};
+    ctx.redirect('/admin/orders');
+    return;
+  }
+
+  let order = await Order.create({
+    status: ctx.request.fields.status,
+    orderedAt: Sequelize.fn("NOW"),
+  });
+
   await user.addOrder(order);
+
+  for (id in items) {
+    let product = await Product.findOne({ where: { id: id } });
+
+    if (!product)
+      continue;
+    
+    if (await utilsEcom.compareQtyAndProductQty(id, items[id]) == 0) {
+      ctx.session.messages = {'invalidVal': `Not enough quantity of ${product.name}!`};
+
+      await order.destroy();
+
+      ctx.redirect("/admin/orders");
+      return;
+    }
+    
+    let orderitem = await OrderItem.create({ quantity: items[id] });
+
+    await orderitem.setProduct(product);
+    await orderitem.update({ price: product.discountPrice});
+    await order.addOrderitem(orderitem);
+  }
 
   await utilsEcom.removeProductQtyFromOrder(order);
 
@@ -2785,23 +2809,27 @@ router.post('/admin/orders/edit/:id', async ctx => {
     await orderitems[i].destroy();
   }
 
-  // Add new orderitems to the order
-  if (ctx.request.fields.items instanceof Array) {
-    for (i = 0; i < ctx.request.fields.items.length; i++) {
-      let product = await Product.findOne({ where: { id: ctx.request.fields.items[i].split(", ")[0] } });
-      let orderitem = await OrderItem.create({ quantity: ctx.request.fields.items[i].split(", ")[1] });
-      await orderitem.setProduct(product);
-      await orderitem.update({ price: product.discountPrice });
+  let items = ctx.request.fields.data;
 
-      await order.addOrderitem(orderitem);
+  for (id in items) {
+    let product = await Product.findOne({ where: { id: id } });
+
+    if (!product)
+      continue;
+    
+    if (await utilsEcom.compareQtyAndProductQty(id, items[id]) == 0) {
+      ctx.session.messages = {'invalidVal': `Not enough quantity of ${product.name}!`};
+
+      await order.destroy();
+
+      ctx.redirect("/admin/orders");
+      return;
     }
-  }
-  else {
-    let product = await Product.findOne({ where: { id: ctx.request.fields.items.split(", ")[0] } });
-    let orderitem = await OrderItem.create({ quantity: ctx.request.fields.items.split(", ")[1] });
-    await orderitem.setProduct(product);
-    await orderitem.update({ price: product.discountPrice });
+    
+    let orderitem = await OrderItem.create({ quantity: items[id] });
 
+    await orderitem.setProduct(product);
+    await orderitem.update({ price: product.discountPrice});
     await order.addOrderitem(orderitem);
   }
 
