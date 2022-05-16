@@ -131,7 +131,7 @@
                     </thead>
                     <tbody>
                         <% for(i = 0; i < orders.length; i++) { %>
-                        <% if (orders[i].status != 0) { %>
+                        <% if (orders[i].status != 0) { console.log(users); %>
                         <tr>
                             <td><%= orders[i].orderedAt %></td>
                             <th scope="row"><b>#<%= orders[i].id %></b></th>

@@ -260,6 +260,7 @@
 
   <script>
   var id = {};
+  var orderitems = {}
 
   function addOrderItemModal(elem) {
     option = document.createElement('option');
@@ -271,15 +272,17 @@
       return;
 
     for (var i = 0; i < items.length; i++) {
-      if (items.options[i].text.startsWith(e.value)) {
-        items.options[i].text = e.value + ', ' + (parseInt(items.options[i].text.split(', ')[1]) + parseInt(q.value));
-        items.options[i].value = e.value + ', ' + items.options[i].text.split(', ')[1];
+      if (items.options[i].text == e.value) {
+        if (orderitems[id[e.value]])
+          orderitems[id[e.value]] += q.value;
+        
+        items.options[i].text = e.value + ' x' + (parseInt(orderitems[id[e.value]]) + parseInt(q.value));
         return;
       }
     }
 
-    option.text = e.value + ', ' + q.value;
-    option.value = id[e.value] + ', ' + q.value;
+    option.text = e.value + " x" + q.value;
+    orderitems[id[e.value]] = q.value;
     option.selected = 'true'
     items.add(option);
   }

@@ -1,4 +1,5 @@
 require('dotenv').config();
+
 const { Sequelize } = require("sequelize");
 
 let uri = process.env.DB_URI;
@@ -18,7 +19,8 @@ let options = {
     max: 150,
     idle: 30000,
     acquire: 60000,
-  },
+  }
+  
 }
 
 if (process.env.HEROKU_DB_URI) 

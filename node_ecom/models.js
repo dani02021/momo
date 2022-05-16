@@ -29,7 +29,7 @@ const Log = db.define("log", {
   timestamp: {
     type: DataTypes.DATE,
     allowNull: false,
-    defaultValue: Sequelize.fn('NOW')
+    defaultValue: Sequelize.fn("NOW")
   },
   user: {
     type: DataTypes.STRING(50),
@@ -493,7 +493,7 @@ Product.prototype.getPriceWithVATStr = async function () {
       type: 'SELECT',
       plain: true
     }
-    )).total;
+    ).catch(err => handleError(err))).total;
 }
 
 Product.prototype.getDiscountPriceWithVAT = async function () {
@@ -512,7 +512,7 @@ Product.prototype.getDiscountPriceWithVATStr = async function () {
       type: 'SELECT',
       plain: true
     }
-    )).total;
+    ).catch(err => handleError(err))).total;
 }
 
 Product.belongsTo(Category, {
@@ -606,7 +606,17 @@ OrderItem.prototype.getTotal = async function () {
 
 OrderItem.prototype.getTotalStr = async function () {
   if (this.price != 0)
-    return price;
+  return (await db.query(
+    `SELECT
+       ROUND(price * quantity, 2) AS total
+     FROM orderitems
+     WHERE orderitems.id = ${this.id} 
+       AND orderitems."deletedAt" is NULL`,
+     {
+       type: 'SELECT',
+       plain: true,
+     }
+   ).catch(err => handleError(err))).total;
 
   let product = await this.getProduct();
 
@@ -626,7 +636,7 @@ OrderItem.prototype.getTotalStr = async function () {
       type: 'SELECT',
       plain: true,
     }
-  )).total;
+  ).catch(err => handleError(err))).total;
 }
 
 OrderItem.prototype.getTotalWithVAT = async function () {
@@ -646,7 +656,7 @@ OrderItem.prototype.getTotalWithVATStr = async function () {
         type: 'SELECT',
         plain: true,
       }
-      )).total;
+      ).catch(err => handleError(err))).total;
 
   let product = await this.getProduct();
 
@@ -667,7 +677,7 @@ OrderItem.prototype.getTotalWithVATStr = async function () {
       type: 'SELECT',
       plain: true,
     }
-  )).total;
+  ).catch(err => handleError(err))).total;
 }
 
 const Order = db.define("order", {
@@ -741,7 +751,7 @@ Order.prototype.getTotalStr = async function () {
         type: 'SELECT',
         plain: true,
       }
-    )).total;
+    ).catch(err => handleError(err))).total;
 
   return (await db.query(
     `SELECT
@@ -756,7 +766,7 @@ Order.prototype.getTotalStr = async function () {
       type: 'SELECT',
       plain: true,
     }
-  )).total;
+  ).catch(err => handleError(err))).total;
 }
 
 Order.prototype.getTotalWithVAT = async function () {
@@ -787,7 +797,7 @@ Order.prototype.getTotalWithVATStr = async function () {
         type: 'SELECT',
         plain: true,
       }
-    )).total;
+    ).catch(err => handleError(err))).total;
 
   return (await db.query(
     `SELECT
@@ -802,7 +812,7 @@ Order.prototype.getTotalWithVATStr = async function () {
       type: 'SELECT',
       plain: true,
     }
-  )).total;
+  ).catch(err => handleError(err))).total;
 }
 
 Order.prototype.orderedAtHTML = function() {
@@ -817,8 +827,10 @@ Order.prototype.getVATSumStr = async function() {
     if (this.status == 0)
       return (await db.query(
         `SELECT
-          COALESCE( ROUND( SUM( products."discountPrice" * orderitems.quantity *
-            ${configEcom.SETTINGS.vat}), 2), 0.00) AS total
+          COALESCE( SUM( ROUND(
+            products."discountPrice" *
+            ${configEcom.SETTINGS.vat}, 2) * orderitems.quantity
+          ), 0.00) AS total
         FROM orderitems
         INNER JOIN orders ON orders.id = orderitems."orderId"
         INNER JOIN products ON orderitems."productId" = products.id
@@ -829,7 +841,7 @@ Order.prototype.getVATSumStr = async function() {
           type: 'SELECT',
           plain: true,
         }
-      )).total;
+      ).catch(err => handleError(err))).total;
   
   return (await db.query(
       `SELECT
@@ -844,7 +856,7 @@ Order.prototype.getVATSumStr = async function() {
         type: 'SELECT',
         plain: true,
       }
-      )).total;
+      ).catch(err => handleError(err))).total;
 }
 
 Order.hasOne(Transaction, {foreignKey: {name: 'orderid'}});

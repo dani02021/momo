@@ -60,7 +60,7 @@ EmailTransport.verify(function (error, success) {
     if (error) {
         handleError(error);
         logger.log('alert',
-            `Email transport cannot be verified!
+            `Email transport cannot establish connection!
         ${error.message}`);
     }
 });
@@ -624,7 +624,7 @@ async function validateStatus(ctx, orderId, responce) {
                 {color: configEcom.SETTINGS.email_payment_table_border_color, borderweight: configEcom.SETTINGS.email_payment_table_border_weight})) +
             parseEmailPlaceholders(configEcom.SETTINGS.email_payment_lower, user, cart));
 
-        await cart.update({ status: 1, orderedAt: Sequelize.fn('NOW') });
+        await cart.update({ status: 1, orderedAt: Sequelize.fn("timezone('utc', NOW") });
 
         let orderitems = await cart.getOrderitems();
 
@@ -693,12 +693,12 @@ async function getReportResponce(filters, limit, offset, time) {
             model: OrderItem,
             mapToModel: true,
             bind: [time, filters.ordAfter, filters.ordBefore]
-        }),
+        }).catch(err => handleError(err)),
         db.query(countText, {
             type: 'SELECT',
             plain: false,
             bind: [time, filters.ordAfter, filters.ordBefore]
-        })
+        }).catch(err => handleError(err))
     ]
 }
 
@@ -744,12 +744,12 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
     }
 
     if (minval && minval != 0) {
-        text += ` AND "discountPrice" >= $minPrice\n`;
+        text += ` AND "discountPrice" * (1 + ${configEcom.SETTINGS.vat}) >= $minPrice\n`;
         returnParamsBind.minPrice = minval;
     }
 
     if (maxval && maxval != 99999) {
-        text += ` AND "discountPrice" <= $maxPrice\n`;
+        text += ` AND "discountPrice" * (1 + ${configEcom.SETTINGS.vat}) <= $maxPrice\n`;
         returnParamsBind.maxPrice = maxval;
     }
 
@@ -778,8 +778,8 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
     }
 
     return [
-        db.query(text, returnParams),
-        db.query(countText, returnParams)
+        db.query(text, returnParams).catch(err => handleError(err)),
+        db.query(countText, returnParams).catch(err => handleError(err))
     ];
 }
 
@@ -990,12 +990,12 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
         type: 'SELECT',
         plain: false,
         model: Product
-    }),
+    }).catch(err => handleError(err)),
     db.query(`SELECT count(*) FROM products`, {
         type: 'SELECT',
         plain: false,
         model: Product
-    })
+    }).catch(err => handleError(err))
     ];
 }
 
@@ -1003,12 +1003,12 @@ function isSessionValid(staff) {
     assert(staff instanceof Staff);
 
     if (!staff.lastActivity)
-        return false;
+        return true;
     
-    if (configEcom.SESSION_BACK_OFFICE_EXPIRE == 0)
-        return false;
+    if (configEcom.DEFAULT_SESSION_BACK_OFFICE_EXPIRE == 0)
+        return true;
 
-    return new Date() - new Date(staff.lastActivity) > configEcom.SESSION_BACK_OFFICE_EXPIRE;
+    return new Date() - new Date(staff.lastActivity) < configEcom.DEFAULT_SESSION_BACK_OFFICE_EXPIRE;
 }
 
 // Other
@@ -1227,7 +1227,12 @@ async function handleError(err, ctx, fileOnly = false) {
     let stackerr = stacktrace.parse(err);
 
     logger.error(
-        `File: ${stackerr[0].fileName} on function ${stackerr[0].functionName} on line ${stackerr[0].lineNumber} User: ${username}, Staff User: ${staffUsername}, URL: ${ctx.url}, Error message: ${err.message}`,
+        `File: ${stackerr[0].fileName} on function ${stackerr[0].functionName} \
+        on line ${stackerr[0].lineNumber} \
+        User: ${username}, \
+        Staff User: ${staffUsername}, \
+        URL: ${ctx ? ctx.url : "undefined"}, \
+        Error message: ${err.message}`,
         {
             longMessage: `Unhandled exception: ${err}, Session: ${session}`,
             fileOnly: fileOnly,

@@ -23,6 +23,7 @@ const Op = Sequelize.Op;
 
 const models = require("./models.js");
 const { parse } = require('path');
+const { bind } = require('koa-route');
 const Category = models.category();
 const Product = models.product();
 const User = models.user();
@@ -219,7 +220,7 @@ async function getAdminProducts(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -322,7 +323,7 @@ async function getAdminAccounts(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -378,7 +379,7 @@ async function getAdminAccounts(ctx) {
     model: User,
     mapToModel: true,
     bind: [filters.user, filters.email, filters.country]
-  });
+  }).catch(err => utilsEcom.handleError(err));
 
   let count = await db.query(`SELECT COUNT(*) FROM users
     WHERE position(upper($1) in upper(username)) > 0
@@ -388,7 +389,7 @@ async function getAdminAccounts(ctx) {
     type: 'SELECT',
     plain: true,
     bind: [filters.user, filters.email, filters.country]
-  });
+  }).catch(err => utilsEcom.handleError(err));
 
   await ctx.render('admin/accounts', {
     layout: 'admin/base',
@@ -429,7 +430,7 @@ async function getAdminStaffs(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -478,7 +479,7 @@ async function getAdminStaffs(ctx) {
     model: Staff,
     mapToModel: true,
     bind: [filters.user, filters.email]
-  });
+  }).catch(err => utilsEcom.handleError(err));
 
   const count = await db.query(`SELECT COUNT(*) FROM staffs WHERE
     position(upper($1) in upper(username)) > 0 AND
@@ -487,7 +488,7 @@ async function getAdminStaffs(ctx) {
     type: 'SELECT',
     plain: true,
     bind: [filters.user, filters.email]
-  });
+  }).catch(err => utilsEcom.handleError(err));
 
   await ctx.render('admin/staff', {
     layout: 'admin/base',
@@ -528,7 +529,7 @@ async function getAdminRoles(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -597,7 +598,7 @@ async function getAdminOrders(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -652,7 +653,7 @@ async function getAdminOrders(ctx) {
   if (ctx.params.page) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
-  
+
   const result = await Order.findAndCountAll({
     where: {
       status: { [Op.gte]: 1 },
@@ -705,7 +706,7 @@ async function getAdminReport(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -809,7 +810,7 @@ async function getAdminAudit(ctx) {
   }
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -916,13 +917,13 @@ async function getAdminAudit(ctx) {
     model: Log,
     mapToModel: true,
     bind: [filters.user, filters.level, filters.ordAfter, filters.ordBefore]
-  });
+  }).catch(err => utilsEcom.handleError(err));
 
   const count = await db.query(queryC, {
     type: 'SELECT',
     plain: true,
     bind: [filters.user, filters.level, filters.ordAfter, filters.ordBefore]
-  });
+  }).catch(err => utilsEcom.handleError(err));
 
   await ctx.render("/admin/audit", {
     layout: "/admin/base",
@@ -1106,9 +1107,16 @@ router.post("/login", async ctx => {
 
     // Transfer cookies to db
     if (ctx.cookies.get("products")) {
-      let cookieProducts = JSON.parse(ctx.cookies.get("products"));
+      try {
+        var cookieProducts = JSON.parse(ctx.cookies.get("products"));
+      } catch (e) {
+        var cookieProducts = {};
+      }
 
       for (i in cookieProducts) {
+        if (!isFinite(i))
+          continue;
+
         const product = await Product.findOne({ where: { id: i } });
 
         if (product) {
@@ -1182,7 +1190,7 @@ router.post("/login", async ctx => {
       { user: ctx.request.fields.username });
 
     await user.update({
-      lastLogin: Sequelize.fn('NOW')
+      lastLogin: Sequelize.fn("NOW")
     });
   }
   else {
@@ -1215,7 +1223,7 @@ router.get('/admin', async ctx => {
     let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
     // Auto session expire
-    if (utilsEcom.isSessionValid(staff)) {
+    if (!utilsEcom.isSessionValid(staff)) {
       utilsEcom.onSessionExpired(ctx);
 
       return;
@@ -1302,8 +1310,8 @@ router.post('/admin/login', async ctx => {
       { user: ctx.request.fields.username, isStaff: true });
 
     await user.update({
-      lastLogin: Sequelize.fn('NOW'),
-      lastActivity: Sequelize.fn('NOW')
+      lastLogin: Sequelize.fn("NOW"),
+      lastActivity: Sequelize.fn("NOW")
     });
   }
   else {
@@ -1360,7 +1368,7 @@ router.post('/admin/products/add', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -1377,7 +1385,7 @@ router.post('/admin/products/add', async ctx => {
     // ctx.session.messages = { 'productErrorPrice': 'Product has invalid price (0 - 9999.99)' };
     // ctx.redirect('/admin/products/');
 
-    ctx.body = {"error": "Product's price must be within range (0 - 9999.99]"}
+    ctx.body = { "error": "Product's price must be within range (0 - 9999.99]" }
     return;
   }
 
@@ -1409,7 +1417,7 @@ router.post('/admin/products/add', async ctx => {
       // ctx.session.messages = { 'productExist': `The product with name ${ctx.request.fields.name} already exists!` };
       // ctx.redirect('/admin/products');
 
-      ctx.body = {"error": `The product with name ${ctx.request.fields.name} already exists!`};
+      ctx.body = { "error": `The product with name ${ctx.request.fields.name} already exists!` };
       return;
     } else {
       await product.restore();
@@ -1442,7 +1450,7 @@ router.post('/admin/products/add', async ctx => {
     }
   }
   ctx.session.messages = { 'productCreated': `Product with id ${product.id} has been created!` };
-  ctx.body = {"ok": "ok"};
+  ctx.body = { "ok": "ok" };
 
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} created product #${product.id}`,
@@ -1475,7 +1483,7 @@ router.get('/admin/products/edit/:id', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -1494,9 +1502,8 @@ router.get('/admin/products/edit/:id', async ctx => {
       id: ctx.params.id
     }
   }).then(async product => {
-    if (!product) 
-    {
-      ctx.session.messages = {"invalidVal": "Product with this id doesn't exist!"};
+    if (!product) {
+      ctx.session.messages = { "invalidVal": "Product with this id doesn't exist!" };
       ctx.redirect("/admin/products");
       return;
     }
@@ -1538,7 +1545,7 @@ router.post('/admin/products/edit/:id', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -1628,7 +1635,7 @@ router.post('/admin/products/delete', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -1702,7 +1709,7 @@ router.post('/admin/accounts/delete', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -1753,7 +1760,7 @@ router.post('/admin/accounts/add', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -1791,7 +1798,7 @@ router.post('/admin/accounts/add', async ctx => {
     });
   } catch (e) {
     if (e instanceof ValidationError) {
-      ctx.body = {"error": e.errors.length != 0 ? e.errors[0].message : e.message};
+      ctx.body = { "error": e.errors.length != 0 ? e.errors[0].message : e.message };
       return;
     } else {
       throw e;
@@ -1800,7 +1807,7 @@ router.post('/admin/accounts/add', async ctx => {
 
   if (!created) {
     if (!user.deletedAt) {
-      ctx.body = {"error": `A user with that username or email already exists!`};
+      ctx.body = { "error": `A user with that username or email already exists!` };
       return;
     } else {
       await user.restore();
@@ -1810,7 +1817,7 @@ router.post('/admin/accounts/add', async ctx => {
   }
 
   ctx.session.messages = { 'accountCreated': `User with id ${user.id} has been created!` };
-  ctx.body = {"ok": "ok"};
+  ctx.body = { "ok": "ok" };
 
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} created account #${user.id}`,
@@ -1847,7 +1854,7 @@ router.post('/admin/staff/add', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -1897,7 +1904,7 @@ router.post('/admin/staff/add', async ctx => {
   }
 
   ctx.session.messages = { 'staffCreated': `Staff with id ${user.id} has been created!` };
-  ctx.body = { 'ok': 'ok'};
+  ctx.body = { 'ok': 'ok' };
 
   utilsEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} created staff #${user.id}`,
@@ -1929,7 +1936,7 @@ router.post('/admin/staff/delete', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -1980,7 +1987,7 @@ router.get('/admin/staff/edit/:id', async ctx => {
   let staffc = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staffc)) {
+  if (!utilsEcom.isSessionValid(staffc)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -2029,7 +2036,7 @@ router.post('/admin/staff/edit/:id', async ctx => {
   let staffc = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staffc)) {
+  if (!utilsEcom.isSessionValid(staffc)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -2091,7 +2098,7 @@ router.post('/admin/categories/add', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -2146,7 +2153,7 @@ router.post('/admin/categories/delete', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -2194,7 +2201,7 @@ router.post('/admin/roles/add', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -2216,7 +2223,7 @@ router.post('/admin/roles/add', async ctx => {
     });
   } catch (e) {
     if (e instanceof ValidationError) {
-      ctx.body = {"error": e.errors.length != 0 ? e.errors[0].message : e.message};
+      ctx.body = { "error": e.errors.length != 0 ? e.errors[0].message : e.message };
       return;
     }
   }
@@ -2224,7 +2231,7 @@ router.post('/admin/roles/add', async ctx => {
   if (ctx.request.fields.permissions instanceof Array) {
     for (permid in ctx.request.fields.permissions) {
       const permission = await Permission.findOne({ where: { id: ctx.request.fields.permissions[permid] } });
-      
+
       if (permission)
         await role.addPermission(permission);
     }
@@ -2232,7 +2239,7 @@ router.post('/admin/roles/add', async ctx => {
   else if (ctx.request.fields.permissions) {
     const permission = await Permission.findOne({ where: { id: ctx.request.fields.permissions } });
 
-    if(permission)
+    if (permission)
       await role.addPermission(permission);
   }
 
@@ -2241,7 +2248,7 @@ router.post('/admin/roles/add', async ctx => {
       await role.restore();
 
     ctx.session.messages = { 'roleCreated': `Role ${role.name} has been created!` };
-    ctx.body = {'ok': 'ok'};
+    ctx.body = { 'ok': 'ok' };
 
     utilsEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} created role #${role.id}`,
@@ -2278,7 +2285,7 @@ router.post('/admin/roles/delete', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -2326,7 +2333,7 @@ router.get('/admin/roles/edit/:id', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -2376,7 +2383,7 @@ router.post('/admin/roles/edit/:id', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -2440,7 +2447,7 @@ router.get('/api/permissions/get', async ctx => {
       model: Permission,
       mapToModel: true,
       bind: [term]
-    })
+    }).catch(err => utilsEcom.handleError(err))
   );
 });
 
@@ -2467,7 +2474,7 @@ router.get('/api/accounts/get', async ctx => {
       model: Permission,
       mapToModel: true,
       bind: [term]
-    })
+    }).catch(err => utilsEcom.handleError(err))
   );
 });
 
@@ -2495,7 +2502,7 @@ router.get('/api/products/get', async ctx => {
       model: Permission,
       mapToModel: true,
       bind: [term]
-    })
+    }).catch(err => utilsEcom.handleError(err))
   );
 });
 
@@ -2506,7 +2513,7 @@ router.post('/admin/api/products/import/csv', async ctx => {
     fs.createReadStream(ctx.request.files[0].path)
       .pipe(csv.parse())
       .on('error', error => {
-        utilsEcom.handleError(error);
+        utilsEcom.utilsEcom.handleError(error);
         reject(error);
       })
       .on('data', row => {
@@ -2514,8 +2521,8 @@ router.post('/admin/api/products/import/csv', async ctx => {
       })
       .on('end', rowCount => resolve(rowCount));
   });
-  
-  ctx.session.messages = {"importedCSV": "CSV imported successfuly!"};
+
+  ctx.session.messages = { "importedCSV": "CSV imported successfuly!" };
   ctx.redirect("/admin/products");
 });
 
@@ -2547,7 +2554,7 @@ router.post('/admin/orders/add', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -2561,7 +2568,7 @@ router.post('/admin/orders/add', async ctx => {
 
   let order = await Order.create({
     status: ctx.request.fields.status,
-    orderedAt: Sequelize.fn('NOW'),
+    orderedAt: Sequelize.fn("NOW"),
   });
 
   if (items instanceof Array) {
@@ -2569,6 +2576,8 @@ router.post('/admin/orders/add', async ctx => {
       let orderitem = await OrderItem.create({ quantity: parseInt(items[i].split(" ")[1]) });
       let product = await Product.findOne({ where: { id: parseInt(items[i].split(" ")[0]) } });
       await orderitem.setProduct(product);
+
+      await orderitem.update({ price: product.discountPrice});
 
       await order.addOrderitem(orderitem);
     }
@@ -2580,8 +2589,6 @@ router.post('/admin/orders/add', async ctx => {
 
     await order.addOrderitem(orderitem);
   }
-
-  await order.update({ price: await order.getTotal() });
 
   let user = await User.findOne({
     where: {
@@ -2626,7 +2633,7 @@ router.post('/admin/orders/delete', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -2685,7 +2692,7 @@ router.get('/admin/orders/edit/:id', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -2753,7 +2760,7 @@ router.post('/admin/orders/edit/:id', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -2784,6 +2791,7 @@ router.post('/admin/orders/edit/:id', async ctx => {
       let product = await Product.findOne({ where: { id: ctx.request.fields.items[i].split(", ")[0] } });
       let orderitem = await OrderItem.create({ quantity: ctx.request.fields.items[i].split(", ")[1] });
       await orderitem.setProduct(product);
+      await orderitem.update({ price: product.discountPrice });
 
       await order.addOrderitem(orderitem);
     }
@@ -2792,6 +2800,7 @@ router.post('/admin/orders/edit/:id', async ctx => {
     let product = await Product.findOne({ where: { id: ctx.request.fields.items.split(", ")[0] } });
     let orderitem = await OrderItem.create({ quantity: ctx.request.fields.items.split(", ")[1] });
     await orderitem.setProduct(product);
+    await orderitem.update({ price: product.discountPrice });
 
     await order.addOrderitem(orderitem);
   }
@@ -2812,7 +2821,6 @@ router.post('/admin/orders/edit/:id', async ctx => {
   // Update status, price and orderedAt
   await order.update({
     status: ctx.request.fields.status,
-    price: await order.getTotal(),
     orderedAt: ctx.request.fields.orderedDate
   });
 
@@ -2826,25 +2834,35 @@ router.post('/admin/orders/edit/:id', async ctx => {
 });
 
 router.get('/addToCart', async ctx => {
-  // Currently working only for registered users
+
+  // Invalid request
+  if (!isFinite(ctx.query.quantity) || !Math.sign(ctx.query.quantity) > 0) {
+    if (ctx.query.cart)
+      ctx.redirect('/cart');
+    ctx.redirect('/products');
+
+    return;
+  }
+
+  // Smart Cart (Non-registered users)
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
     if (!ctx.cookies.get('products'))
       ctx.cookies.set('products', `{"${ctx.query.id}": ${ctx.query.quantity}}`, { httpOnly: true, expires: new Date(configEcom.COOKIE_PRODUCTS_EXPIRE) });
     else {
       try {
-        var products = JSON.parse(ctx.cookies.get('products'));
+        var cookieProducts = JSON.parse(ctx.cookies.get('products'));
       } catch (e) {
-        var products = {};
+        var cookieProducts = {};
       }
-      
-      if (!products[ctx.query.id])
-        products[ctx.query.id] = ctx.query.quantity;
+
+      if (!cookieProducts[ctx.query.id])
+        cookieProducts[ctx.query.id] = ctx.query.quantity;
       else {
-        products[ctx.query.id] = products[ctx.query.id] + ctx.query.quantity;
+        cookieProducts[ctx.query.id] = parseInt(cookieProducts[ctx.query.id]) + parseInt(ctx.query.quantity);
       }
-      
-      if (await utilsEcom.compareQtyAndProductQty(ctx.query.id, products[ctx.query.id]) == 0) {
-        products[ctx.query.id] -= ctx.query.quantity;
+
+      if (await utilsEcom.compareQtyAndProductQty(ctx.query.id, cookieProducts[ctx.query.id]) == 0) {
+        cookieProducts[ctx.query.id] -= ctx.query.quantity;
 
         ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
         if (ctx.query.cart) {
@@ -2861,17 +2879,98 @@ router.get('/addToCart', async ctx => {
         return;
       }
 
-      ctx.cookies.set('products', JSON.stringify(products), { httpOnly: true, expires: new Date(configEcom.COOKIE_PRODUCTS_EXPIRE) });
-      
+      ctx.cookies.set('products', JSON.stringify(cookieProducts), { httpOnly: true, expires: new Date(configEcom.COOKIE_PRODUCTS_EXPIRE) });
+
       if (ctx.query.cart) {
-        // TODO
-  
+        let ids = []
+        let qtys = [];
+
+        let orderitems = [], totals = [], totalsVAT = [];
+
+        let curPrice = "0.00";
+        let curTotal = "0.00";
+
+        for (i in cookieProducts) {
+          let num = Number(i);
+
+          if (isFinite(num)) {
+            ids.push(num);
+            qtys.push(parseInt(cookieProducts[num]));
+          }
+        }
+
+        products = await db.query(
+          `SELECT
+            products."id", "name", "price", "discountPrice", "image",
+            ROUND("discountPrice", 2) * x.qty AS "totalPrice",
+            ROUND("discountPrice" * ( 1 + ${configEcom.SETTINGS.vat}), 2) * x.qty AS "totalPriceVAT"
+          FROM products
+          INNER JOIN
+            unnest(ARRAY[${ids}], ARRAY[${qtys}]) as x(id, qty)
+          ON products.id = x.id
+          WHERE (products."deletedAt" IS NULL
+            AND products."id" IN (${ids}))`,
+          {
+            type: 'SELECT',
+            mapToModel: true,
+            model: Product,
+          }
+        ).catch(err => utilsEcom.handleError(err));
+
+        for (i of products) {
+          if (i.id == ctx.query.id) {
+            curPrice = await i.getDiscountPriceWithVATStr();
+            curTotal = i.dataValues.totalPriceVAT;
+          }
+
+          orderitems.push({ 'id': i.id, 'productId': i.id, 'quantity': cookieProducts[i.id] });
+          totals.push(i.dataValues.totalPrice);
+          totalsVAT.push(i.dataValues.totalPriceVAT);
+        }
+
+        subTotal = (await db.query(
+          `SELECT COALESCE(ROUND(SUM(a), 2), 0.00) AS total FROM unnest(array[${totals.toString()}]) AS s(a)`,
+          {
+            type: 'SELECT',
+            plain: true
+          }
+        ).catch(err => utilsEcom.handleError(err))).total;
+
+        grandTotal = (await db.query(
+          `SELECT COALESCE(ROUND(SUM(a), 2), 0.00) AS total FROM unnest(array[${totalsVAT.toString()}]) AS s(a)`,
+          {
+            type: 'SELECT',
+            plain: true
+          }
+        ).catch(err => utilsEcom.handleError(err))).total;
+
+        orderVATSum = (await db.query(
+          `SELECT COALESCE($1::DECIMAL - $2::DECIMAL, 0.00) AS total`,
+          {
+            type: 'SELECT',
+            plain: true,
+            bind: [grandTotal, subTotal]
+          }
+        ).catch(err => utilsEcom.handleError(err))).total;
+
+        ctx.body = {
+          'status': 'ok',
+          'prodID': ctx.query.id,
+          'prodPrice': curPrice,
+          'totalProdPrice': curTotal,
+          'subTotal': subTotal,
+          'vatSum': orderVATSum,
+          'grandTotal': grandTotal,
+        };
+
         return;
       }
     }
 
     ctx.session.messages = { 'productAdded': 'Product added to the cart!' };
     ctx.redirect('/products');
+
+    return;
   }
 
   const user = await User.findOne({ where: { username: ctx.session.dataValues.username } });
@@ -2907,15 +3006,6 @@ router.get('/addToCart', async ctx => {
       quantity: ctx.query.quantity,
     }
   });
-
-  // Invalid request
-  if (!isFinite(ctx.query.quantity) || !Math.sign(ctx.query.quantity) > 0) {
-    if (ctx.query.cart)
-      ctx.redirect('/cart');
-    ctx.redirect('/products');
-
-    return;
-  }
 
   if (await utilsEcom.compareQtyAndProductQty(ctx.query.id, parseInt(orderitem.quantity) + parseInt(ctx.query.quantity)) == 0) {
     if (ctx.query.cart) {
@@ -2958,25 +3048,106 @@ router.get('/removeFromCart', async ctx => {
   const quantity = ctx.query.quantity;
 
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    let products = JSON.parse(ctx.cookies.get('products'));
+    let cookieProducts = JSON.parse(ctx.cookies.get('products'));
 
-    if (products[ctx.query.id]) {
+    if (cookieProducts[ctx.query.id]) {
       if (quantity > 0) {
-        if (products[ctx.query.id] > quantity)
-          products[ctx.query.id] -= quantity;
+        if (cookieProducts[ctx.query.id] > quantity)
+          cookieProducts[ctx.query.id] -= quantity;
         else {
-          ctx.status = 400;
-          return;
+          delete cookieProducts[ctx.query.id];
         }
       } else {
-        delete products[ctx.query.id];
+        delete cookieProducts[ctx.query.id];
       }
     }
 
-    ctx.cookies.set('products', JSON.stringify(products), { httpOnly: true, expires: new Date(configEcom.COOKIE_PRODUCTS_EXPIRE) });
+    if (cookieProducts[ctx.query.id]) {
+      let ids = []
+      let qtys = [];
+
+      let orderitems = [], totals = [], totalsVAT = [];
+
+      let curPrice = "0.00";
+      let curTotal = "0.00";
+
+      for (i in cookieProducts) {
+        let num = Number(i);
+
+        if (isFinite(num)) {
+          ids.push(num);
+          qtys.push(parseInt(cookieProducts[num]));
+        }
+      }
+
+      products = await db.query(
+        `SELECT
+            products."id", "name", "price", "discountPrice", "image",
+            ROUND("discountPrice", 2) * x.qty AS "totalPrice",
+            ROUND("discountPrice" * ( 1 + ${configEcom.SETTINGS.vat}), 2) * x.qty AS "totalPriceVAT"
+          FROM products
+          INNER JOIN
+            unnest(ARRAY[${ids}], ARRAY[${qtys}]) as x(id, qty)
+          ON products.id = x.id
+          WHERE (products."deletedAt" IS NULL
+            AND products."id" IN (${ids}))`,
+        {
+          type: 'SELECT',
+          mapToModel: true,
+          model: Product,
+        }
+      ).catch(err => utilsEcom.handleError(err));
+
+      for (i of products) {
+        if (i.id == ctx.query.id) {
+          curPrice = await i.getDiscountPriceWithVATStr();
+          curTotal = i.dataValues.totalPriceVAT;
+        }
+
+        orderitems.push({ 'id': i.id, 'productId': i.id, 'quantity': cookieProducts[i.id] });
+        totals.push(i.dataValues.totalPrice);
+        totalsVAT.push(i.dataValues.totalPriceVAT);
+      }
+
+      subTotal = (await db.query(
+        `SELECT COALESCE(ROUND(SUM(a), 2), 0.00) AS total FROM unnest(array[${totals.toString()}]) AS s(a)`,
+        {
+          type: 'SELECT',
+          plain: true
+        }
+      ).catch(err => utilsEcom.handleError(err))).total;
+
+      grandTotal = (await db.query(
+        `SELECT COALESCE(ROUND(SUM(a), 2), 0.00) AS total FROM unnest(array[${totalsVAT.toString()}]) AS s(a)`,
+        {
+          type: 'SELECT',
+          plain: true
+        }
+      ).catch(err => utilsEcom.handleError(err))).total;
+
+      orderVATSum = (await db.query(
+        `SELECT COALESCE($1::DECIMAL - $2::DECIMAL, 0.00) AS total`,
+        {
+          type: 'SELECT',
+          plain: true,
+          bind: [grandTotal, subTotal]
+        }
+      ).catch(err => utilsEcom.handleError(err))).total;
+
+      ctx.body = {
+        'status': 'ok',
+        'prodID': ctx.query.id,
+        'prodPrice': curPrice,
+        'totalProdPrice': curTotal,
+        'subTotal': subTotal,
+        'vatSum': orderVATSum,
+        'grandTotal': grandTotal,
+      };
+    }
+
+    ctx.cookies.set('products', JSON.stringify(cookieProducts), { httpOnly: true, expires: new Date(configEcom.COOKIE_PRODUCTS_EXPIRE) });
 
     ctx.session.messages = { 'cartRemoved': 'Removed selected items from the cart' };
-    ctx.redirect('/cart');
     return;
   }
 
@@ -3023,15 +3194,17 @@ router.get('/removeFromCart', async ctx => {
     });
   }
   else {
-    await orderitem.destroy();
+    if (orderitem) {
+      await orderitem.destroy();
 
-    ctx.session.messages = { 'cartRemoved': 'Removed selected items from the cart' };
+      ctx.session.messages = { 'cartRemoved': 'Removed selected items from the cart' };
 
-    ctx.body = {
-      'status': 'redirect',
-      'redirect': '/cart'
-    };
-    
+      ctx.body = {
+        'status': 'redirect',
+        'redirect': '/cart'
+      };
+    } else ctx.redirect('/cart');
+
     return;
   }
 
@@ -3058,55 +3231,88 @@ router.get('/cart', async ctx => {
     let orderVATSum = "0.00";
 
     let ids = [];
+    let qtys = [];
 
     if (ctx.cookies.get("products")) {
-      var cookieProducts = JSON.parse(ctx.cookies.get("products"));
+      try {
+        var cookieProducts = JSON.parse(ctx.cookies.get("products"));
+      } catch (e) {
+        var cookieProducts = {};
+
+        ctx.cookies.set("products");
+      }
 
       for (i in cookieProducts) {
         let num = Number(i);
+        let qty = Number(cookieProducts[i]);
 
-        if (isFinite(num))
+        if (isFinite(num) && Math.sign(num) >= 0 &&
+          isFinite(qty) && Math.sign(qty) >= 0) {
           ids.push(num);
+          qtys.push(qty);
+
+          continue;
+        }
+
+        // COOKIE NOT CORRECT !!!
+        // Clear the cookie
+        ctx.cookies.set("products");
+
+        ctx.session.messages = { "otherError": "Your cart have been cleared because of invalid cookie data!" };
+        ctx.redirect("/cart");
+        return;
       }
 
-      products = await Product.findAll({
-        where: { id: { [Op.in]: ids } },
-        attributes: [
-          "id", "name", "price", "discountPrice", "image",
-          [Sequelize.literal(`ROUND("discountPrice" * ${cookieProducts[i]}, 2)`), 'totalPrice'],
-          [Sequelize.literal(`ROUND("discountPrice" * ${cookieProducts[i]} * ( 1 + ${configEcom.SETTINGS.vat}), 2)`), 'totalPriceVAT']
-        ]
-      });
-
-      for (i of products) {
-        orderitems.push({ 'id': i.id, 'productId': i.id, 'quantity': cookieProducts[i.id] });
-        totals.push(i.dataValues.totalPrice);
-        totalsVAT.push(i.dataValues.totalPriceVAT);
+      if (ids.length > 0) {
+        products = await db.query(
+          `SELECT
+            products."id", "name", "price", "discountPrice", "image",
+            ROUND("discountPrice", 2) * x.qty AS "totalPrice",
+            ROUND("discountPrice" * ( 1 + ${configEcom.SETTINGS.vat}), 2) * x.qty AS "totalPriceVAT"
+          FROM products
+          INNER JOIN
+            unnest(ARRAY[${ids}], ARRAY[${qtys}]) as x(id, qty)
+          ON products.id = x.id
+          WHERE (products."deletedAt" IS NULL
+            AND products."id" IN (${ids}))`,
+          {
+            type: 'SELECT',
+            mapToModel: true,
+            model: Product,
+          }
+        ).catch(err => utilsEcom.handleError(err));
+  
+        for (i of products) {
+          orderitems.push({ 'id': i.id, 'productId': i.id, 'quantity': cookieProducts[i.id] });
+          totals.push(i.dataValues.totalPrice);
+          totalsVAT.push(i.dataValues.totalPriceVAT);
+        }
+  
+        subTotal = (await db.query(
+          `SELECT COALESCE(ROUND(SUM(a), 2), 0.00) AS total FROM unnest(array[${totals.toString()}]) AS s(a)`,
+          {
+            type: 'SELECT',
+            plain: true
+          }
+        ).catch(err => utilsEcom.handleError(err))).total;
+  
+        grandTotal = (await db.query(
+          `SELECT COALESCE(ROUND(SUM(a), 2), 0.00) AS total FROM unnest(array[${totalsVAT.toString()}]) AS s(a)`,
+          {
+            type: 'SELECT',
+            plain: true
+          }
+        ).catch(err => utilsEcom.handleError(err))).total;
+  
+        orderVATSum = (await db.query(
+          `SELECT COALESCE($1::DECIMAL - $2::DECIMAL, 0.00) AS total`,
+          {
+            type: 'SELECT',
+            plain: true,
+            bind: [grandTotal, subTotal]
+          }
+        ).catch(err => utilsEcom.handleError(err))).total;
       }
-
-      subTotal = (await db.query(
-        `SELECT COALESCE(ROUND(SUM(a), 2), 0.00) AS total FROM unnest(array[${totals.toString()}]) AS s(a)`,
-        {
-          type: 'SELECT',
-          plain: true
-        }
-      )).total;
-
-      grandTotal = (await db.query(
-        `SELECT COALESCE(ROUND(SUM(a), 2), 0.00) AS total FROM unnest(array[${totalsVAT.toString()}]) AS s(a)`,
-        {
-          type: 'SELECT',
-          plain: true
-        }
-      )).total;
-
-      orderVATSum = (await db.query(
-        `SELECT COALESCE(ROUND(SUM(a * ${configEcom.SETTINGS.vat}), 2), 0.00) AS total FROM unnest(array[${totals.toString()}]) AS s(a)`,
-        {
-          type: 'SELECT',
-          plain: true
-        }
-      )).total;
     }
 
     let cartQty = await utilsEcom.getCartQuantity(ctx);
@@ -3335,7 +3541,7 @@ router.post('/captureOrder', async ctx => {
       orderitems[i].update({ price: (await orderitems[i].getProduct()).discountPrice });
     }
 
-    await order.update({ status: 5, orderedAt: Sequelize.fn('NOW') });
+    await order.update({ status: 5, orderedAt: Sequelize.fn("NOW") });
 
     await utilsEcom.removeProductQtyFromOrder(order);
 
@@ -3373,7 +3579,7 @@ router.get('/admin/export/report/pdf', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -3472,7 +3678,7 @@ router.get('/admin/export/report/excel', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -3569,7 +3775,7 @@ router.get('/admin/export/report/csv', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -3669,7 +3875,7 @@ router.get('/admin/settings/email', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -3715,7 +3921,7 @@ router.post('/admin/settings/email', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -3805,7 +4011,7 @@ router.post('/admin/settings/email', async ctx => {
 
   if (type == "payment")
     await Settings.bulkCreate([
-      { type: 'email_payment', key: "email_payment_sender", value: "danielgudjenev@gmail.com" }, // HARD-CODED, FOR NOW
+      { type: 'email_payment', key: "email_payment_sender", value: "danielgudjenev@gmail.com" }, // HARD-CODED, FORNOW
       { type: 'email_payment', key: "email_payment_subject", value: subject },
       { type: 'email_payment', key: "email_payment_upper", value: ctx.request.fields.uppercontent },
       { type: 'email_payment', key: "email_payment_lower", value: ctx.request.fields.lowercontent },
@@ -3819,7 +4025,7 @@ router.post('/admin/settings/email', async ctx => {
       updateOnDuplicate: ["type", "key", "value"]
     });
   else await Settings.bulkCreate([
-    { type: 'email_order', key: "email_order_sender", value: "danielgudjenev@gmail.com" }, // HARD-CODED, FOR NOW
+    { type: 'email_order', key: "email_order_sender", value: "danielgudjenev@gmail.com" }, // HARD-CODED, FORNOW
     { type: 'email_order', key: "email_order_subject", value: subject },
     { type: 'email_order', key: "email_order_upper", value: ctx.request.fields.uppercontent },
     { type: 'email_order', key: "email_order_lower", value: ctx.request.fields.lowercontent },
@@ -3864,7 +4070,7 @@ router.get('/admin/settings/other', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
@@ -3910,7 +4116,7 @@ router.post('/admin/settings/other', async ctx => {
   let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
   // Auto session expire
-  if (utilsEcom.isSessionValid(staff)) {
+  if (!utilsEcom.isSessionValid(staff)) {
     utilsEcom.onSessionExpired(ctx);
 
     return;
