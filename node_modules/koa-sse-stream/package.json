@@ -1,0 +1,35 @@
+{
+  "name": "koa-sse-stream",
+  "version": "0.2.0",
+  "description": "koa sse（server side event） middleware",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "example": "node example.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yklykl530/koa-sse.git"
+  },
+  "keywords": [
+    "sse",
+    "koa",
+    "server"
+  ],
+  "author": "yklykl123",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yklykl530/koa-sse/issues"
+  },
+  "homepage": "https://github.com/yklykl530/koa-sse#readme",
+  "dependencies": {
+    "stream": "0.0.2"
+  },
+  "devDependencies": {
+    "@koa/cors": "^2.2.1",
+    "koa": "^2.5.0"
+  }
+}

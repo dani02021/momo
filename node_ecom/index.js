@@ -13,7 +13,11 @@ const configEcom = require("./config.js");
 const session = require('koa-session');
 const assert = require('assert/strict');
 const csv = require('fast-csv');
+const ExcelJS = require('exceljs');
 const favicon = require('koa-favicon');
+const { PassThrough } = require("stream");
+const bodyClean = require('koa-body-clean');
+var crypto = require('crypto');
 
 const fs = require('fs');
 const db = require("./db.js");
@@ -2521,24 +2525,75 @@ router.get('/api/products/get', async ctx => {
   );
 });
 
-router.post('/admin/api/products/import/csv', async ctx => {
+router.post('/admin/api/products/import/xlsx', async ctx => {
   console.log(ctx.request.files);
 
-  await new Promise((resolve, reject) => {
-    fs.createReadStream(ctx.request.files[0].path)
-      .pipe(csv.parse())
-      .on('error', error => {
-        utilsEcom.utilsEcom.handleError(error);
-        reject(error);
-      })
-      .on('data', row => {
-        console.log(`ROW=${JSON.stringify(row)}`);
-      })
-      .on('end', rowCount => resolve(rowCount));
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(ctx.request.files[0].path);
+
+  var worksheet = workbook.getWorksheet(1);
+
+  ctx.request.socket.setTimeout(0);
+  ctx.req.socket.setNoDelay(true);
+  ctx.req.socket.setKeepAlive(true);
+
+  let streamId = ctx.query.streamId;
+
+  ctx.set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
   });
 
-  ctx.session.messages = { "importedCSV": "CSV imported successfuly!" };
-  ctx.redirect("/admin/products");
+  const stream = new PassThrough();
+
+  ctx.status = 200;
+  ctx.body = stream;
+
+  (async () => {
+    let seq = utilsEcom.rowsSequence(worksheet);
+    let attempts = 0;
+
+    for await (let row of seq) {
+      if (attempts == 0
+        || attempts == worksheet.rowCount - 1
+        || attempts % Math.ceil(worksheet.rowCount / Math.min(worksheet.rowCount, 20)) == 0) {
+          stream.write(`id: ${streamId}\n`);
+          stream.write(`event: message\n`);
+          stream.write(`data: ${row.getCell(3)}\n\n`);
+      }
+
+      attempts++;
+    }
+  })();
+});
+
+// WARNING: HTTP/1 -> MAX 6 SSE for the browser!
+// So if user try to upload 7 files silmuntaniously,
+// the browser will reject it!
+router.get('/admin/api/events/xlsx', async ctx => {
+  ctx.request.socket.setTimeout(0);
+  ctx.req.socket.setNoDelay(true);
+  ctx.req.socket.setKeepAlive(true);
+
+  let streamId = ctx.query.streamId;
+
+  ctx.set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+  });
+
+  const stream = new PassThrough();
+
+  ctx.status = 200;
+  ctx.body = stream;
+
+  // Heartbeat
+  setInterval(() => {
+    stream.write('event: message\n');
+    stream.write(`data: ${new Date()}\n\n`);
+  }, configEcom.DEFAULT_SSE_PING);
 });
 
 router.get('/admin/orders', async ctx => getAdminOrders(ctx));
@@ -2588,7 +2643,7 @@ router.post('/admin/orders/add', async ctx => {
   });
 
   if (!user) {
-    ctx.session.messages = {'invalidVal': 'User does not exists!'};
+    ctx.session.messages = { 'invalidVal': 'User does not exists!' };
     ctx.redirect('/admin/orders');
     return;
   }
@@ -2605,20 +2660,20 @@ router.post('/admin/orders/add', async ctx => {
 
     if (!product)
       continue;
-    
+
     if (await utilsEcom.compareQtyAndProductQty(id, items[id]) == 0) {
-      ctx.session.messages = {'invalidVal': `Not enough quantity of ${product.name}!`};
+      ctx.session.messages = { 'invalidVal': `Not enough quantity of ${product.name}!` };
 
       await order.destroy();
 
       ctx.redirect("/admin/orders");
       return;
     }
-    
+
     let orderitem = await OrderItem.create({ quantity: items[id] });
 
     await orderitem.setProduct(product);
-    await orderitem.update({ price: product.discountPrice});
+    await orderitem.update({ price: product.discountPrice });
     await order.addOrderitem(orderitem);
   }
 
@@ -2816,20 +2871,20 @@ router.post('/admin/orders/edit/:id', async ctx => {
 
     if (!product)
       continue;
-    
+
     if (await utilsEcom.compareQtyAndProductQty(id, items[id]) == 0) {
-      ctx.session.messages = {'invalidVal': `Not enough quantity of ${product.name}!`};
+      ctx.session.messages = { 'invalidVal': `Not enough quantity of ${product.name}!` };
 
       await order.destroy();
 
       ctx.redirect("/admin/orders");
       return;
     }
-    
+
     let orderitem = await OrderItem.create({ quantity: items[id] });
 
     await orderitem.setProduct(product);
-    await orderitem.update({ price: product.discountPrice});
+    await orderitem.update({ price: product.discountPrice });
     await order.addOrderitem(orderitem);
   }
 
@@ -3309,13 +3364,13 @@ router.get('/cart', async ctx => {
             model: Product,
           }
         ).catch(err => utilsEcom.handleError(err));
-  
+
         for (i of products) {
           orderitems.push({ 'id': i.id, 'productId': i.id, 'quantity': cookieProducts[i.id] });
           totals.push(i.dataValues.totalPrice);
           totalsVAT.push(i.dataValues.totalPriceVAT);
         }
-  
+
         subTotal = (await db.query(
           `SELECT COALESCE(ROUND(SUM(a), 2), 0.00) AS total FROM unnest(array[${totals.toString()}]) AS s(a)`,
           {
@@ -3323,7 +3378,7 @@ router.get('/cart', async ctx => {
             plain: true
           }
         ).catch(err => utilsEcom.handleError(err))).total;
-  
+
         grandTotal = (await db.query(
           `SELECT COALESCE(ROUND(SUM(a), 2), 0.00) AS total FROM unnest(array[${totalsVAT.toString()}]) AS s(a)`,
           {
@@ -3331,7 +3386,7 @@ router.get('/cart', async ctx => {
             plain: true
           }
         ).catch(err => utilsEcom.handleError(err))).total;
-  
+
         orderVATSum = (await db.query(
           `SELECT COALESCE($1::DECIMAL - $2::DECIMAL, 0.00) AS total`,
           {
@@ -4208,6 +4263,7 @@ app.use(session({
 app.use(serve('./static'));
 
 app.use(KoaBodyParser());
+app.use(bodyClean());
 
 render(app, {
   root: path.join(__dirname, "templates"),

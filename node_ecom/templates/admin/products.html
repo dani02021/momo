@@ -117,9 +117,9 @@
           </button>
         </div>
         <div class="d-grid gap-2">
-          <form id="csvImportForm" action="/admin/api/products/import/csv" method="post" enctype="multipart/form-data">
-            <input type="file" accept=".csv" name="csvFile" id="csvImportFile" onchange="document.getElementById('csvImportForm').submit();" hidden>
-            <button type="button" class="btn btn-primary text-uppercase" style="width: 100%;" onclick="document.getElementById('csvImportFile').click();">Import products from CSV</button>
+          <form id="xlsxImportForm" action="/admin/api/products/import/xlsx" method="post" enctype="multipart/form-data">
+            <input type="file" accept=".xlsx .xls" name="xlsxFile" id="xlsxImportFile" onchange="toAJAXImport();" hidden>
+            <button type="button" class="btn btn-primary text-uppercase" style="width: 100%;" onclick="document.getElementById('xlsxImportFile').click();">Import products from XLSX</button>
           </form>
         </div>
       </div>
@@ -339,7 +339,28 @@
   </div>
 </div>
 
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="loading-import" tabindex="-1"
+  aria-labelledby="loading-import" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="loading-import-title">Loading...</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="progress">
+          <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/sse.js"></script>
 <script>
+  let evtSource;
   function showRemModal(elem) {
     var myModal = new bootstrap.Modal(document.getElementById('remove-cat'), {
       keyboard: false,
@@ -365,6 +386,21 @@
           window.location.reload();
         }
       }).fail(function(data) { });
+  }
+
+  function toAJAXImport() {
+    evtSource = new SSE(`/admin/api/products/import/xlsx`,
+                      {payload: new FormData($("#xlsxImportForm")[0])});
+    
+    evtSource.addEventListener('error', function(e) { });
+
+    evtSource.addEventListener('open', function(e) {
+      $('#loading-import').modal('show');
+    });
+
+    evtSource.stream();
+
+    console.log(evtSource);
   }
 
   function showAddModal(elem) {

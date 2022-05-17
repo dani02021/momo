@@ -938,6 +938,19 @@ async function saveReportExcel(reportRes, filters, time, currency) {
     return createTempFile('excel_report.xlsx', buffer);
 }
 
+/**
+ * Generate rows from Worksheet
+ * @param {import('exceljs').Worksheet} worksheet 
+ */
+async function* rowsSequence(worksheet) {
+    for (i = 0; i < worksheet.rowCount; i++) {
+        yield new Promise((resolve, reject) => {
+            resolve(worksheet.getRow(i));
+        });
+    }
+  
+}
+
 // Returns every product and how many times its ordered - NOT USED - NOT WORKING
 async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval) {
     let text = 
@@ -1005,10 +1018,10 @@ function isSessionValid(staff) {
     if (!staff.lastActivity)
         return true;
     
-    if (configEcom.DEFAULT_SESSION_BACK_OFFICE_EXPIRE == 0)
+    if (configEcom.SETTINGS["backoffice_expire"] == 0)
         return true;
 
-    return new Date() - new Date(staff.lastActivity) < configEcom.DEFAULT_SESSION_BACK_OFFICE_EXPIRE;
+    return new Date() - new Date(staff.lastActivity) < configEcom.SETTINGS["backoffice_expire"];
 }
 
 // Other
@@ -1365,6 +1378,7 @@ module.exports = {
     getReportResponce,
     getProductsAndCountRaw,
     getProductsAndOrderCount,
+    rowsSequence,
     saveReportCsv,
     saveReportExcel,
     saveReportPdf,

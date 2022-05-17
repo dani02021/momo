@@ -2,9 +2,11 @@
   "dependencies": {
     "fast-csv": "^4.3.6",
     "koa-better-body": "^3.3.9",
+    "koa-body-clean": "^1.0.0",
     "koa-bodyparser": "^4.3.0",
     "koa-favicon": "^2.1.0",
     "koa-session": "^6.2.0",
+    "koa-sse-stream": "^0.2.0",
     "stack-trace": "^1.0.0-pre1"
   }
 }
