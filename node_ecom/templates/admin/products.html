@@ -118,7 +118,7 @@
         </div>
         <div class="d-grid gap-2">
           <form id="xlsxImportForm" action="/admin/api/products/import/xlsx" method="post" enctype="multipart/form-data">
-            <input type="file" accept=".xlsx .xls" name="xlsxFile" id="xlsxImportFile" onchange="toAJAXImport();" hidden>
+            <input type="file" accept=".xlsx .xls" name="xlsxFile" id="xlsxImportFile" onchange="toAJAXImport(this);" hidden>
             <button type="button" class="btn btn-primary text-uppercase" style="width: 100%;" onclick="document.getElementById('xlsxImportFile').click();">Import products from XLSX</button>
           </form>
         </div>
@@ -349,7 +349,7 @@
       </div>
       <div class="modal-body">
         <div class="progress">
-          <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+          <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%;">0%</div>
         </div>
       </div>
       <div class="modal-footer">
@@ -361,6 +361,22 @@
 <script src="/js/sse.js"></script>
 <script>
   let evtSource;
+
+  let bar = document.getElementById("progress-bar");
+  let title = document.getElementById('loading-import-title');
+  
+  $("#loading-import").on("hidden.bs.modal", function () {
+    if (title.innerHTML.equalsIgnoreCase('done')) {
+      window.location.reload();
+      return;
+    }
+    
+    bar.style.width = '0%';
+    bar.innerHTML = '0%';
+    title.innerHTML = 'Loading...';
+    bar.classList.remove('bg-danger');
+  });
+  
   function showRemModal(elem) {
     var myModal = new bootstrap.Modal(document.getElementById('remove-cat'), {
       keyboard: false,
@@ -388,19 +404,48 @@
       }).fail(function(data) { });
   }
 
-  function toAJAXImport() {
+  function toAJAXImport(elem) {
     evtSource = new SSE(`/admin/api/products/import/xlsx`,
                       {payload: new FormData($("#xlsxImportForm")[0])});
     
-    evtSource.addEventListener('error', function(e) { });
+    elem.value = null;
+    
+    evtSource.onerror = function(e) { };
 
-    evtSource.addEventListener('open', function(e) {
-      $('#loading-import').modal('show');
-    });
+    evtSource.onreadystatechange = function(e) {
+      if (e.readyState === 1)
+        $('#loading-import').modal('show');
+    };
+
+    evtSource.onmessage = function(e) {
+      if (e.data == 'done') {
+        bar.style.width = '100%';
+        bar.innerHTML = 'Done';
+
+        evtSource.close();
+
+        title.innerHTML = 'Done';
+
+        setTimeout(() => {
+          $('#loading-import').modal('hide');
+        }, 3000);
+
+        return;
+      } else if (e.data.split('\t')[0] == 'error') {
+        bar.style.width = '100%';
+        bar.innerHTML = e.data.split('\t')[1];
+        bar.classList.add('bg-danger');
+        
+        title.innerHTML = 'Error';
+
+        return;
+      }
+
+      bar.style.width = Math.round(Number(e.data) * 100) + '%';
+      bar.innerHTML = Math.round(Number(e.data) * 100) + '%';
+    }
 
     evtSource.stream();
-
-    console.log(evtSource);
   }
 
   function showAddModal(elem) {

@@ -424,7 +424,13 @@ const Product = db.define("product", {
   },
   discountPrice: {
     type: DataTypes.DECIMAL(7, 2),
-    allowNull: false
+    allowNull: false,
+    validate: {
+      min: {
+        args: 0.01,
+        msg: 'Price must be minimum 0.01!'
+      }
+    }
   },
   description: {
     type: DataTypes.TEXT,

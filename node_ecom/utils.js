@@ -939,16 +939,21 @@ async function saveReportExcel(reportRes, filters, time, currency) {
 }
 
 /**
- * Generate rows from Worksheet
+ * Generate cells from Worksheet
  * @param {import('exceljs').Worksheet} worksheet 
  */
-async function* rowsSequence(worksheet) {
-    for (i = 0; i < worksheet.rowCount; i++) {
-        yield new Promise((resolve, reject) => {
-            resolve(worksheet.getRow(i));
-        });
+function* cellSequence(worksheet) {
+    for (let i = 1; i <= worksheet.rowCount; i++) {
+        let row = worksheet.getRow(i);
+        for (let z = 1; z <= row.cellCount; z++) {
+            yield {
+                "row": i,
+                "column":  z,
+                "data": row.getCell(z),
+                "max": worksheet.rowCount * row.cellCount
+            }
+        }
     }
-  
 }
 
 // Returns every product and how many times its ordered - NOT USED - NOT WORKING
@@ -1378,7 +1383,7 @@ module.exports = {
     getReportResponce,
     getProductsAndCountRaw,
     getProductsAndOrderCount,
-    rowsSequence,
+    cellSequence,
     saveReportCsv,
     saveReportExcel,
     saveReportPdf,

@@ -98,6 +98,8 @@
       if (!this.xhr) {
         return;
       }
+
+      console.log(this.xhr.responseText);
   
       if (this.xhr.status !== 200) {
         this._onStreamFailure(e);
@@ -191,6 +193,8 @@
       }
       this.xhr.withCredentials = this.withCredentials;
       this.xhr.send(this.payload);
+
+      console.log(this.xhr);
     };
   
     this.close = function() {

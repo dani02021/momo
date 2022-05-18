@@ -26,7 +26,7 @@ const { Sequelize, ValidationError } = require("sequelize");
 const Op = Sequelize.Op;
 
 const models = require("./models.js");
-const { parse } = require('path');
+const { parse, resolve } = require('path');
 const { bind } = require('koa-route');
 const Category = models.category();
 const Product = models.product();
@@ -2528,16 +2528,9 @@ router.get('/api/products/get', async ctx => {
 router.post('/admin/api/products/import/xlsx', async ctx => {
   console.log(ctx.request.files);
 
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(ctx.request.files[0].path);
-
-  var worksheet = workbook.getWorksheet(1);
-
   ctx.request.socket.setTimeout(0);
   ctx.req.socket.setNoDelay(true);
   ctx.req.socket.setKeepAlive(true);
-
-  let streamId = ctx.query.streamId;
 
   ctx.set({
     "Content-Type": "text/event-stream",
@@ -2550,51 +2543,84 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
   ctx.status = 200;
   ctx.body = stream;
 
-  (async () => {
-    let seq = utilsEcom.rowsSequence(worksheet);
-    let attempts = 0;
+  // Supported only .xlsx and .xls
+  if (!(/.xlsx|.xls/g.exec(ctx.request.files[0].name))) {
+    stream.write(`event: message\n`);
+    stream.write(`data: error\tFile should end with .xlsx or .xls\n\n`);
 
-    for await (let row of seq) {
-      if (attempts == 0
-        || attempts == worksheet.rowCount - 1
-        || attempts % Math.ceil(worksheet.rowCount / Math.min(worksheet.rowCount, 20)) == 0) {
-          stream.write(`id: ${streamId}\n`);
-          stream.write(`event: message\n`);
-          stream.write(`data: ${row.getCell(3)}\n\n`);
+    console.log(stream);
+    stream.end();
+    return;
+  }
+
+  const workbook = new ExcelJS.Workbook();
+
+  try {
+    await workbook.xlsx.readFile(ctx.request.files[0].path);
+  } catch(e) {
+    stream.write(`event: message\n`);
+    stream.write(`data: error\tCan't open the file! Check if it is corrupted?\n\n`);
+    
+    stream.end();
+    return;
+  }
+
+  var worksheet = workbook.getWorksheet(1);
+
+  let seq = utilsEcom.cellSequence(worksheet);
+  let attempts = 0;
+
+  // Move to config
+  let TABLE_HEADERS_SEQUENCE = [
+    'Type', 'SKU', 'Name',
+    'Short description', 'Description',
+    'Quantity', 'Тегло (kg)',
+    'Regular price', 'Categories',
+    'Images'
+  ];
+
+  let timer = setInterval(async () => {
+    let detail = seq.next();
+
+    for (let i=0; i<1000; i++) {
+      attempts++;
+      
+      if (detail.done) {
+        stream.write(`event: message\n`);
+        stream.write(`data: done\n\n`);
+
+        stream.end();
+
+        clearInterval(timer);
+        return;
       }
 
-      attempts++;
+      // Check headers
+      console.log(detail.value.data.value);
+      if (detail.value.row == 1)
+        if (detail.value.data.value != TABLE_HEADERS_SEQUENCE[detail.value.column - 1] &&
+          TABLE_HEADERS_SEQUENCE.length >= detail.value.column) {
+          stream.write(`event: message\n`);
+          stream.write(`data: error\tColumn ${detail.value.column} \
+          on row 1 should be ${TABLE_HEADERS_SEQUENCE[detail.value.column - 1]}\n\n`);
+
+          stream.end();
+
+          clearInterval(timer);
+          return;
+        }
+
+      detail = seq.next();
     }
-  })();
+
+    stream.write(`event: message\n`);
+    stream.write(`data: ${attempts / detail.value.max}\n\n`);
+  }, 0);
 });
 
 // WARNING: HTTP/1 -> MAX 6 SSE for the browser!
 // So if user try to upload 7 files silmuntaniously,
 // the browser will reject it!
-router.get('/admin/api/events/xlsx', async ctx => {
-  ctx.request.socket.setTimeout(0);
-  ctx.req.socket.setNoDelay(true);
-  ctx.req.socket.setKeepAlive(true);
-
-  let streamId = ctx.query.streamId;
-
-  ctx.set({
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
-  });
-
-  const stream = new PassThrough();
-
-  ctx.status = 200;
-  ctx.body = stream;
-
-  // Heartbeat
-  setInterval(() => {
-    stream.write('event: message\n');
-    stream.write(`data: ${new Date()}\n\n`);
-  }, configEcom.DEFAULT_SSE_PING);
-});
 
 router.get('/admin/orders', async ctx => getAdminOrders(ctx));
 router.get('/admin/orders/:page', async ctx => getAdminOrders(ctx));
