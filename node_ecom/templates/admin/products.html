@@ -366,11 +366,11 @@
   let title = document.getElementById('loading-import-title');
   
   $("#loading-import").on("hidden.bs.modal", function () {
-    if (title.innerHTML.equalsIgnoreCase('done')) {
+    if (title.innerHTML.toUpperCase() == 'DONE') {
       window.location.reload();
       return;
     }
-    
+
     bar.style.width = '0%';
     bar.innerHTML = '0%';
     title.innerHTML = 'Loading...';
@@ -410,7 +410,15 @@
     
     elem.value = null;
     
-    evtSource.onerror = function(e) { };
+    evtSource.onerror = function(e) {
+      bar.style.width = '100%';
+      bar.innerHTML = "There was an error while trying to connect to the server!";
+      bar.classList.add('bg-danger');
+      
+      title.innerHTML = 'Error';
+
+      $('#loading-import').modal('show');
+    };
 
     evtSource.onreadystatechange = function(e) {
       if (e.readyState === 1)
@@ -425,10 +433,6 @@
         evtSource.close();
 
         title.innerHTML = 'Done';
-
-        setTimeout(() => {
-          $('#loading-import').modal('hide');
-        }, 3000);
 
         return;
       } else if (e.data.split('\t')[0] == 'error') {

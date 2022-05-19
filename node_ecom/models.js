@@ -414,7 +414,7 @@ const Category = db.define("category", {
 
 const Product = db.define("product", {
   name: {
-    type: DataTypes.STRING(100),
+    type: DataTypes.STRING(200),
     allowNull: false,
     unique: true
   },
@@ -499,7 +499,7 @@ Product.prototype.getPriceWithVATStr = async function () {
       type: 'SELECT',
       plain: true
     }
-    ).catch(err => handleError(err))).total;
+    )).total;
 }
 
 Product.prototype.getDiscountPriceWithVAT = async function () {
@@ -518,7 +518,7 @@ Product.prototype.getDiscountPriceWithVATStr = async function () {
       type: 'SELECT',
       plain: true
     }
-    ).catch(err => handleError(err))).total;
+    )).total;
 }
 
 Product.belongsTo(Category, {
@@ -622,7 +622,7 @@ OrderItem.prototype.getTotalStr = async function () {
        type: 'SELECT',
        plain: true,
      }
-   ).catch(err => handleError(err))).total;
+   )).total;
 
   let product = await this.getProduct();
 
@@ -642,7 +642,7 @@ OrderItem.prototype.getTotalStr = async function () {
       type: 'SELECT',
       plain: true,
     }
-  ).catch(err => handleError(err))).total;
+  )).total;
 }
 
 OrderItem.prototype.getTotalWithVAT = async function () {
@@ -662,7 +662,7 @@ OrderItem.prototype.getTotalWithVATStr = async function () {
         type: 'SELECT',
         plain: true,
       }
-      ).catch(err => handleError(err))).total;
+      )).total;
 
   let product = await this.getProduct();
 
@@ -683,7 +683,7 @@ OrderItem.prototype.getTotalWithVATStr = async function () {
       type: 'SELECT',
       plain: true,
     }
-  ).catch(err => handleError(err))).total;
+  )).total;
 }
 
 const Order = db.define("order", {
@@ -763,7 +763,7 @@ Order.prototype.getTotalStr = async function () {
         type: 'SELECT',
         plain: true,
       }
-    ).catch(err => handleError(err))).total;
+    )).total;
 
   return (await db.query(
     `SELECT
@@ -778,7 +778,7 @@ Order.prototype.getTotalStr = async function () {
       type: 'SELECT',
       plain: true,
     }
-  ).catch(err => handleError(err))).total;
+  )).total;
 }
 
 Order.prototype.getTotalWithVAT = async function () {
@@ -797,8 +797,8 @@ Order.prototype.getTotalWithVATStr = async function () {
   if (this.status == 0)
     return (await db.query(
       `SELECT
-        COALESCE( ROUND( SUM( orderitems.quantity * products."discountPrice" *
-          ( 1 + ${configEcom.SETTINGS.vat} ) ), 2), 0.00) AS total
+        COALESCE( SUM( ROUND( orderitems.quantity * products."discountPrice" *
+          ( 1 + ${configEcom.SETTINGS.vat} ), 2 )), 0.00) AS total
       FROM orders
       INNER JOIN orderitems ON orders.id = orderitems."orderId"
       INNER JOIN products ON orderitems."productId" = products.id
@@ -809,12 +809,12 @@ Order.prototype.getTotalWithVATStr = async function () {
         type: 'SELECT',
         plain: true,
       }
-    ).catch(err => handleError(err))).total;
+    )).total;
 
   return (await db.query(
     `SELECT
-      COALESCE( ROUND( SUM( orderitems.quantity * orderitems.price *
-         ( 1 + ${configEcom.SETTINGS.vat} ) ), 2), 0.00) AS total
+      COALESCE( SUM( ROUND( orderitems.quantity * orderitems.price *
+         ( 1 + ${configEcom.SETTINGS.vat} ), 2 )), 0.00) AS total
     FROM orders
     INNER JOIN orderitems ON orders.id = orderitems."orderId"
     WHERE orders.id = ${this.id}
@@ -824,7 +824,7 @@ Order.prototype.getTotalWithVATStr = async function () {
       type: 'SELECT',
       plain: true,
     }
-  ).catch(err => handleError(err))).total;
+  )).total;
 }
 
 Order.prototype.orderedAtHTML = function() {
@@ -840,9 +840,8 @@ Order.prototype.getVATSumStr = async function() {
       return (await db.query(
         `SELECT
           COALESCE( SUM( ROUND(
-            products."discountPrice" *
-            ${configEcom.SETTINGS.vat}, 2) * orderitems.quantity
-          ), 0.00) AS total
+            products."discountPrice" * orderitems.quantity *
+            ${configEcom.SETTINGS.vat}, 2)), 0.00) AS total
         FROM orderitems
         INNER JOIN orders ON orders.id = orderitems."orderId"
         INNER JOIN products ON orderitems."productId" = products.id
@@ -853,12 +852,12 @@ Order.prototype.getVATSumStr = async function() {
           type: 'SELECT',
           plain: true,
         }
-      ).catch(err => handleError(err))).total;
+      )).total;
   
   return (await db.query(
       `SELECT
-        COALESCE( ROUND( SUM( orderitems.price * orderitems.quantity *
-          ${configEcom.SETTINGS.vat}), 2), 0.00) AS total
+        COALESCE( SUM( ROUND( orderitems.price * orderitems.quantity *
+          ${configEcom.SETTINGS.vat}, 2)), 0.00) AS total
       FROM orderitems
       INNER JOIN orders ON orders.id = orderitems."orderId"
       WHERE orders.id = ${this.id}
@@ -868,7 +867,7 @@ Order.prototype.getVATSumStr = async function() {
         type: 'SELECT',
         plain: true,
       }
-      ).catch(err => handleError(err))).total;
+      )).total;
 }
 
 Order.hasOne(Transaction, {foreignKey: {name: 'orderid'}});

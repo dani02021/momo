@@ -2,9 +2,7 @@ require('dotenv').config();
 
 const crypto = require('crypto');
 const nodemailer = require("nodemailer");
-const winston = require('winston');
 const paypal = require('@paypal/checkout-server-sdk');
-const WinstonTransport = require('winston-transport');
 
 let environment = new paypal.core.SandboxEnvironment(process.env.PAYPAL_CLIENT_ID, process.env.PAYPAL_CLIENT_SECRET);
 let paypalClient = new paypal.core.PayPalHttpClient(environment);
@@ -19,8 +17,9 @@ const Staff = models.staff();
 const Order = models.order();
 const OrderItem = models.orderitem();
 const Product = models.product();
-const Log = models.log();
 const Settings = models.settings();
+
+const loggerEcom = require('./logger.js');
 
 const fs = require('fs');
 const os = require('os');
@@ -58,67 +57,11 @@ const EmailTransport = nodemailer.createTransport({
 
 EmailTransport.verify(function (error, success) {
     if (error) {
-        handleError(error);
-        logger.log('alert',
+        loggerEcom.handleError(error);
+        logger.logger.log('alert',
             `Email transport cannot establish connection!
         ${error.message}`);
     }
-});
-
-class SequelizeTransport extends WinstonTransport {
-    constructor(opts) {
-        super(opts);
-        //
-        // Consume any custom options here. e.g.:
-        // - Connection information for databases
-        // - Authentication information for APIs (e.g. loggly, papertrail,
-        //   logentries, etc.).
-        //
-    }
-
-    log(info, callback) {
-        if (info.fileOnly)
-            return;
-
-        setImmediate(() => {
-            this.emit('logged', info);
-        });
-
-        let user = "";
-
-        if (info.user)
-            user = info.user;
-
-        Log.create({
-            timestamp: new Date().toISOString(), user: user,
-            level: info.level, message: info.message,
-            longMessage: info.longMessage, isStaff: info.isStaff
-        });
-
-        // Perform the writing to the remote service
-        callback();
-    }
-};
-
-const logger = winston.createLogger({
-    levels: configEcom.LOG_LEVELS,
-    transports: [
-        new SequelizeTransport({
-            level: "debug"
-        }),
-        new winston.transports.File({
-            level: "error",
-            // Create the log directory if it does not exist
-            filename: 'logs/error.log',
-            format: winston.format.printf(log => `[${new Date().toLocaleString("en-GB")}] ` + log.message.replaceAll('\n', '')),
-        }),
-        new winston.transports.File({
-            level: "error",
-            // Create the log directory if it does not exist
-            filename: 'logs/fullerror.log',
-            format: winston.format.printf(log => `[${new Date().toLocaleString("en-GB")}] ` + log.stacktrace),
-        })
-    ]
 });
 
 function getHost() {
@@ -331,7 +274,7 @@ async function sendEmail(sender, email, subject, text, html)
     } 
     catch (e) 
     {
-        handleError(e);
+        loggerEcom.handleError(e);
     }
 }
 
@@ -485,7 +428,7 @@ async function captureOrder(orderId, debug) {
         return response;
     }
     catch (e) {
-        handleError(e, null, true);
+        loggerEcom.handleError(e, null, true);
 
         logger.log('alert',
             `There was an error while trying to capture paypal order #${orderId}!
@@ -693,12 +636,12 @@ async function getReportResponce(filters, limit, offset, time) {
             model: OrderItem,
             mapToModel: true,
             bind: [time, filters.ordAfter, filters.ordBefore]
-        }).catch(err => handleError(err)),
+        }),
         db.query(countText, {
             type: 'SELECT',
             plain: false,
             bind: [time, filters.ordAfter, filters.ordBefore]
-        }).catch(err => handleError(err))
+        })
     ]
 }
 
@@ -778,8 +721,8 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
     }
 
     return [
-        db.query(text, returnParams).catch(err => handleError(err)),
-        db.query(countText, returnParams).catch(err => handleError(err))
+        db.query(text, returnParams),
+        db.query(countText, returnParams)
     ];
 }
 
@@ -939,19 +882,17 @@ async function saveReportExcel(reportRes, filters, time, currency) {
 }
 
 /**
- * Generate cells from Worksheet
+ * Generate rows from Worksheet
  * @param {import('exceljs').Worksheet} worksheet 
  */
-function* cellSequence(worksheet) {
+function* rowSequence(worksheet) {
     for (let i = 1; i <= worksheet.rowCount; i++) {
         let row = worksheet.getRow(i);
-        for (let z = 1; z <= row.cellCount; z++) {
-            yield {
-                "row": i,
-                "column":  z,
-                "data": row.getCell(z),
-                "max": worksheet.rowCount * row.cellCount
-            }
+
+        yield {
+            "row": i,
+            "rowCount": worksheet.rowCount,
+            "data": row,
         }
     }
 }
@@ -1008,12 +949,12 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
         type: 'SELECT',
         plain: false,
         model: Product
-    }).catch(err => handleError(err)),
+    }),
     db.query(`SELECT count(*) FROM products`, {
         type: 'SELECT',
         plain: false,
         model: Product
-    }).catch(err => handleError(err))
+    })
     ];
 }
 
@@ -1223,44 +1164,6 @@ async function generateLogs(x = 100) {
 
 // generateOrders(80000);
 
-/**
- * 
- * @param {Error} err 
- * @param {import('koa').Context} ctx 
- * @param {boolean} fileOnly 
- */
-async function handleError(err, ctx, fileOnly = false) {
-    assert(err instanceof Error);
-
-    let username;
-    let staffUsername;
-    let session;
-
-    if (ctx && ctx.session) {
-        username = ctx.session.dataValues.username;
-        staffUsername = ctx.session.dataValues.staffUsername;
-        session = JSON.stringify(ctx.session.dataValues);
-    }
-
-    let stackerr = stacktrace.parse(err);
-
-    logger.error(
-        `File: ${stackerr[0].fileName} on function ${stackerr[0].functionName} \
-        on line ${stackerr[0].lineNumber} \
-        User: ${username}, \
-        Staff User: ${staffUsername}, \
-        URL: ${ctx ? ctx.url : "undefined"}, \
-        Error message: ${err.message}`,
-        {
-            longMessage: `Unhandled exception: ${err}, Session: ${session}`,
-            fileOnly: fileOnly,
-            stacktrace: err.stack
-        }
-    );
-
-    console.log(err);
-}
-
 // Events
 
 /**
@@ -1321,6 +1224,18 @@ function onSessionExpired(ctx, message = "Session expired!", redirectLoc = "/adm
     ctx.redirect(redirectLoc);
 }
 
+// ExcelJS
+function isRichValue(value) {
+    return Boolean(value && Array.isArray(value.richText));
+}
+  
+function richToString(value) {
+    if (!isRichValue(value))
+        return value;
+    
+    return value.richText.map(({ text }) => text).join('');
+}
+
 // Settings
 configEcom.loadSettings(Settings.findAll());
 
@@ -1360,7 +1275,6 @@ def validate_status(request, uid, order_id, order):
 */
 
 module.exports = {
-    logger,
     getHost,
     givePages,
     generateEmailVerfToken,
@@ -1383,7 +1297,7 @@ module.exports = {
     getReportResponce,
     getProductsAndCountRaw,
     getProductsAndOrderCount,
-    cellSequence,
+    rowSequence,
     saveReportCsv,
     saveReportExcel,
     saveReportPdf,
@@ -1391,9 +1305,10 @@ module.exports = {
     combineTwoObjects,
     getCurrency,
     getAge,
-    handleError,
     onNoPermission,
     onNotAuthenticatedStaff,
     onNotAuthenticatedUser,
     onSessionExpired,
+    isRichValue,
+    richToString,
 };

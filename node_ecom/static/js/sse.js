@@ -93,13 +93,23 @@
       this.dispatchEvent(new CustomEvent('error'));
       this.close();
     }
+
+    this._onStreamClosed = function(e) {
+        if (!this.xhr) {
+            return;
+        }
+
+        if (this.readyState == this.CLOSED) {
+            return;
+        }
+
+        this.dispatchEvent(new CustomEvent('close'));
+      }
   
     this._onStreamProgress = function(e) {
       if (!this.xhr) {
         return;
       }
-
-      console.log(this.xhr.responseText);
   
       if (this.xhr.status !== 200) {
         this._onStreamFailure(e);
@@ -186,15 +196,13 @@
       this.xhr.addEventListener('load', this._onStreamLoaded.bind(this));
       this.xhr.addEventListener('readystatechange', this._checkStreamClosed.bind(this));
       this.xhr.addEventListener('error', this._onStreamFailure.bind(this));
-      this.xhr.addEventListener('abort', this._onStreamFailure.bind(this));
+      this.xhr.addEventListener('abort', this._onStreamClosed.bind(this));
       this.xhr.open(this.method, this.url);
       for (var header in this.headers) {
         this.xhr.setRequestHeader(header, this.headers[header]);
       }
       this.xhr.withCredentials = this.withCredentials;
       this.xhr.send(this.payload);
-
-      console.log(this.xhr);
     };
   
     this.close = function() {

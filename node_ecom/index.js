@@ -10,6 +10,7 @@ const serve = require('koa-static');
 const render = require("koa-ejs");
 const utilsEcom = require("./utils.js");
 const configEcom = require("./config.js");
+const loggerEcom = require("./logger.js");
 const session = require('koa-session');
 const assert = require('assert/strict');
 const csv = require('fast-csv');
@@ -774,7 +775,7 @@ async function getAdminReport(ctx) {
 
   const [reportRes, count] = await utilsEcom.getReportResponce(filters, limit, offset, time);
 
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} `,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
@@ -987,7 +988,7 @@ router.post("/register", async ctx => {
     // let message = { 'userExists': 'User already exists with this email or username' };
     // ctx.session.messages = message;
 
-    utilsEcom.logger.info(`Someone tried to register as already existing user ${ctx.request.fields.username}`);
+    loggerEcom.logger.info(`Someone tried to register as already existing user ${ctx.request.fields.username}`);
     // ctx.redirect('/register');
 
     ctx.body = {
@@ -1060,7 +1061,7 @@ router.get('/verify_account/:token', async ctx => {
     let messages = { 'verfError': 'Invalid token!' };
     ctx.session.messages = messages;
 
-    utilsEcom.logger.log('info',
+    loggerEcom.logger.log('info',
       `Someone has entered invalid token ${ctx.params.token}!`);
     ctx.redirect('/');
     return;
@@ -1077,7 +1078,7 @@ router.get('/verify_account/:token', async ctx => {
 
   ctx.session.messages = messages;
 
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `User ${user.username} validated their e-mail!`,
     { user: user.username });
 
@@ -1095,8 +1096,17 @@ router.post("/login", async ctx => {
     let messages = { 'loginErrorUser': 'User not found!' };
     ctx.session.messages = messages;
 
-    utilsEcom.logger.log('info',
+    loggerEcom.logger.log('info',
       `Tried to log in with invalid username ${ctx.request.fields.username} as user!`);
+    ctx.redirect("/");
+
+    return;
+  }
+
+  if (!ctx.request.fields.password) {
+    let messages = { 'loginErrorUser': 'Invalid password!' };
+    ctx.session.messages = messages;
+
     ctx.redirect("/");
 
     return;
@@ -1189,7 +1199,7 @@ router.post("/login", async ctx => {
     ctx.session.messages = messages;
     ctx.session.username = ctx.request.fields.username;
 
-    utilsEcom.logger.log('info',
+    loggerEcom.logger.log('info',
       `User ${ctx.request.fields.username} logged in!`,
       { user: ctx.request.fields.username });
 
@@ -1201,7 +1211,7 @@ router.post("/login", async ctx => {
     let messages = { 'loginErrorPass': 'Wrong password!' };
     ctx.session.messages = messages;
 
-    utilsEcom.logger.log('info',
+    loggerEcom.logger.log('info',
       `User ${ctx.request.fields.username} tried to log in with invalid password!`,
       { user: ctx.request.fields.username });
   }
@@ -1212,7 +1222,7 @@ router.post("/login", async ctx => {
 router.get('/logout', async ctx => {
   ctx.session.messages = { 'logout': 'Log-out successful!' };
 
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `User ${ctx.session.username} logged out!`,
     { user: ctx.session.username });
 
@@ -1297,7 +1307,7 @@ router.post('/admin/login', async ctx => {
     let messages = { 'loginErrorUser': 'User not found!' };
     ctx.session.messages = messages;
 
-    utilsEcom.logger.log('info',
+    loggerEcom.logger.log('info',
       `Tried to log in with invalid username ${ctx.request.fields.username} as staff!`);
     ctx.redirect("/admin");
 
@@ -1309,7 +1319,7 @@ router.post('/admin/login', async ctx => {
     ctx.session.messages = messages;
     ctx.session.staffUsername = ctx.request.fields.username;
 
-    utilsEcom.logger.log('info',
+    loggerEcom.logger.log('info',
       `Staff ${ctx.request.fields.username} logged in!`,
       { user: ctx.request.fields.username, isStaff: true });
 
@@ -1322,7 +1332,7 @@ router.post('/admin/login', async ctx => {
     let messages = { 'loginErrorPass': 'Wrong password!' };
     ctx.session.messages = messages;
 
-    utilsEcom.logger.log('info',
+    loggerEcom.logger.log('info',
       `Staff ${ctx.request.fields.username} tried to log in with invalid password!`,
       { user: ctx.request.fields.username, isStaff: true });
 
@@ -1335,7 +1345,7 @@ router.post('/admin/login', async ctx => {
 
 router.get('/admin/logout', async ctx => {
   ctx.session.messages = { 'logout': 'Log-out successful!' };
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} logged out!`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
@@ -1456,7 +1466,7 @@ router.post('/admin/products/add', async ctx => {
   ctx.session.messages = { 'productCreated': `Product with id ${product.id} has been created!` };
   ctx.body = { "ok": "ok" };
 
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} created product #${product.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
   // ctx.redirect('/admin/products');
@@ -1583,7 +1593,7 @@ router.post('/admin/products/edit/:id', async ctx => {
   if (ctx.request.files.length && ctx.request.files[0].size != 0) {
     fs.renameSync(ctx.request.files[0].path + '', __dirname + '/static/media/id' + ctx.params.id + '/' + ctx.request.files[0].name, function (err) {
       if (err) {
-        utilsEcom.logger.log('error',
+        loggerEcom.logger.log('error',
           `There was an error while trying to edit the image of product # ${ctx.params.id}!
         ${err.message}`);
         throw err;
@@ -1607,7 +1617,7 @@ router.post('/admin/products/edit/:id', async ctx => {
     });
 
   ctx.session.messages = { 'productEdited': `Product with id ${ctx.params.id} was edited!` };
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} updated product #${ctx.params.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
@@ -1658,7 +1668,7 @@ router.post('/admin/products/delete', async ctx => {
   });
 
   ctx.session.messages = { 'productDeleted': 'Selected product/s have been deleted!' }
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} deleted product/s with id/s ${ctx.request.fields.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
@@ -1732,7 +1742,7 @@ router.post('/admin/accounts/delete', async ctx => {
   });
 
   ctx.session.messages = { 'accountDeleted': 'Selected accounts have been deleted!' }
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} deleted account/s with id/s ${ctx.request.fields.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
@@ -1823,7 +1833,7 @@ router.post('/admin/accounts/add', async ctx => {
   ctx.session.messages = { 'accountCreated': `User with id ${user.id} has been created!` };
   ctx.body = { "ok": "ok" };
 
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} created account #${user.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
@@ -1910,7 +1920,7 @@ router.post('/admin/staff/add', async ctx => {
   ctx.session.messages = { 'staffCreated': `Staff with id ${user.id} has been created!` };
   ctx.body = { 'ok': 'ok' };
 
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} created staff #${user.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 });
@@ -1959,7 +1969,7 @@ router.post('/admin/staff/delete', async ctx => {
   });
 
   ctx.session.messages = { 'staffDeleted': 'Selected staff were deleted!' }
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} deleted staff/s with id/s ${ctx.request.fields.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
@@ -2071,7 +2081,7 @@ router.post('/admin/staff/edit/:id', async ctx => {
     await staff.addRole(role);
   }
   ctx.session.messages = { 'staffEdited': `Staff with id ${ctx.params.id} was edited!` };
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} updated staff #${ctx.params.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
   ctx.redirect('/admin/staff/edit/' + ctx.params.id);
@@ -2121,7 +2131,7 @@ router.post('/admin/categories/add', async ctx => {
 
   if (created) {
     ctx.session.messages = { 'categoryCreated': `Category with id ${ctx.params.id} has been created!` };
-    utilsEcom.logger.log('info',
+    loggerEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} created category #${ctx.params.id}`,
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
   }
@@ -2174,7 +2184,7 @@ router.post('/admin/categories/delete', async ctx => {
   });
 
   ctx.session.messages = { 'categoryDeleted': `Selected categories have been deleted!` };
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} deleted category/ies with id/s ${ctx.request.fields.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
   ctx.redirect('/admin/products');
@@ -2254,7 +2264,7 @@ router.post('/admin/roles/add', async ctx => {
     ctx.session.messages = { 'roleCreated': `Role ${role.name} has been created!` };
     ctx.body = { 'ok': 'ok' };
 
-    utilsEcom.logger.log('info',
+    loggerEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} created role #${role.id}`,
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
   }
@@ -2305,7 +2315,7 @@ router.post('/admin/roles/delete', async ctx => {
     }
   });
   ctx.session.messages = { 'roleDeleted': 'Selected roles were deleted!' }
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} deleted role/s with id/s ${ctx.request.fields.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
@@ -2417,7 +2427,7 @@ router.post('/admin/roles/edit/:id', async ctx => {
   }
 
   ctx.session.messages = { 'roleEdited': `Role with id ${ctx.params.id} was edited!` };
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} updated role #${ctx.params.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
@@ -2554,21 +2564,20 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
   }
 
   const workbook = new ExcelJS.Workbook();
-
+  var worksheet;
   try {
     await workbook.xlsx.readFile(ctx.request.files[0].path);
-  } catch(e) {
+
+    var worksheet = workbook.getWorksheet(1);
+  } catch (e) {
     stream.write(`event: message\n`);
     stream.write(`data: error\tCan't open the file! Check if it is corrupted?\n\n`);
-    
+
     stream.end();
     return;
   }
-
-  var worksheet = workbook.getWorksheet(1);
-
-  let seq = utilsEcom.cellSequence(worksheet);
-  let attempts = 0;
+  let seq = utilsEcom.rowSequence(worksheet);
+  let attempts, ignored = 0;
 
   // Move to config
   let TABLE_HEADERS_SEQUENCE = [
@@ -2579,43 +2588,162 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
     'Images'
   ];
 
-  let timer = setInterval(async () => {
-    let detail = seq.next();
+  var t = await db.transaction();
+  var categoriesCache = {};
 
-    for (let i=0; i<1000; i++) {
-      attempts++;
-      
-      if (detail.done) {
+  var products = new Set();
+
+  (async () => {
+    try {
+      var detail = seq.next();
+
+      while (true) {
+        rowLoop:
+        for (let i = 0; i < Math.min(detail.value.rowCount / 5, 100); i++) {
+          attempts++;
+
+          // Check headers
+          // console.log(detail.value.data);
+
+          if (detail.value.row == 1) {
+            for (x in TABLE_HEADERS_SEQUENCE) {
+              if (detail.value.data.getCell(parseInt(x) + 1) != TABLE_HEADERS_SEQUENCE[parseInt(x)]) {
+                stream.write(`event: message\n`);
+                stream.write(`data: error\tColumn ${parseInt(x) + 1} \
+                on row 1 should be ${TABLE_HEADERS_SEQUENCE[parseInt(x)]}\n\n`);
+
+                stream.end();
+                return;
+              }
+            }
+          } else {
+            for (let z = 1; z <= TABLE_HEADERS_SEQUENCE.length; z++) {
+              let val = detail.value.data.getCell(z).value;
+              if (val != undefined && val != null && val != '') {
+                break;
+              }
+
+              // Empty row
+              if (z == TABLE_HEADERS_SEQUENCE.length()) {
+                attempts--;
+                
+                continue rowLoop;
+              }
+            }
+
+            let nameIndex = TABLE_HEADERS_SEQUENCE.indexOf('Name') + 1;
+            let priceIndex = TABLE_HEADERS_SEQUENCE.indexOf('Regular price') + 1;
+            let discountPriceIndex = TABLE_HEADERS_SEQUENCE.indexOf('Regular price') + 1;
+            let categoryIndex = TABLE_HEADERS_SEQUENCE.indexOf('Categories') + 1;
+            let descriptionIndex = TABLE_HEADERS_SEQUENCE.indexOf('Short description') + 1;
+            let imageIndex = TABLE_HEADERS_SEQUENCE.indexOf('Images') + 1;
+            let quantityIndex = TABLE_HEADERS_SEQUENCE.indexOf('Quantity') + 1;
+
+            if (!categoriesCache[detail.value.data.getCell(categoryIndex).value]) {
+              let cat = await Category.findOne({ name:
+                utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value)
+              });
+
+              if (!cat) {
+                cat = await Category.create({
+                  name: utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value),
+                  imageCss: "fas fa-random",
+                }, {
+                  transaction: t
+                });
+              }
+
+              categoriesCache[utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value)] = cat;
+            }
+
+            let product = {
+              name: utilsEcom.richToString(detail.value.data.getCell(nameIndex).value),
+              price: utilsEcom.richToString(detail.value.data.getCell(priceIndex).value),
+              discountPrice: utilsEcom.richToString(detail.value.data.getCell(discountPriceIndex).value),
+              description: utilsEcom.richToString(detail.value.data.getCell(descriptionIndex).value),
+              categoryId: categoriesCache[utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value)].id,
+              quantity: utilsEcom.richToString(detail.value.data.getCell(quantityIndex).value),
+            };
+
+            await Product.build(product).validate();
+            
+            if (products.has(product))
+              ignored++;
+            
+            products.add(product);
+            
+            // await Product.upsert({
+            //   name: utilsEcom.isRichValue(detail.value.data.getCell(nameIndex).value) ? utilsEcom.richToString(detail.value.data.getCell(nameIndex).value) : detail.value.data.getCell(nameIndex).value,
+            //   price: detail.value.data.getCell(priceIndex).value,
+            //   discountPrice: detail.value.data.getCell(discountPriceIndex).value,
+            //   description: detail.value.data.getCell(descriptionIndex).value,
+            //   categoryId: categoriesCache[detail.value.data.getCell(categoryIndex).value].id,
+            //   quantity: detail.value.data.getCell(quantityIndex).value,
+            // }, {
+            //   transaction: t
+            // });
+          }
+
+          detail = seq.next();
+
+          if (detail.done) {
+            stream.write(`event: message\n`);
+            stream.write(`data: done\n\n`);
+
+            // Bulk upsert
+            await Product.bulkCreate(products, {
+              updateOnDuplicate: ["price", "discountPrice", "description", "categoryId", "quantity"],
+              transaction: t
+            });
+
+            await t.rollback();
+
+            stream.end();
+
+            loggerEcom.logger.log('info',
+              `Staff ${ctx.session.dataValues.staffUsername} imported ${attempts} products from XLSX`,
+              { user: ctx.session.dataValues.staffUsername, isStaff: true });
+
+            return;
+          }
+        }
+
+        // Bulk upsert
+        await Product.bulkCreate([...products], {
+          updateOnDuplicate: ["price", "discountPrice", "description", "categoryId", "quantity"],
+          transaction: t
+        });
+
+        products = new Set();
+
         stream.write(`event: message\n`);
-        stream.write(`data: done\n\n`);
+        stream.write(`data: ${attempts / detail.value.rowCount}\n\n`);
+      }
+    } catch (e) {
+      console.log(e);
+      console.log(detail.value.data.getCell(3).value);
+      if (e.errors) {
+        stream.write(`event: message\n`);
+        stream.write(`data: error\tError on row: ${detail.value.row} with message: ${e.errors[0].message}\n\n`);
 
         stream.end();
-
-        clearInterval(timer);
         return;
       }
 
-      // Check headers
-      console.log(detail.value.data.value);
-      if (detail.value.row == 1)
-        if (detail.value.data.value != TABLE_HEADERS_SEQUENCE[detail.value.column - 1] &&
-          TABLE_HEADERS_SEQUENCE.length >= detail.value.column) {
-          stream.write(`event: message\n`);
-          stream.write(`data: error\tColumn ${detail.value.column} \
-          on row 1 should be ${TABLE_HEADERS_SEQUENCE[detail.value.column - 1]}\n\n`);
+      if (!t.finished)
+        await t.rollback();
 
-          stream.end();
+      stream.write(`event: message\n`);
+      stream.write(`data: error\t${e}\n\n`);
 
-          clearInterval(timer);
-          return;
-        }
+      loggerEcom.logger.log('error',
+      `XLSX import of products requested by staff ${ctx.session.dataValues.staffUsername} is incomplete!`,
+      { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
-      detail = seq.next();
+      stream.end();
+      return;
     }
-
-    stream.write(`event: message\n`);
-    stream.write(`data: ${attempts / detail.value.max}\n\n`);
-  }, 0);
+  })();
 });
 
 // WARNING: HTTP/1 -> MAX 6 SSE for the browser!
@@ -2706,7 +2834,7 @@ router.post('/admin/orders/add', async ctx => {
   await utilsEcom.removeProductQtyFromOrder(order);
 
   ctx.session.messages = { 'orderCreated': 'Order created!' };
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} created order #${order.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
@@ -2765,7 +2893,7 @@ router.post('/admin/orders/delete', async ctx => {
   });
 
   ctx.session.messages = { 'orderDeleted': 'Selected orders have been deleted!' };
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} deleted order/s with id/s ${ctx.request.fields.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
@@ -2917,7 +3045,7 @@ router.post('/admin/orders/edit/:id', async ctx => {
   await utilsEcom.removeProductQtyFromOrder(order);
 
   if (order.status != ctx.request.fields.status) {
-    utilsEcom.logger.log('info',
+    loggerEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} updated status of order #${ctx.params.id}`,
       {
         user: ctx.session.dataValues.staffUsername,
@@ -3745,7 +3873,7 @@ router.get('/admin/export/report/pdf', async ctx => {
 
   ctx.body = fs.createReadStream(path);
 
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report`,
     {
       user: ctx.session.dataValues.staffUsername,
@@ -3844,7 +3972,7 @@ router.get('/admin/export/report/excel', async ctx => {
 
   ctx.body = fs.createReadStream(path);
 
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report`,
     {
       user: ctx.session.dataValues.staffUsername,
@@ -3941,7 +4069,7 @@ router.get('/admin/export/report/csv', async ctx => {
 
   ctx.body = fs.createReadStream(path);
 
-  utilsEcom.logger.log('info',
+  loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} downloaded generated orders report`,
     {
       user: ctx.session.dataValues.staffUsername,
@@ -4306,7 +4434,7 @@ app.use(favicon(__dirname + '/static/img/favicon.ico'));
 
 // Global Unhandled Error Handler
 app.on("error", (err, ctx) => {
-  utilsEcom.handleError(err, ctx);
+  loggerEcom.handleError(err, ctx);
 });
 
 // app.listen(3210);

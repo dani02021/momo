@@ -22,7 +22,7 @@
                     <h2 class="title">Filters</h2>
                     <% for(var i in filters) { %>
                     <% if (filters.hasOwnProperty(i)) { %>
-                    <a href="javascript:clearFilter('i')"><%= i %>: <%= filters[i] %></a>
+                    <a class="no-overflow" href="javascript:clearFilter('i')"><%= i %>: <%= filters[i] %></a>
                     <% } %>
                     <% } %>
                     <% if(filters) {%>
