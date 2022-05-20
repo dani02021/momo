@@ -2577,7 +2577,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
     return;
   }
   let seq = utilsEcom.rowSequence(worksheet);
-  let attempts, ignored = 0;
+  let attempts = 0, ignored = 0;
 
   // Move to config
   let TABLE_HEADERS_SEQUENCE = [
@@ -2589,9 +2589,9 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
   ];
 
   var t = await db.transaction();
-  var categoriesCache = {};
+  var categoriesCache = {}; // Posible exploit, if there are too many different categories
 
-  var products = new Set();
+  var products = [];
 
   (async () => {
     try {
@@ -2617,6 +2617,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
               }
             }
           } else {
+            // Check and skip if row is empty
             for (let z = 1; z <= TABLE_HEADERS_SEQUENCE.length; z++) {
               let val = detail.value.data.getCell(z).value;
               if (val != undefined && val != null && val != '') {
@@ -2636,7 +2637,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
             let discountPriceIndex = TABLE_HEADERS_SEQUENCE.indexOf('Regular price') + 1;
             let categoryIndex = TABLE_HEADERS_SEQUENCE.indexOf('Categories') + 1;
             let descriptionIndex = TABLE_HEADERS_SEQUENCE.indexOf('Short description') + 1;
-            let imageIndex = TABLE_HEADERS_SEQUENCE.indexOf('Images') + 1;
+            let imageIndex = TABLE_HEADERS_SEQUENCE.indexOf('Images') + 1; // todo
             let quantityIndex = TABLE_HEADERS_SEQUENCE.indexOf('Quantity') + 1;
 
             if (!categoriesCache[detail.value.data.getCell(categoryIndex).value]) {
@@ -2667,28 +2668,27 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
 
             await Product.build(product).validate();
             
-            if (products.has(product))
+            let prodExist;
+
+            products.every(element => {
+              if (element.name == product.name) {
+                prodExist = true;
+                return false;
+              }
+
+              return true;
+            });
+
+            if (prodExist)
               ignored++;
-            
-            products.add(product);
-            
-            // await Product.upsert({
-            //   name: utilsEcom.isRichValue(detail.value.data.getCell(nameIndex).value) ? utilsEcom.richToString(detail.value.data.getCell(nameIndex).value) : detail.value.data.getCell(nameIndex).value,
-            //   price: detail.value.data.getCell(priceIndex).value,
-            //   discountPrice: detail.value.data.getCell(discountPriceIndex).value,
-            //   description: detail.value.data.getCell(descriptionIndex).value,
-            //   categoryId: categoriesCache[detail.value.data.getCell(categoryIndex).value].id,
-            //   quantity: detail.value.data.getCell(quantityIndex).value,
-            // }, {
-            //   transaction: t
-            // });
+              else products.push(product);
           }
 
           detail = seq.next();
 
           if (detail.done) {
             stream.write(`event: message\n`);
-            stream.write(`data: done\n\n`);
+            stream.write(`data: {"status": "done", "ignored": ${ignored}, "count": ${attempts}}\n\n`);
 
             // Bulk upsert
             await Product.bulkCreate(products, {
@@ -2709,22 +2709,21 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
         }
 
         // Bulk upsert
-        await Product.bulkCreate([...products], {
+        await Product.bulkCreate(products, {
           updateOnDuplicate: ["price", "discountPrice", "description", "categoryId", "quantity"],
           transaction: t
         });
 
-        products = new Set();
+        products = [];
 
         stream.write(`event: message\n`);
-        stream.write(`data: ${attempts / detail.value.rowCount}\n\n`);
+        stream.write(`data: {"status": "progress", "count": ${attempts / detail.value.rowCount}}\n\n`);
       }
     } catch (e) {
       console.log(e);
-      console.log(detail.value.data.getCell(3).value);
       if (e.errors) {
         stream.write(`event: message\n`);
-        stream.write(`data: error\tError on row: ${detail.value.row} with message: ${e.errors[0].message}\n\n`);
+        stream.write(`data: {"status": "error", "msg": "Error on row: ${detail.value.row} with message: ${e.errors[0].message}"\n\n`);
 
         stream.end();
         return;
@@ -2734,7 +2733,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
         await t.rollback();
 
       stream.write(`event: message\n`);
-      stream.write(`data: error\t${e}\n\n`);
+      stream.write(`data: {"status": "error", "msg": "${e}"\n\n`);
 
       loggerEcom.logger.log('error',
       `XLSX import of products requested by staff ${ctx.session.dataValues.staffUsername} is incomplete!`,
@@ -3296,6 +3295,11 @@ router.get('/removeFromCart', async ctx => {
         }
       } else {
         delete cookieProducts[ctx.query.id];
+
+        ctx.body = {
+          'status': 'redirect',
+          'redirect': '/cart'
+        };
       }
     }
 
@@ -3669,6 +3673,12 @@ router.get('/checkout', async ctx => {
   }
 
   orderitems = await order.getOrderitems();
+
+  if (!orderitems || orderitems.length == 0) {
+    ctx.session.messages = { "notEnoughQty": "You don't have any products in cart!"};
+    ctx.redirect('/cart');
+    return;
+  }
 
   let products = [];
 

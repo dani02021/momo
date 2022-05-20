@@ -426,18 +426,20 @@
     };
 
     evtSource.onmessage = function(e) {
-      if (e.data == 'done') {
+      let data = JSON.parse(e.data);
+
+      if (data.status == 'done') {
         bar.style.width = '100%';
         bar.innerHTML = 'Done';
 
         evtSource.close();
 
-        title.innerHTML = 'Done';
+        title.innerHTML = `Added ${data.count} products, skipped ${data.ignored}`;
 
         return;
-      } else if (e.data.split('\t')[0] == 'error') {
+      } else if (data.status == 'error') {
         bar.style.width = '100%';
-        bar.innerHTML = e.data.split('\t')[1];
+        bar.innerHTML = data.msg;
         bar.classList.add('bg-danger');
         
         title.innerHTML = 'Error';
@@ -445,8 +447,8 @@
         return;
       }
 
-      bar.style.width = Math.round(Number(e.data) * 100) + '%';
-      bar.innerHTML = Math.round(Number(e.data) * 100) + '%';
+      bar.style.width = Math.round(Number(data.count) * 100) + '%';
+      bar.innerHTML = Math.round(Number(data.count) * 100) + '%';
     }
 
     evtSource.stream();
