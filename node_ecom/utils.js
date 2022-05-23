@@ -611,11 +611,13 @@ async function getReportResponce(filters, limit, offset, time) {
         date_trunc($1, orders."orderedAt") as "startDate", 
         SUM(orderitems.quantity) as products, 
         COUNT(distinct orders.id) as orders, 
-        SUM(distinct price) as total 
+        SUM(price * orderitems.quantity) as total 
     FROM orders 
     INNER JOIN orderitems
         ON orderitems."orderId" = orders.id 
     WHERE status > 0
+        AND orders."deletedAt" is NULL
+        AND orderitems."deletedAt" is NULL
         AND "orderedAt" BETWEEN $2 AND $3
     GROUP BY "startDate" `;
 

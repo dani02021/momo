@@ -1,7 +1,5 @@
 require('dotenv').config();
 
-const http = require("http");
-const https = require("https");
 const Koa = require('koa');
 const KoaRouter = require('koa-router');
 const KoaBodyParser = require('koa-better-body');
@@ -13,12 +11,14 @@ const configEcom = require("./config.js");
 const loggerEcom = require("./logger.js");
 const session = require('koa-session');
 const assert = require('assert/strict');
-const csv = require('fast-csv');
 const ExcelJS = require('exceljs');
 const favicon = require('koa-favicon');
 const { PassThrough } = require("stream");
 const bodyClean = require('koa-body-clean');
-var crypto = require('crypto');
+const fetch = require('node-fetch');
+const { imageHash } = require('image-hash');
+const CyrilTransit = require('cyrillic-to-translit-js');
+const cyriltransit = new CyrilTransit();
 
 const fs = require('fs');
 const db = require("./db.js");
@@ -83,20 +83,20 @@ async function getProducts(ctx) {
   // Get filters
   let filters = {}, filtersToReturn = {};
 
-  if (isFinite(ctx.query.cat)) {
+  if (Number.isSafeInteger(ctx.query.cat)) {
     filters['cat'] = ctx.query.cat;
     filtersToReturn['Category'] = ctx.query.cat;
   } else {
     filters['cat'] = '';
   }
-  if (isFinite(ctx.query.minval) && Math.sign(ctx.query.minval) >= 0) {
+  if (Number.isSafeInteger(ctx.query.minval) && Math.sign(ctx.query.minval) >= 0) {
     filters['minval'] = ctx.query.minval
     filtersToReturn['Min price'] = ctx.query.minval
   }
   else {
     filters['minval'] = 0
   }
-  if (isFinite(ctx.query.maxval) && Math.sign(ctx.query.maxval) >= 0) {
+  if (Number.isSafeInteger(ctx.query.maxval) && Math.sign(ctx.query.maxval) >= 0) {
     filters['maxval'] = ctx.query.maxval
     filtersToReturn['Max price'] = ctx.query.maxval
   }
@@ -238,18 +238,18 @@ async function getAdminProducts(ctx) {
   // Get filters
   let filters = {}, filtersToReturn = {};
 
-  if (isFinite(ctx.query.category)) {
+  if (Number.isSafeInteger(ctx.query.category)) {
     filters['category'] = ctx.query.category;
     filtersToReturn['category'] = ctx.query.category;
   }
-  if (isFinite(ctx.query.minprice) && Math.sign(ctx.query.minprice) >= 0) {
+  if (Number.isSafeInteger(ctx.query.minprice) && Math.sign(ctx.query.minprice) >= 0) {
     filters['minprice'] = ctx.query.minprice;
     filtersToReturn['minprice'] = ctx.query.minprice;
   }
   else {
     filters['minprice'] = 0;
   }
-  if (isFinite(ctx.query.maxprice) && Math.sign(ctx.query.maxprice) >= 0) {
+  if (Number.isSafeInteger(ctx.query.maxprice) && Math.sign(ctx.query.maxprice) >= 0) {
     filters['maxprice'] = ctx.query.maxprice;
     filtersToReturn['maxprice'] = ctx.query.maxprice;
   }
@@ -1128,7 +1128,7 @@ router.post("/login", async ctx => {
       }
 
       for (i in cookieProducts) {
-        if (!isFinite(i))
+        if (!Number.isSafeInteger(i))
           continue;
 
         const product = await Product.findOne({ where: { id: i } });
@@ -2553,12 +2553,14 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
   ctx.status = 200;
   ctx.body = stream;
 
+  stream.write(`event: message\n`);
+  stream.write(`data: {"status": "progress", "count": 0}\n\n`);
+
   // Supported only .xlsx and .xls
   if (!(/.xlsx|.xls/g.exec(ctx.request.files[0].name))) {
     stream.write(`event: message\n`);
-    stream.write(`data: error\tFile should end with .xlsx or .xls\n\n`);
+    stream.write(`data: {"status": "error", "msg": File should end with .xlsx or .xls"\n\n`);
 
-    console.log(stream);
     stream.end();
     return;
   }
@@ -2571,7 +2573,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
     var worksheet = workbook.getWorksheet(1);
   } catch (e) {
     stream.write(`event: message\n`);
-    stream.write(`data: error\tCan't open the file! Check if it is corrupted?\n\n`);
+    stream.write(`data: {"status":"error", "msg": "Can't open the file! Check if it is corrupted?"\n\n`);
 
     stream.end();
     return;
@@ -2599,7 +2601,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
 
       while (true) {
         rowLoop:
-        for (let i = 0; i < Math.min(detail.value.rowCount / 5, 100); i++) {
+        for (let i = 0; i < Math.min(detail.value.rowCount / 5, 50); i++) {
           attempts++;
 
           // Check headers
@@ -2609,8 +2611,8 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
             for (x in TABLE_HEADERS_SEQUENCE) {
               if (detail.value.data.getCell(parseInt(x) + 1) != TABLE_HEADERS_SEQUENCE[parseInt(x)]) {
                 stream.write(`event: message\n`);
-                stream.write(`data: error\tColumn ${parseInt(x) + 1} \
-                on row 1 should be ${TABLE_HEADERS_SEQUENCE[parseInt(x)]}\n\n`);
+                stream.write(`{"status": "error", "msg": "Column ${parseInt(x) + 1} \
+                on row 1 should be ${TABLE_HEADERS_SEQUENCE[parseInt(x)]}"\n\n`);
 
                 stream.end();
                 return;
@@ -2627,7 +2629,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
               // Empty row
               if (z == TABLE_HEADERS_SEQUENCE.length()) {
                 attempts--;
-                
+
                 continue rowLoop;
               }
             }
@@ -2641,8 +2643,9 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
             let quantityIndex = TABLE_HEADERS_SEQUENCE.indexOf('Quantity') + 1;
 
             if (!categoriesCache[detail.value.data.getCell(categoryIndex).value]) {
-              let cat = await Category.findOne({ name:
-                utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value)
+              let cat = await Category.findOne({
+                name:
+                  utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value)
               });
 
               if (!cat) {
@@ -2667,28 +2670,61 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
             };
 
             await Product.build(product).validate();
-            
-            let prodExist;
+
+            let isProductValid = true;
+
+            // Image processing
+            let url = utilsEcom.richToString(detail.value.data.getCell(imageIndex).value);
+
+            if (url && url.length != 0) {
+              try {
+                url = url.trim();
+
+                let imageRes = await fetch(url, { size: configEcom.DEFAULT_MAX_IMAGE_SIZE });
+
+                if (!imageRes.redirected && imageRes.status === 200) {
+                  // TODO: Check for image width/height
+
+                  let imagePath = `./static/media/${Buffer.from(product.name, 'utf8').toString('hex').substring(0, 60)}-${Number.parseInt(Math.random() * 10000)}`;
+                  let image = imagePath.replace("./static/media/", "");
+
+                  let imageStream = fs.createWriteStream(imagePath);
+
+                  await new Promise((resolve, reject) => {
+                    imageRes.body.pipe(imageStream);
+                    imageRes.body.on("error", reject);
+                    imageStream.on("finish", resolve);
+                  });
+
+                  product.image = image;
+                } else {
+                  isProductValid = false;
+                }
+
+              } catch (e) {
+                isProductValid = false;
+              }
+            }
 
             products.every(element => {
               if (element.name == product.name) {
-                prodExist = true;
+                isProductValid = false;
                 return false;
               }
 
               return true;
             });
 
-            if (prodExist)
+            if (!isProductValid)
               ignored++;
-              else products.push(product);
+            else products.push(product);
           }
 
           detail = seq.next();
 
           if (detail.done) {
             stream.write(`event: message\n`);
-            stream.write(`data: {"status": "done", "ignored": ${ignored}, "count": ${attempts}}\n\n`);
+            stream.write(`data: {"status": "done", "ignored": ${ignored}, "count": ${attempts - ignored}}\n\n`);
 
             // Bulk upsert
             await Product.bulkCreate(products, {
@@ -2696,7 +2732,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
               transaction: t
             });
 
-            await t.rollback();
+            await t.commit();
 
             stream.end();
 
@@ -2721,6 +2757,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
       }
     } catch (e) {
       console.log(e);
+
       if (e.errors) {
         stream.write(`event: message\n`);
         stream.write(`data: {"status": "error", "msg": "Error on row: ${detail.value.row} with message: ${e.errors[0].message}"\n\n`);
@@ -2736,8 +2773,8 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
       stream.write(`data: {"status": "error", "msg": "${e}"\n\n`);
 
       loggerEcom.logger.log('error',
-      `XLSX import of products requested by staff ${ctx.session.dataValues.staffUsername} is incomplete!`,
-      { user: ctx.session.dataValues.staffUsername, isStaff: true });
+        `XLSX import of products requested by staff ${ctx.session.dataValues.staffUsername} is incomplete!`,
+        { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
       stream.end();
       return;
@@ -2789,6 +2826,12 @@ router.post('/admin/orders/add', async ctx => {
 
   let items = ctx.request.fields.data;
 
+  try {
+    items = JSON.parse(ctx.request.fields.data);
+  } catch (e) {
+    items = {};
+  }
+
   let user = await User.findOne({
     where: {
       username: ctx.request.fields.user
@@ -2796,48 +2839,73 @@ router.post('/admin/orders/add', async ctx => {
   });
 
   if (!user) {
-    ctx.session.messages = { 'invalidVal': 'User does not exists!' };
-    ctx.redirect('/admin/orders');
+    ctx.body = { "error": `User with name ${ctx.request.fields.user} does not exist!` };
+    // ctx.session.messages = { 'invalidVal': 'User does not exists!' };
+    // ctx.redirect('/admin/orders');
     return;
   }
 
-  let order = await Order.create({
-    status: ctx.request.fields.status,
-    orderedAt: Sequelize.fn("NOW"),
-  });
+  const t = await db.transaction(async (t) => {
+    let order = await Order.create({
+      status: ctx.request.fields.status,
+      orderedAt: Sequelize.fn("NOW"),
+    }, { transaction: t });
 
-  await user.addOrder(order);
-
-  for (id in items) {
-    let product = await Product.findOne({ where: { id: id } });
-
-    if (!product)
-      continue;
-
-    if (await utilsEcom.compareQtyAndProductQty(id, items[id]) == 0) {
-      ctx.session.messages = { 'invalidVal': `Not enough quantity of ${product.name}!` };
-
-      await order.destroy();
-
-      ctx.redirect("/admin/orders");
+    if (Object.keys(items).length === 0) {
+      ctx.body = { "error": `Selected items are invalid or no items are selected!` };
+      await order.destroy({ transaction: t });
       return;
     }
 
-    let orderitem = await OrderItem.create({ quantity: items[id] });
+    for (id in items) {
+      if (!Number.isSafeInteger(Number(id)) || Math.sign(id) <= 0) {
+        ctx.body = { "error": `Invalid product!` };
+        await order.destroy({ transaction: t });
 
-    await orderitem.setProduct(product);
-    await orderitem.update({ price: product.discountPrice });
-    await order.addOrderitem(orderitem);
-  }
+        return;
+      }
 
-  await utilsEcom.removeProductQtyFromOrder(order);
+      if (!Number.isSafeInteger(items[id]) || Math.sign(items[id]) <= 0) {
+        ctx.body = { "error": `Invalid quantity of product #${id}!` };
+        await order.destroy({ transaction: t });
 
-  ctx.session.messages = { 'orderCreated': 'Order created!' };
-  loggerEcom.logger.log('info',
-    `Staff ${ctx.session.dataValues.staffUsername} created order #${order.id}`,
-    { user: ctx.session.dataValues.staffUsername, isStaff: true });
+        return;
+      }
 
-  ctx.redirect('/admin/orders');
+      let product = await Product.findOne({ where: { id: id } });
+
+      if (!product) {
+        ctx.body = { 'error': `Product with id ${id} does not exist!` };
+        await order.destroy({ transaction: t });
+
+        return;
+      }
+
+      if (await utilsEcom.compareQtyAndProductQty(id, items[id]) == 0) {
+        ctx.body = { "error": `Not enough quantity of ${product.name}!` };
+        await order.destroy({ transaction: t });
+
+        return;
+      }
+
+      let orderitem = await OrderItem.create({ quantity: items[id] }, { transaction: t });
+
+      await orderitem.setProduct(product, { transaction: t });
+      await orderitem.update({ price: product.discountPrice }, { transaction: t });
+      await order.addOrderitem(orderitem, { transaction: t });
+    }
+
+    await user.addOrder(order, { transaction: t });
+
+    await utilsEcom.removeProductQtyFromOrder(order);
+
+    loggerEcom.logger.log('info',
+      `Staff ${ctx.session.dataValues.staffUsername} created order #${order.id} with status ${order.status}`,
+      { user: ctx.session.dataValues.staffUsername, isStaff: true });
+
+    ctx.session.messages = { 'orderCreated': 'Order created!' };
+    ctx.body = { 'ok': 'ok' };
+  });
 });
 
 router.post('/admin/orders/delete', async ctx => {
@@ -2899,6 +2967,7 @@ router.post('/admin/orders/delete', async ctx => {
   ctx.redirect('/admin/orders');
 });
 
+// NOT WORKING
 router.get('/admin/orders/edit/:id', async ctx => {
   // Check for admin rights
   if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
@@ -3072,7 +3141,7 @@ router.post('/admin/orders/edit/:id', async ctx => {
 router.get('/addToCart', async ctx => {
 
   // Invalid request
-  if (!isFinite(ctx.query.quantity) || !Math.sign(ctx.query.quantity) > 0) {
+  if (!Number.isSafeInteger(ctx.query.quantity) || !Math.sign(ctx.query.quantity) > 0) {
     if (ctx.query.cart)
       ctx.redirect('/cart');
     ctx.redirect('/products');
@@ -3129,7 +3198,7 @@ router.get('/addToCart', async ctx => {
         for (i in cookieProducts) {
           let num = Number(i);
 
-          if (isFinite(num)) {
+          if (Number.isSafeInteger(num)) {
             ids.push(num);
             qtys.push(parseInt(cookieProducts[num]));
           }
@@ -3315,7 +3384,7 @@ router.get('/removeFromCart', async ctx => {
       for (i in cookieProducts) {
         let num = Number(i);
 
-        if (isFinite(num)) {
+        if (Number.isSafeInteger(num)) {
           ids.push(num);
           qtys.push(parseInt(cookieProducts[num]));
         }
@@ -3487,8 +3556,8 @@ router.get('/cart', async ctx => {
         let num = Number(i);
         let qty = Number(cookieProducts[i]);
 
-        if (isFinite(num) && Math.sign(num) >= 0 &&
-          isFinite(qty) && Math.sign(qty) >= 0) {
+        if (Number.isSafeInteger(num) && Math.sign(num) >= 0 &&
+          Number.isSafeInteger(qty) && Math.sign(qty) >= 0) {
           ids.push(num);
           qtys.push(qty);
 
@@ -3675,7 +3744,7 @@ router.get('/checkout', async ctx => {
   orderitems = await order.getOrderitems();
 
   if (!orderitems || orderitems.length == 0) {
-    ctx.session.messages = { "notEnoughQty": "You don't have any products in cart!"};
+    ctx.session.messages = { "notEnoughQty": "You don't have any products in cart!" };
     ctx.redirect('/cart');
     return;
   }

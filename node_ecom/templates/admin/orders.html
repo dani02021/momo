@@ -1,377 +1,431 @@
 <% for(i in session.dataValues.messages) { %>
-<% if(session.dataValues.messages.hasOwnProperty(i)) { %>
-<% if(i == 'orderExists') { %>
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-  <strong>Order already exists!</strong>
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-<% } if(i == 'orderCreated') { %>
-<div class="alert alert-success alert-dismissible fade show" role="alert">
-  <strong>Order is created!</strong>
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-<% } if(i == 'orderDeleted') { %>
-<div class="alert alert-warning alert-dismissible fade show" role="alert">
-  <strong>Selected orders are deleted!</strong>
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-<% } if(i == 'orderEdited') { %>
-<div class="alert alert-success alert-dismissible fade show" role="alert">
-  <strong>Order is edited!</strong>
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-<% } if(i == 'orderNotEnoughQty') { %>
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-  <strong>Some of the product/s does not have enough quantity/ies!</strong>
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-<% } %>
-<% } %>
-<% } %>
-<style>
-  .ui-autocomplete-loading {
-    background: white url("/img/ui-anim_basic_16x16.gif") right center no-repeat;
-  }
-</style>
-<div class="container mt-5">
-  <div class="row tm-content-row">
-    <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
-      <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1000px;">
-        <h2 class="tm-block-title">Orders</h2>
-        <div class="container">
-          <form action="/admin/orders" method="get" onsubmit="checkOrderFilter(this);">
-            <div class="row">
-              <div class="col">
-                <select name="status" class="form-select">
-                  <option value="-1" selected disabled>Select status:</option>
-                  <%= filters['status'] %>
-                  <% for(i = 0; i < statuses.length; i++) { %>
-                  <option value="<%= i %>" <% if (statuses[i] == filters['status']) { %> selected <% } %>> <%= statuses[i] %></option>
-                  <% } %>
-                </select>
-              </div>
-              <div class="col-sm-3">
-                <input name="user" class="form-select" style="background-image: none" placeholder="Username" value="<%= filters['user'] %>">
-              </div>
-              <div class="col-sm-3">
-                <input name="ordAfter" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="From date" type="datetime-local" value="<%= filters['ordAfter'] %>"><br>
-              </div>
-              <div class="col-sm-3">
-                <input name="ordBefore" class="form-universal" data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="To date" type="datetime-local" value="<%= filters['ordBefore'] %>">
-              </div>
+  <% if(session.dataValues.messages.hasOwnProperty(i)) { %>
+    <% if(i=='orderExists' ) { %>
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Order already exists!</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+      <% } if(i=='orderCreated' ) { %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <strong>Order is created!</strong>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <% } if(i=='orderDeleted' ) { %>
+          <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <strong>Selected orders are deleted!</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          <% } if(i=='orderEdited' ) { %>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+              <strong>Order is edited!</strong>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-            <div class="row" style="margin-bottom: 12px;">
-              <div class="d-grid gap-2">
-                <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
-                <a href="/admin/orders" class="btn btn-primary text-uppercase">Clear filters</a>
+            <% } if(i=='orderNotEnoughQty' ) { %>
+              <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Some of the product/s does not have enough quantity/ies!</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
               </div>
-            </div>
-          </form>
-        </div>
-        <div class="tm-product-table-container">
-          <table id="table1" class="table table-hover tm-table-small tm-product-table sortable">
-            <thead>
-              <tr>
-                <th scope="col">&nbsp;</th>
-                <th scope="col" class="clickable">TIMESTAMP</th>
-                <th scope="col" class="clickable">STATUS</th>
-                <th scope="col" class="clickable">ORDER NO.</th>
-                <th scope="col" class="clickable">FULL NAME</th>
-                <th scope="col" class="clickable">USERNAME</th>
-                <th scope="col" class="clickable">COUNTRY</th>
-                <th scope="col" class="clickable">ADDRESS</th>
-                <th scope="col" class="clickable">SUB TOTAL</th>
-                <th scope="col" class="clickable">VAT</th>
-                <th scope="col" class="clickable">GRAND TOTAL</th>
-                <th scope="col">ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% for(i = 0; i < orders.length; i++) { %>
-              <tr>
-                <th scope="row"><input type="checkbox" /></th>
-                <td><b><%= orders[i].orderedAt.toLocaleString('en-GB') %></b></td>
-                <td>
-                  <% if (orders[i].status == 1) { %>
-                  <div class="tm-status-circle pending"></div>
-                  <% } else if (orders[i].status == 2) { %>
-                  <div class="tm-status-circle moving"></div>
-                  <% } else if (orders[i].status == 3) { %>
-                  <div class="tm-status-circle cancelled"></div>
-                  <% } else if (orders[i].status == 4) { %>
-                  <div class="tm-status-circle moving"></div>
-                  <% } else if (orders[i].status == 5) { %>
-                  <div class="tm-status-circle moving"></div>
+              <% } %>
+                <% } %>
                   <% } %>
-                  <%= statuses[orders[i].status] %>
-                </td>
-                <td data-id="<%= orders[i].id %>"><b>#<%= orders[i].id %></b></td>
-                <td><b><%= (await orders[i].getUsers())[0].firstName + " " + (await orders[i].getUsers())[0].lastName %></b></td>
-                <td><b><%= (await orders[i].getUsers())[0].username %></b></td>
-                <td><b><%= (await orders[i].getUsers())[0].country %></b></td>
-                <td><b><%= (await orders[i].getUsers())[0].address %></b></td>
-                <td style="text-align: right;"><b>$<%= await orders[i].getTotalStr() %></b></td>
-                <td style="text-align: right;"><b>$<%= await orders[i].getVATSumStr() %></b></td>
-                <td style="text-align: right;"><b>$<%= await orders[i].getTotalWithVATStr() %></b></td>
-                <td><a href="/admin/orders/edit/<%= orders[i].id %>" class="tm-order-edit-link">
-                    <i class="far fa-edit tm-order-edit-icon"></i>
-                  </a>
-                </td>
-              </tr>
-              <% } %>
-            </tbody>
-          </table>
-        </div>
-        <!-- table container -->
-        <div class="d-grid gap-2">
-          <a href="#" class="btn btn-primary text-uppercase mb-3" data-bs-target="#add-order" data-bs-toggle="modal"
-            data-bs-dismiss="modal">Add new order</a>
-          <button class="btn btn-primary text-uppercase" data-bs-target="#rem-order" data-bs-toggle="modal"
-            data-bs-dismiss="modal">
-            Delete selected orders
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<!-- Pagination Start -->
-<div class="col-md-12">
-  <nav>
-    <ul class="pagination justify-content-center">
-      <% if(page > 1) { %>
-      <li class="page-item">
-        <a class="page-link" href="javascript:moveToPage(<%= page - 1 %>);">Previous</a>
-      </li>
-      <% } else { %>
-      <li class="page-item disabled">
-        <a class="page-link" href="" tabindex="-1">Previous</a>
-      </li>
-      <% } %>
-      <% for(var i = 0; i < pages.length; i++) { %>
-      <% if(pages[i] == page) { %>
-      <li class="page-item active"><a class="page-link" href=""><%= page %></a></li>
-      <% } else { %>
-      <li class="page-item <% if (pages[i] == '...') { %> disabled <% } %>"><a class="page-link" href="javascript:moveToPage(<%= pages[i] %>);">
-        <%= pages[i] %></a></li>
-      <% } %>
-      <% } %>
-      <% if(page < pages[pages.length - 1]) { %>
-      <li class="page-item">
-        <a class="page-link" href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
-      </li>
-      <% } else { %>
-      <li class="page-item disabled">
-        <a class="page-link" href="">Next</a>
-      </li>
-      <% } %>
-    </ul>
-  </nav>
-</div>
-<!-- Modal -->
-<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-order" tabindex="-1"
-  aria-labelledby="add-order" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Add Order</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form id="add-order-form" action="/admin/orders/add" onsubmit="selectAll();" method="post">
-        <input type="hidden" name="data" id="data">
-        <div class="modal-body">
-          <label>Items:</label>
-          <div>
-            <select id="add-order-items" style="width:100%;max-width:90%;" name="items" multiple>
-            </select>
-          </div>
-          <label>User:</label>
-          <div class="ui-widget">
-            <input name="user" id="user">
-          </div>
-          <label>Status:</label>
-          <div>
-            <select id="add-order-statuses" name="status">
-              <% for (i = 0; i < statuses.length; i++) { %>
-              <option value="<%= i %>"><%= statuses[i] %></option>
-              <% } %>
-            </select>
-          </div><br>
-          <button type="button" class="btn btn-primary" data-bs-target="#add-order-orderitem" data-bs-toggle="modal"
-            data-bs-dismiss="modal">Add Item</button>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary">Add</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-  <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-order-orderitem" tabindex="-1"
-    aria-labelledby="add-order-orderitem" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="remove-cat-title">Add Order</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <label>Product:</label>
-          <div>
-            <input name="orderitem-select" id="orderitem-select" placeholder="Product Name">
-          </div>
-          <label>Quantity:</label>
-          <div>
-            <input type="number" id="orderitem-quantity" name="orderitem-quantity" placeholder="Quantity">
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-target="#add-order" data-bs-toggle="modal"
-            data-bs-dismiss="modal" data-bs-dismiss="modal">Back</button>
-          <button type="button" data-bs-target="#add-order" data-bs-toggle="modal" data-bs-dismiss="modal"
-            onclick="addOrderItemModal(this);" class="btn btn-primary">Add</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="rem-order" tabindex="-1"
-    aria-labelledby="rem-order" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="remove-cat-title">Delete Orders</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <h4><b>Are you sure?</b></h4>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-          <form id="rem-order-form" action="/admin/orders/delete" method="post"
-            onsubmit="return deleteOrders(this);">
-            <button type="submit" data-bs-dismiss="modal" class="btn btn-primary">Delete</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
+                    <style>
+                      .ui-autocomplete-loading {
+                        background: white url("/img/ui-anim_basic_16x16.gif") right center no-repeat;
+                      }
+                    </style>
+                    <div class="container mt-5">
+                      <div class="row tm-content-row">
+                        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
+                          <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1000px;">
+                            <h2 class="tm-block-title">Orders</h2>
+                            <div class="container">
+                              <form action="/admin/orders" method="get" onsubmit="checkOrderFilter(this);">
+                                <div class="row">
+                                  <div class="col">
+                                    <select name="status" class="form-select">
+                                      <option value="-1" selected disabled>Select status:</option>
+                                      <%= filters['status'] %>
+                                        <% for(i=0; i < statuses.length; i++) { %>
+                                          <option value="<%= i %>" <% if (statuses[i]==filters['status']) { %> selected
+                                            <% } %>> <%= statuses[i] %>
+                                          </option>
+                                          <% } %>
+                                    </select>
+                                  </div>
+                                  <div class="col-sm-3">
+                                    <input name="user" class="form-select" style="background-image: none"
+                                      placeholder="Username" value="<%= filters['user'] %>">
+                                  </div>
+                                  <div class="col-sm-3">
+                                    <input name="ordAfter" class="form-universal" data-bs-toggle="tooltip"
+                                      data-bs-placement="top" title="From date" type="datetime-local"
+                                      value="<%= filters['ordAfter'] %>"><br>
+                                  </div>
+                                  <div class="col-sm-3">
+                                    <input name="ordBefore" class="form-universal" data-bs-toggle="tooltip"
+                                      data-bs-placement="top" title="To date" type="datetime-local"
+                                      value="<%= filters['ordBefore'] %>">
+                                  </div>
+                                </div>
+                                <div class="row" style="margin-bottom: 12px;">
+                                  <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
+                                    <a href="/admin/orders" class="btn btn-primary text-uppercase">Clear filters</a>
+                                  </div>
+                                </div>
+                              </form>
+                            </div>
+                            <div class="tm-product-table-container">
+                              <table id="table1" class="table table-hover tm-table-small tm-product-table sortable">
+                                <thead>
+                                  <tr>
+                                    <th scope="col">&nbsp;</th>
+                                    <th scope="col" class="clickable">TIMESTAMP</th>
+                                    <th scope="col" class="clickable">STATUS</th>
+                                    <th scope="col" class="clickable">ORDER NO.</th>
+                                    <th scope="col" class="clickable">FULL NAME</th>
+                                    <th scope="col" class="clickable">USERNAME</th>
+                                    <th scope="col" class="clickable">COUNTRY</th>
+                                    <th scope="col" class="clickable">ADDRESS</th>
+                                    <th scope="col" class="clickable">SUB TOTAL</th>
+                                    <th scope="col" class="clickable">VAT</th>
+                                    <th scope="col" class="clickable">GRAND TOTAL</th>
+                                    <th scope="col">ACTION</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <% for(i=0; i < orders.length; i++) { %>
+                                    <tr>
+                                      <th scope="row"><input type="checkbox" /></th>
+                                      <td><b>
+                                          <%= orders[i].orderedAt.toLocaleString('en-GB') %>
+                                        </b></td>
+                                      <td>
+                                        <% if (orders[i].status==1) { %>
+                                          <div class="tm-status-circle pending"></div>
+                                          <% } else if (orders[i].status==2) { %>
+                                            <div class="tm-status-circle moving"></div>
+                                            <% } else if (orders[i].status==3) { %>
+                                              <div class="tm-status-circle cancelled"></div>
+                                              <% } else if (orders[i].status==4) { %>
+                                                <div class="tm-status-circle moving"></div>
+                                                <% } else if (orders[i].status==5) { %>
+                                                  <div class="tm-status-circle moving"></div>
+                                                  <% } %>
+                                                    <%= statuses[orders[i].status] %>
+                                      </td>
+                                      <td data-id="<%= orders[i].id %>"><b>#<%= orders[i].id %></b></td>
+                                      <td><b>
+                                          <%= (await orders[i].getUsers())[0].firstName + " " + (await
+                                            orders[i].getUsers())[0].lastName %>
+                                        </b></td>
+                                      <td><b>
+                                          <%= (await orders[i].getUsers())[0].username %>
+                                        </b></td>
+                                      <td><b>
+                                          <%= (await orders[i].getUsers())[0].country %>
+                                        </b></td>
+                                      <td><b>
+                                          <%= (await orders[i].getUsers())[0].address %>
+                                        </b></td>
+                                      <td style="text-align: right;"><b>$<%= await orders[i].getTotalStr() %></b></td>
+                                      <td style="text-align: right;"><b>$<%= await orders[i].getVATSumStr() %></b></td>
+                                      <td style="text-align: right;"><b>$<%= await orders[i].getTotalWithVATStr() %></b>
+                                      </td>
+                                      <td>
+                                        <!--
+                                          <a href="/admin/orders/edit/<%= orders[i].id %>" class="tm-order-edit-link">
+                                          <i class="far fa-edit tm-order-edit-icon"></i>
+                                          </a>
+                                        -->
+                                      </td>
+                                    </tr>
+                                    <% } %>
+                                </tbody>
+                              </table>
+                            </div>
+                            <!-- table container -->
+                            <div class="d-grid gap-2">
+                              <a href="#" class="btn btn-primary text-uppercase mb-3" data-bs-target="#add-order"
+                                data-bs-toggle="modal" data-bs-dismiss="modal">Add new order</a>
+                              <button class="btn btn-primary text-uppercase" data-bs-target="#rem-order"
+                                data-bs-toggle="modal" data-bs-dismiss="modal">
+                                Delete selected orders
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Pagination Start -->
+                    <div class="col-md-12">
+                      <nav>
+                        <ul class="pagination justify-content-center">
+                          <% if(page> 1) { %>
+                            <li class="page-item">
+                              <a class="page-link" href="javascript:moveToPage(<%= page - 1 %>);">Previous</a>
+                            </li>
+                            <% } else { %>
+                              <li class="page-item disabled">
+                                <a class="page-link" href="" tabindex="-1">Previous</a>
+                              </li>
+                              <% } %>
+                                <% for(var i=0; i < pages.length; i++) { %>
+                                  <% if(pages[i]==page) { %>
+                                    <li class="page-item active"><a class="page-link" href="">
+                                        <%= page %>
+                                      </a></li>
+                                    <% } else { %>
+                                      <li class="page-item <% if (pages[i] == '...') { %> disabled <% } %>"><a
+                                          class="page-link" href="javascript:moveToPage(<%= pages[i] %>);">
+                                          <%= pages[i] %>
+                                        </a></li>
+                                      <% } %>
+                                        <% } %>
+                                          <% if(page < pages[pages.length - 1]) { %>
+                                            <li class="page-item">
+                                              <a class="page-link"
+                                                href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
+                                            </li>
+                                            <% } else { %>
+                                              <li class="page-item disabled">
+                                                <a class="page-link" href="">Next</a>
+                                              </li>
+                                              <% } %>
+                        </ul>
+                      </nav>
+                    </div>
+                    <!-- Modal -->
+                    <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-order"
+                      tabindex="-1" aria-labelledby="add-order" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title">Add Order</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <form id="add-order-form" action="/admin/orders/add" method="post">
+                            <input type="hidden" name="data" id="data">
+                            <div class="modal-body">
+                              <label>Items:</label>
+                              <div>
+                                <select id="add-order-items" style="width:100%;max-width:90%;" name="items" multiple>
+                                </select>
+                              </div>
+                              <label>User:</label>
+                              <div class="ui-widget">
+                                <input name="user" id="user">
+                              </div>
+                              <label>Status:</label>
+                              <div>
+                                <select id="add-order-statuses" name="status">
+                                  <% for (i=0; i < statuses.length; i++) { %>
+                                    <option value="<%= i %>">
+                                      <%= statuses[i] %>
+                                    </option>
+                                    <% } %>
+                                </select>
+                              </div><br>
+                              <button type="button" class="btn btn-primary" data-bs-target="#add-order-orderitem"
+                                data-bs-toggle="modal" data-bs-dismiss="modal">Add Item</button><br>
+                              <div>
+                                <label id="err" style="color: red; font-weight: 300;"></label>
+                              </div>
+                            </div>
+                            <div class="modal-footer">
+                              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                              <button type="button" class="btn btn-primary" onclick="toAJAX();">Add</button>
+                            </div>
+                        </div>
+                        </form>
+                      </div>
+                    </div>
+                    </div>
+                    <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-order-orderitem"
+                      tabindex="-1" aria-labelledby="add-order-orderitem" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title" id="remove-cat-title">Add Order</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body">
+                            <label>Product:</label>
+                            <div>
+                              <input name="orderitem-select" id="orderitem-select" placeholder="Product Name">
+                            </div>
+                            <label>Quantity:</label>
+                            <div>
+                              <input type="number" id="orderitem-quantity" name="orderitem-quantity"
+                                placeholder="Quantity" min="1">
+                              <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-target="#add-order"
+                                  data-bs-toggle="modal" data-bs-dismiss="modal" data-bs-dismiss="modal">Back</button>
+                                <button type="button" data-bs-target="#add-order" data-bs-toggle="modal"
+                                  data-bs-dismiss="modal" onclick="addOrderItemModal(this);"
+                                  class="btn btn-primary">Add</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="rem-order"
+                      tabindex="-1" aria-labelledby="rem-order" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title" id="remove-cat-title">Delete Orders</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body">
+                            <h4><b>Are you sure?</b></h4>
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+                            <form id="rem-order-form" action="/admin/orders/delete" method="post"
+                              onsubmit="return deleteOrders(this);">
+                              <button type="submit" data-bs-dismiss="modal" class="btn btn-primary">Delete</button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-  <script>
-  var id = {};
-  var orderitems = {}
+                    <script>
+                      var id = {};
+                      var orderitems = {}
 
-  function addOrderItemModal(elem) {
-    option = document.createElement('option');
-    e = document.getElementById('orderitem-select');
-    q = document.getElementById('orderitem-quantity');
-    items = document.getElementById('add-order-items');
+                      function addOrderItemModal(elem) {
+                        option = document.createElement('option');
+                        element = document.getElementById('orderitem-select');
+                        qty = document.getElementById('orderitem-quantity');
+                        items = document.getElementById('add-order-items');
 
-    if(!q.value || !e.value)
-      return;
+                        if (!qty.value || !element.value ||
+                            !Number.isSafeInteger(Number(qty.value)) ||
+                            Math.sign(Number(qty.value)) <= 0)
+                          return;
 
-    for (var i = 0; i < items.length; i++) {
-      if (items.options[i].text == e.value) {
-        if (orderitems[id[e.value]])
-          orderitems[id[e.value]] += q.value;
-        
-        items.options[i].text = e.value + ' x' + (parseInt(orderitems[id[e.value]]) + parseInt(q.value));
-        return;
-      }
-    }
+                        for (var i = 0; i < items.length; i++) {
+                          if (items.options[i].value == element.value) {
+                            if (orderitems[id[element.value]])
+                              orderitems[id[element.value]] += parseInt(qty.value);
+                            else orderitems[id[element.value]] = parseInt(qty.value);
 
-    option.text = e.value + " x" + q.value;
-    orderitems[id[e.value]] = q.value;
-    option.selected = 'true';
-    items.add(option);
-  }
+                            items.options[i].text = element.value + ' x' + (parseInt(orderitems[id[element.value]]));
+                            return;
+                          }
+                        }
 
-  function selectAll() {
-    options = document.getElementById('add-order-items').getElementsByTagName('option');
-    document.getElementById('data').value = JSON.stringify(orderitems);
+                        option.text = element.value + " x" + Number(qty.value);
+                        option.value = element.value;
 
-    for (i = 0; i < options.length; i++) {
-      options[i].selected = 'true';
-    }
-  }
+                        orderitems[id[element.value]] = parseInt(qty.value);
+                        option.selected = 'true';
+                        items.add(option);
+                      }
 
-    function deleteOrders(elem) {
-      var table = document.getElementById('table1');
-      var ok = false;
+                      function selectAll() {
+                        options = document.getElementById('add-order-items').getElementsByTagName('option');
+                        document.getElementById('data').value = JSON.stringify(orderitems);
 
-      for (const inp of table.getElementsByTagName('input')) {
-        if (!inp.checked)
-          continue;
+                        for (i = 0; i < options.length; i++) {
+                          options[i].selected = 'true';
+                        }
+                      }
 
-        var row = inp.parentElement.parentElement;
-        var elems = row.getElementsByTagName('td');
+                      function deleteOrders(elem) {
+                        var table = document.getElementById('table1');
+                        var ok = false;
 
-        for (const elem of elems) {
-          if("id" in elem.dataset) {
-            var id = elem.innerText.match(/\d+/)[0];
-          }
-        }
+                        for (const inp of table.getElementsByTagName('input')) {
+                          if (!inp.checked)
+                            continue;
 
-        input = document.createElement('input');
-        input.hidden = 'hidden';
-        input.type = 'number';
-        input.defaultValue = id;
-        input.name = 'id';
-        document.getElementById('rem-order-form').appendChild(input);
-        ok = true;
-      }
+                          var row = inp.parentElement.parentElement;
+                          var elems = row.getElementsByTagName('td');
 
-      return ok;
-    }
+                          for (const elem of elems) {
+                            if ("id" in elem.dataset) {
+                              var id = elem.innerText.match(/\d+/)[0];
+                            }
+                          }
 
-    function checkOrderFilter(form) {
-      for (const elem of form.elements) {
-        if (elem.value === '')
-          elem.disabled = true;
-      }
-    }
+                          input = document.createElement('input');
+                          input.hidden = 'hidden';
+                          input.type = 'number';
+                          input.defaultValue = id;
+                          input.name = 'id';
+                          document.getElementById('rem-order-form').appendChild(input);
+                          ok = true;
+                        }
 
-    // Users autocomplete
-    $( function() {
-    var cache = {};
-    $( "input[name='user']" ).autocomplete({
-      source: "/api/accounts/get",
-      minLength: 3,
-      source: function( request, response ) {
-        var term = request.term;
-        if ( term in cache ) {
-          response( cache[ term ] );
-          return;
-        }
- 
-        $.getJSON( "/api/accounts/get", request, function( data, status, xhr ) {
-          cache[ term ] = data;
-          response( data );
-        });
-      }
-    });
+                        return ok;
+                      }
 
-    var cache1 = {};
-    $( "#orderitem-select" ).autocomplete({
-      source: "/api/products/get",
-      minLength: 2,
-      source: function( request, response ) {
-        var term = request.term;
-        if ( term in cache1 ) {
-          response( cache1[ term ] );
-          return;
-        }
- 
-        $.getJSON( "/api/products/get", request, function( data, status, xhr ) {
-          cache1[ term ] = data;
-          response( data );
-        });
-      },
-      select: function(request, responce) {
-        id[responce.item.value] = responce.item.id;
-    }
-    });
-  } );
-  </script>
+                      function checkOrderFilter(form) {
+                        for (const elem of form.elements) {
+                          if (elem.value === '')
+                            elem.disabled = true;
+                        }
+                      }
+
+                      function toAJAX() {
+                        selectAll();
+
+                        $.ajax({
+                          type: "POST",
+                          url: "/admin/orders/add",
+                          data: $("#add-order-form").serialize()
+                        }).done(function (data) {
+                          if (data.error) {
+                            document.getElementById("err").innerHTML = data.error;
+                          } else if (data.ok) {
+                            window.location.reload();
+                          }
+                        }).fail(function (data) { });
+                      }
+
+                      // Users autocomplete
+                      $(function () {
+                        var cache = {};
+                        $("input[name='user']").autocomplete({
+                          source: "/api/accounts/get",
+                          minLength: 3,
+                          source: function (request, response) {
+                            var term = request.term;
+                            if (term in cache) {
+                              response(cache[term]);
+                              return;
+                            }
+
+                            $.getJSON("/api/accounts/get", request, function (data, status, xhr) {
+                              cache[term] = data;
+                              response(data);
+                            });
+                          }
+                        });
+
+                        var cache1 = {};
+                        $("#orderitem-select").autocomplete({
+                          source: "/api/products/get",
+                          minLength: 2,
+                          source: function (request, response) {
+                            var term = request.term;
+                            if (term in cache1) {
+                              response(cache1[term]);
+                              return;
+                            }
+
+                            $.getJSON("/api/products/get", request, function (data, status, xhr) {
+                              cache1[term] = data;
+                              response(data);
+                            });
+                          },
+                          select: function (request, responce) {
+                            id[responce.item.value] = responce.item.id;
+                          }
+                        });
+                      });
+                    </script>

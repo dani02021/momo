@@ -1,12 +1,15 @@
 {
   "dependencies": {
+    "cyrillic-to-translit-js": "^3.2.1",
     "fast-csv": "^4.3.6",
+    "image-hash": "^5.3.1",
     "koa-better-body": "^3.3.9",
     "koa-body-clean": "^1.0.0",
     "koa-bodyparser": "^4.3.0",
     "koa-favicon": "^2.1.0",
     "koa-session": "^6.2.0",
     "koa-sse-stream": "^0.2.0",
+    "node-fetch": "^3.2.4",
     "stack-trace": "^1.0.0-pre1"
   }
 }
