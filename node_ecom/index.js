@@ -2554,12 +2554,17 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
   ctx.body = stream;
 
   stream.write(`event: message\n`);
-  stream.write(`data: {"status": "progress", "count": 0}\n\n`);
+  stream.write(`data: ${JSON.stringify({
+    "status": "progress", "count": 0
+  })}\n\n`);
 
   // Supported only .xlsx and .xls
   if (!(/.xlsx|.xls/g.exec(ctx.request.files[0].name))) {
     stream.write(`event: message\n`);
-    stream.write(`data: {"status": "error", "msg": "File should end with .xlsx or .xls"}\n\n`);
+    stream.write(`data: ${JSON.stringify({
+      "status": "error",
+      "msg": "File should be with extention .xlsx or .xls"
+    })}\n\n`);
 
     stream.end();
     return;
@@ -2573,7 +2578,10 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
     var worksheet = workbook.getWorksheet(1);
   } catch (e) {
     stream.write(`event: message\n`);
-    stream.write(`data: {"status":"error", "msg": "Can't open the file! Check if it is corrupted?"}\n\n`);
+    stream.write(`data: ${JSON.stringify({
+      "status":"error",
+      "msg": "Can't open the file! Check if it is corrupted?"
+    })}\n\n`);
 
     stream.end();
     return;
@@ -2611,8 +2619,10 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
             for (x in TABLE_HEADERS_SEQUENCE) {
               if (detail.value.data.getCell(parseInt(x) + 1) != TABLE_HEADERS_SEQUENCE[parseInt(x)]) {
                 stream.write(`event: message\n`);
-                stream.write(`{"status": "error", "msg": "Column ${parseInt(x) + 1} \
-                on row 1 should be ${TABLE_HEADERS_SEQUENCE[parseInt(x)]}}"\n\n`);
+                stream.write(`data: ${JSON.stringify({
+                  "status": "error",
+                  "msg": `Column ${parseInt(x) + 1} \ on row 1 should be "${TABLE_HEADERS_SEQUENCE[parseInt(x)]}"`
+                })}\n\n`);
 
                 stream.end();
                 return;
@@ -2726,7 +2736,10 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
 
           if (detail.done) {
             stream.write(`event: message\n`);
-            stream.write(`data: {"status": "done", "ignored": ${ignored}, "count": ${attempts - ignored}}\n\n`);
+            stream.write(`data: ${JSON.stringify({
+              "status": "done",
+              "ignored": ignored, "count": attempts - ignored
+            })}\n\n`);
 
             // Bulk upsert
             await Product.bulkCreate(products, {
@@ -2755,14 +2768,20 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
         products = [];
 
         stream.write(`event: message\n`);
-        stream.write(`data: {"status": "progress", "count": ${attempts / detail.value.rowCount}}\n\n`);
+        stream.write(`data: ${JSON.stringify({
+          "status": "progress",
+          "count": attempts / detail.value.rowCount
+        })}\n\n`);
       }
     } catch (e) {
       console.log(e);
 
       if (e.errors) {
         stream.write(`event: message\n`);
-        stream.write(`data: {"status": "error", "msg": "Error on row: ${detail.value.row} with message: ${e.errors[0].message}"}\n\n`);
+        stream.write(`data: ${JSON.stringify({
+          "status": "error",
+          "msg": `Error on row: ${detail.value.row} with message: ${e.errors[0].message}`
+        })}\n\n`);
 
         stream.end();
         return;
@@ -2772,7 +2791,10 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
         await t.rollback();
 
       stream.write(`event: message\n`);
-      stream.write(`data: {"status": "error", "msg": "${e}"}\n\n`);
+      stream.write(`data: ${JSON.stringify({
+        "status": "error",
+        "msg": e
+      })}\n\n`);
 
       loggerEcom.logger.log('error',
         `XLSX import of products requested by staff ${ctx.session.dataValues.staffUsername} is incomplete!`,
@@ -4499,6 +4521,10 @@ router.post('/admin/settings/other', async ctx => {
 
   ctx.session.messages = { 'settingsOK': 'Settings changed!' };
   ctx.redirect('/admin/settings/other');
+});
+
+router.get('/admin/promotions/targetgroups', async ctx => {
+  
 });
 
 /* WARNING: 

@@ -520,9 +520,9 @@ function sendUserPass() {
 
 // Methods for /products page
 
-function setHref(oritin, pathname, search) 
+function setHref(origin, pathname, search) 
 {
-    window.location.href = oritin + pathname + "?" + search;
+    window.location.href = origin + pathname + "?" + search;
 }
 
 function addCategory(index) {
@@ -617,15 +617,17 @@ function clearFilter(filter) {
     setHref(window.location.origin, pathname, window.location.search);
 }
 
-function moveToPage(page, prefix, ret = false) {
+function moveToPage(page, prefix = false, ret = false) {
     if(hasPage()) {
         if (ret)
             return replacePage(page, prefix, ret);
         else replacePage(page, prefix, ret);
     } else {
+        let pathname = (window.location.pathname.endsWith("/") ? "" : "/") + (prefix ? prefix + "/" : "") + page;
+        
         if (ret)
-            return window.location.pathname + "/" + (prefix ? prefix + "/" : "") + page;
-        else window.location.pathname += "/" + (prefix ? prefix + "/" : "") + page;
+            return window.location.pathname + pathname;
+        else window.location.pathname += pathname;
     }
 }
 
@@ -633,13 +635,10 @@ function hasPage() {
     return new RegExp("/[0-9]+/*").test(window.location.pathname);
 }
 
-function replacePage(page, prefix, ret) {
-    console.log(window.location.pathname.replace(new RegExp(((prefix ? prefix : "")) + "/[0-9]+/*"), (prefix ? prefix + "/" : "/") + page));
-    
+function replacePage(page, prefix, ret) {    
     if (ret)
         return window.location.pathname.replace(new RegExp(((prefix ? prefix : "")) + "/[0-9]+/*"), (prefix ? prefix + "/" : "/") + page);
     else window.location.pathname = window.location.pathname.replace(new RegExp(((prefix ? prefix : "")) + "/[0-9]+/*"), (prefix ? prefix + "/" : "/") + page);
-    console.log(window.location.href);
 }
 
 function checkRegisterForm() {

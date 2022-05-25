@@ -102,6 +102,18 @@
                                 <a class="dropdown-item" href="/admin/settings/other">Other settings</a>
                             </div>
                         </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle <% if (selected == 'more') { %> active <% } %>" href="#" id="navbarDropdown" role="button"
+                                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-angle-double-right"></i>
+                                <span>
+                                    More <i class="fas fa-angle-down"></i>
+                                </span>
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                <a class="dropdown-item" href="/admin/promotions/targetgroups">Promotions -> Target Groups</a>
+                            </div>
+                        </li>
                     </ul>
                     <% if(session.dataValues && session.dataValues.staffUsername) { %>
                     <ul class="navbar-nav">
