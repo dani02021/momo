@@ -165,7 +165,6 @@
         }
   
         var value = line.substring(index + 1).trimLeft();
-        console.log(value);
         if (field === 'data') {
           e[field] += value;
         } else {
