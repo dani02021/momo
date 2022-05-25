@@ -345,7 +345,8 @@ const Staff = db.define("staff", {
   {
     paranoid: true,
     timestamp: true
-  });
+  }
+);
 
 // Add custom methods
 Staff.prototype.authenticate = function (varPass) {
@@ -368,7 +369,8 @@ const Permission = db.define('permission', {
   {
     paranoid: true,
     timestamp: true
-  });
+  }
+);
 
 const Role = db.define("role", {
   name: {
@@ -389,7 +391,8 @@ const Role = db.define("role", {
   {
     paranoid: true,
     timestamp: true
-  });
+  }
+);
 
 Role.belongsToMany(Permission, { through: 'role_permissions' });
 Permission.belongsToMany(Role, { through: 'role_permissions' });
@@ -410,7 +413,8 @@ const Category = db.define("category", {
   {
     paranoid: true,
     timestamp: true
-  });
+  }
+);
 
 const Product = db.define("product", {
   name: {
@@ -454,7 +458,8 @@ const Product = db.define("product", {
   {
     paranoid: true,
     timestamp: true
-  });
+  }
+);
 
 const Session = db.define("session", {
   key: {
@@ -481,7 +486,44 @@ const Session = db.define("session", {
   {
     paranoid: false,
     timestamp: false
-  });
+  }
+);
+
+const TargetGroupFilters = db.define("targetgroupfilters", {
+  filter: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  value: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  }
+},
+  {
+    paranoid: true,
+    timestamp: false
+  }
+);
+
+const TargetGroup = db.define("targetgroup", {
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  },
+  username: {
+    type: DataTypes.STRING(50)
+  },
+},
+  {
+    paranoid: true,
+    timestamp: false
+  }
+);
+
+TargetGroup.belongsTo(TargetGroupFilters, {
+  foreignKey: 'targetId'
+});
 
 Product.prototype.getPriceWithVAT = async function () {
   return parseFloat(await this.getPriceWithVATStr());
@@ -945,9 +987,13 @@ function settings() {
   return Settings;
 }
 
+function targetgroups() {
+  return TargetGroup;
+}
+
 module.exports = {
   category, product, user, staff, session, permission, role, order, orderitem, transaction,
-  paypaltransacion, codtransaction, log, settings
+  paypaltransacion, codtransaction, log, settings, targetgroups
 };
 
 // Alter the database

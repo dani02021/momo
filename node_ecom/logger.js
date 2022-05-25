@@ -64,6 +64,7 @@ const logger = winston.createLogger({
 });
 
 /**
+ * Global error handler
  * 
  * @param {Error} err 
  * @param {import('koa').Context} ctx 

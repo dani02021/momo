@@ -17,8 +17,6 @@ const { PassThrough } = require("stream");
 const bodyClean = require('koa-body-clean');
 const fetch = require('node-fetch');
 const { imageHash } = require('image-hash');
-const CyrilTransit = require('cyrillic-to-translit-js');
-const cyriltransit = new CyrilTransit();
 
 const fs = require('fs');
 const db = require("./db.js");
@@ -43,6 +41,7 @@ const PayPalTransaction = models.paypaltransacion();
 const CODTransaction = models.codtransaction();
 const Log = models.log();
 const Settings = models.settings();
+const TargetGroup = models.targetgroups();
 
 const app = new Koa();
 const router = new KoaRouter();
@@ -4524,6 +4523,28 @@ router.post('/admin/settings/other', async ctx => {
 });
 
 router.get('/admin/promotions/targetgroups', async ctx => {
+  let page = 1;
+
+  if (ctx.params.page) {
+    page = parseInt(ctx.params.page)
+  }
+
+  let limit = configEcom.SETTINGS["elements_per_page"];
+  let offset = 0;
+
+  if (ctx.params.page) {
+    offset = (parseInt(ctx.params.page) - 1) * limit;
+  }
+
+  await ctx.render("/admin/targetgroups", {
+    layout: "/admin/base",
+    session: ctx.session,
+    selected: "more",
+    targetgroups: [],
+    filters: [],
+    page: page,
+    pages: utilsEcom.givePages(page, Math.ceil(0 / limit))
+  });
   
 });
 
