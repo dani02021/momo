@@ -2559,7 +2559,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
   // Supported only .xlsx and .xls
   if (!(/.xlsx|.xls/g.exec(ctx.request.files[0].name))) {
     stream.write(`event: message\n`);
-    stream.write(`data: {"status": "error", "msg": File should end with .xlsx or .xls"\n\n`);
+    stream.write(`data: {"status": "error", "msg": "File should end with .xlsx or .xls"}\n\n`);
 
     stream.end();
     return;
@@ -2573,7 +2573,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
     var worksheet = workbook.getWorksheet(1);
   } catch (e) {
     stream.write(`event: message\n`);
-    stream.write(`data: {"status":"error", "msg": "Can't open the file! Check if it is corrupted?"\n\n`);
+    stream.write(`data: {"status":"error", "msg": "Can't open the file! Check if it is corrupted?"}\n\n`);
 
     stream.end();
     return;
@@ -2612,7 +2612,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
               if (detail.value.data.getCell(parseInt(x) + 1) != TABLE_HEADERS_SEQUENCE[parseInt(x)]) {
                 stream.write(`event: message\n`);
                 stream.write(`{"status": "error", "msg": "Column ${parseInt(x) + 1} \
-                on row 1 should be ${TABLE_HEADERS_SEQUENCE[parseInt(x)]}"\n\n`);
+                on row 1 should be ${TABLE_HEADERS_SEQUENCE[parseInt(x)]}}"\n\n`);
 
                 stream.end();
                 return;
