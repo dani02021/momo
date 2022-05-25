@@ -2762,7 +2762,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
 
       if (e.errors) {
         stream.write(`event: message\n`);
-        stream.write(`data: {"status": "error", "msg": "Error on row: ${detail.value.row} with message: ${e.errors[0].message}"\n\n`);
+        stream.write(`data: {"status": "error", "msg": "Error on row: ${detail.value.row} with message: ${e.errors[0].message}"}\n\n`);
 
         stream.end();
         return;
