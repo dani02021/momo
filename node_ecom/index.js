@@ -2760,7 +2760,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
 
       if (e.errors) {
         stream.write(`event: message\n`);
-        stream.write(`data: {"status": "error", "msg": "Error on row: ${detail.value.row} with message: ${e.errors[0].message}"\n\n`);
+        stream.write(`data: {"status": "error", "msg": "Error on row: ${detail.value.row} with message: ${e.errors[0].message}"}\n\n`);
 
         stream.end();
         return;
@@ -2770,7 +2770,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
         await t.rollback();
 
       stream.write(`event: message\n`);
-      stream.write(`data: {"status": "error", "msg": "${e}"\n\n`);
+      stream.write(`data: {"status": "error", "msg": "${e}"}\n\n`);
 
       loggerEcom.logger.log('error',
         `XLSX import of products requested by staff ${ctx.session.dataValues.staffUsername} is incomplete!`,
