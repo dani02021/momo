@@ -7,7 +7,7 @@
                 <div class="sidebar-widget category">
                     <h2 class="title">Category</h2>
                     <nav class="navbar bg-light">
-                        <ul class="navbar-nav">
+                        <ul class="navbar-nav" style="max-height: 500px !important; overflow-y: scroll !important;">
                             <% for(var i = 0; i < categories.length; i++) { %>
                                 <li class="nav-item">
                                     <a class="nav-link" href="javascript:addCategory(<%= categories[i].id %>);">

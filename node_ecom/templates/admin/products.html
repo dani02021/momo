@@ -118,7 +118,7 @@
         </div>
         <div class="d-grid gap-2">
           <form id="xlsxImportForm" action="/admin/api/products/import/xlsx" method="post" enctype="multipart/form-data">
-            <input type="file" accept=".xlsx .xls" name="xlsxFile" id="xlsxImportFile" onchange="toAJAXImport(this);" hidden>
+            <input type="file" accept=".xlsx,.xls" name="xlsxFile" id="xlsxImportFile" onchange="toAJAXImport(this);" hidden>
             <button type="button" class="btn btn-primary text-uppercase" style="width: 100%;" onclick="document.getElementById('xlsxImportFile').click();">Import products from XLSX</button>
           </form>
         </div>

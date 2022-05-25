@@ -83,20 +83,20 @@ async function getProducts(ctx) {
   // Get filters
   let filters = {}, filtersToReturn = {};
 
-  if (Number.isSafeInteger(ctx.query.cat)) {
+  if (Number.isSafeInteger(Number(ctx.query.cat))) {
     filters['cat'] = ctx.query.cat;
     filtersToReturn['Category'] = ctx.query.cat;
   } else {
     filters['cat'] = '';
   }
-  if (Number.isSafeInteger(ctx.query.minval) && Math.sign(ctx.query.minval) >= 0) {
+  if (Number.isSafeInteger(Number(ctx.query.minval)) && Math.sign(Number(ctx.query.minval)) >= 0) {
     filters['minval'] = ctx.query.minval
     filtersToReturn['Min price'] = ctx.query.minval
   }
   else {
     filters['minval'] = 0
   }
-  if (Number.isSafeInteger(ctx.query.maxval) && Math.sign(ctx.query.maxval) >= 0) {
+  if (Number.isSafeInteger(Number(ctx.query.maxval)) && Math.sign(Number(ctx.query.maxval)) >= 0) {
     filters['maxval'] = ctx.query.maxval
     filtersToReturn['Max price'] = ctx.query.maxval
   }
@@ -238,18 +238,18 @@ async function getAdminProducts(ctx) {
   // Get filters
   let filters = {}, filtersToReturn = {};
 
-  if (Number.isSafeInteger(ctx.query.category)) {
+  if (Number.isSafeInteger(Number(ctx.query.category))) {
     filters['category'] = ctx.query.category;
     filtersToReturn['category'] = ctx.query.category;
   }
-  if (Number.isSafeInteger(ctx.query.minprice) && Math.sign(ctx.query.minprice) >= 0) {
+  if (Number.isSafeInteger(Number(ctx.query.minprice)) && Math.sign(ctx.query.minprice) >= 0) {
     filters['minprice'] = ctx.query.minprice;
     filtersToReturn['minprice'] = ctx.query.minprice;
   }
   else {
     filters['minprice'] = 0;
   }
-  if (Number.isSafeInteger(ctx.query.maxprice) && Math.sign(ctx.query.maxprice) >= 0) {
+  if (Number.isSafeInteger(Number(ctx.query.maxprice)) && Math.sign(ctx.query.maxprice) >= 0) {
     filters['maxprice'] = ctx.query.maxprice;
     filtersToReturn['maxprice'] = ctx.query.maxprice;
   }
@@ -1128,7 +1128,7 @@ router.post("/login", async ctx => {
       }
 
       for (i in cookieProducts) {
-        if (!Number.isSafeInteger(i))
+        if (!Number.isSafeInteger(Number(i)))
           continue;
 
         const product = await Product.findOne({ where: { id: i } });
@@ -2639,13 +2639,15 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
             let discountPriceIndex = TABLE_HEADERS_SEQUENCE.indexOf('Regular price') + 1;
             let categoryIndex = TABLE_HEADERS_SEQUENCE.indexOf('Categories') + 1;
             let descriptionIndex = TABLE_HEADERS_SEQUENCE.indexOf('Short description') + 1;
-            let imageIndex = TABLE_HEADERS_SEQUENCE.indexOf('Images') + 1; // todo
+            let imageIndex = TABLE_HEADERS_SEQUENCE.indexOf('Images') + 1;
             let quantityIndex = TABLE_HEADERS_SEQUENCE.indexOf('Quantity') + 1;
 
-            if (!categoriesCache[detail.value.data.getCell(categoryIndex).value]) {
+            if (!categoriesCache[utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value)]) {
               let cat = await Category.findOne({
-                name:
-                  utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value)
+                where: {
+                  name:
+                    utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value)
+                }
               });
 
               if (!cat) {
@@ -2770,7 +2772,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
         await t.rollback();
 
       stream.write(`event: message\n`);
-      stream.write(`data: {"status": "error", "msg": "${e}"\n\n`);
+      stream.write(`data: {"status": "error", "msg": "${e}"}\n\n`);
 
       loggerEcom.logger.log('error',
         `XLSX import of products requested by staff ${ctx.session.dataValues.staffUsername} is incomplete!`,
@@ -2865,7 +2867,7 @@ router.post('/admin/orders/add', async ctx => {
         return;
       }
 
-      if (!Number.isSafeInteger(items[id]) || Math.sign(items[id]) <= 0) {
+      if (!Number.isSafeInteger(Number(items[id])) || Math.sign(items[id]) <= 0) {
         ctx.body = { "error": `Invalid quantity of product #${id}!` };
         await order.destroy({ transaction: t });
 
@@ -3141,7 +3143,9 @@ router.post('/admin/orders/edit/:id', async ctx => {
 router.get('/addToCart', async ctx => {
 
   // Invalid request
-  if (!Number.isSafeInteger(ctx.query.quantity) || !Math.sign(ctx.query.quantity) > 0) {
+  if (!Number.isSafeInteger(Number(ctx.query.quantity)) || !Math.sign(Number(ctx.query.quantity)) > 0) {
+    ctx.session.messages = {'otherError': `Invalid quantity of product`};
+
     if (ctx.query.cart)
       ctx.redirect('/cart');
     ctx.redirect('/products');
@@ -3161,7 +3165,7 @@ router.get('/addToCart', async ctx => {
       }
 
       if (!cookieProducts[ctx.query.id])
-        cookieProducts[ctx.query.id] = ctx.query.quantity;
+        cookieProducts[ctx.query.id] = parseInt(ctx.query.quantity);
       else {
         cookieProducts[ctx.query.id] = parseInt(cookieProducts[ctx.query.id]) + parseInt(ctx.query.quantity);
       }
@@ -3169,15 +3173,13 @@ router.get('/addToCart', async ctx => {
       if (await utilsEcom.compareQtyAndProductQty(ctx.query.id, cookieProducts[ctx.query.id]) == 0) {
         cookieProducts[ctx.query.id] -= ctx.query.quantity;
 
-        ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
         if (ctx.query.cart) {
-          ctx.body = {
-            'status': 'redirect',
-            'redirect': '/cart'
-          };
+          ctx.status = 400;
 
           return;
         }
+
+        ctx.session.messages = { 'notEnoughQty': 'Not enough quantity of the given product!' };
 
         ctx.redirect('/products');
 
@@ -3312,7 +3314,12 @@ router.get('/addToCart', async ctx => {
     }
   });
 
-  if (await utilsEcom.compareQtyAndProductQty(ctx.query.id, parseInt(orderitem.quantity) + parseInt(ctx.query.quantity)) == 0) {
+  let compareQty = parseInt(ctx.query.quantity);
+
+  if (!createdorderitem)
+    compareQty += parseInt(orderitem.quantity);
+
+  if (await utilsEcom.compareQtyAndProductQty(ctx.query.id, compareQty) == 0) {
     if (ctx.query.cart) {
       ctx.status = 400;
     } else {
@@ -3350,7 +3357,21 @@ router.get('/addToCart', async ctx => {
 });
 
 router.get('/removeFromCart', async ctx => {
-  const quantity = ctx.query.quantity;
+  const quantity = Number(ctx.query.quantity);
+
+  // Invalid request
+  if (!Number.isSafeInteger(quantity) || !Math.sign(quantity) > 0) {
+    ctx.session.messages = {'otherError': `Invalid quantity of product`};
+
+    if (ctx.query.cart)
+      ctx.body = {
+        'status': 'redirect',
+        'redirect': '/cart'
+      };
+    else ctx.redirect('/products');
+
+    return;
+  }
 
   if (!await utilsEcom.isAuthenticatedUser(ctx)) {
     let cookieProducts = JSON.parse(ctx.cookies.get('products'));
@@ -3360,7 +3381,7 @@ router.get('/removeFromCart', async ctx => {
         if (cookieProducts[ctx.query.id] > quantity)
           cookieProducts[ctx.query.id] -= quantity;
         else {
-          delete cookieProducts[ctx.query.id];
+          ctx.status = 400;
         }
       } else {
         delete cookieProducts[ctx.query.id];
