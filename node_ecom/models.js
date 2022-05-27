@@ -489,7 +489,7 @@ const Session = db.define("session", {
   }
 );
 
-const TargetGroupFilters = db.define("targetgroupfilters", {
+const TargetGroupFilters = db.define("targetgroup_filters", {
   filter: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -521,9 +521,12 @@ const TargetGroup = db.define("targetgroup", {
   }
 );
 
-TargetGroup.belongsTo(TargetGroupFilters, {
+TargetGroupFilters.belongsTo(TargetGroup, {
   foreignKey: 'targetId'
 });
+
+TargetGroup.belongsToMany(User, { through: 'targetgroup_users', allowNull: false });
+User.belongsToMany(TargetGroup, { through: 'targetgroup_users', allowNull: false });
 
 Product.prototype.getPriceWithVAT = async function () {
   return parseFloat(await this.getPriceWithVATStr());
@@ -1038,7 +1041,10 @@ module.exports = {
   Permission.create({name: 'audit.read'});
   Permission.create({name: 'settings.email'});
   Permission.create({name: 'settings.other'});
+  Permission.create({name: 'targetgroups.read'});
+  Permission.create({name: 'targetgroups.create'});
   */
+
   // Create associations
 
   /*
@@ -1067,8 +1073,10 @@ module.exports = {
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'report.read'}}).then(perm => {role.addPermission(perm);})});
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'audit.read'}}).then(perm => {role.addPermission(perm);})});
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'settings.other'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'targetgroups.read'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'targetgroups.create'}}).then(perm => {role.addPermission(perm);})});
   */
-
+  
   // Staff.findOne({where: {username: 'dakata'}}).then(user => {Role.findOne({where: {name: 'Admin'}}).then(role => {user.addRole(role);})});
 
   // Make staff

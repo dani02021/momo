@@ -1179,7 +1179,7 @@ function onNoPermission(ctx, message, logOptions, redirectLoc = "/admin")
     ctx.session.messages = { 'noPermission': message };
 
     if (logOptions)
-        logger.log(logOptions.level,
+        loggerEcom.logger.log(logOptions.level,
             logOptions.message,
             logOptions.options);
     
@@ -1219,8 +1219,6 @@ function onSessionExpired(ctx, message = "Session expired!", redirectLoc = "/adm
 {
     assert(typeof redirectLoc === "string");
     assert(typeof message === "string");
-
-    console.log("SESSION EXPIRED: " + configEcom.SETTINGS.backoffice_expire);
 
     ctx.session.messages = { "sessionExpired": message };
     ctx.session.staffUsername = null;

@@ -80,11 +80,13 @@ const VALID_GENDERS = [
     'Female'
 ];
 
-const EVENT_STREAMS = new Array(DEFAULT_EVENT_STREAMS_LENGTH);
-
-// Some todos
-EVENT_STREAMS.fill(undefined);
-Object.seal(EVENT_STREAMS);
+let PRODUCT_IMPORT_TABLE_HEADERS = [
+    'Type', 'SKU', 'Name',
+    'Short description', 'Description',
+    'Quantity', 'Тегло (kg)',
+    'Regular price', 'Categories',
+    'Images'
+  ];
 
 /**
  * 
@@ -120,6 +122,6 @@ module.exports = {
     STATUS_DISPLAY,
     LOG_LEVELS,
     VALID_GENDERS,
-    EVENT_STREAMS,
+    PRODUCT_IMPORT_TABLE_HEADERS,
     loadSettings
 }

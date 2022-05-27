@@ -944,6 +944,282 @@ async function getAdminAudit(ctx) {
   ctx.session.messages = null;
 }
 
+async function adminPromotionTargetGroups(ctx) {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    utilsEcom.onNotAuthenticatedStaff(ctx);
+    return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  if (!await utilsEcom.hasPermission(ctx, "targetgroups.read")) {
+    utilsEcom.onNoPermission(ctx,
+      "You don\'t have permission to see target groups",
+      {
+        level: "info",
+        message: `Staff ${ctx.session.dataValues.staffUsername} tried to see target groups without rights`,
+        options:
+        {
+          user: ctx.session.dataValues.staffUsername,
+          isStaff: true
+        }
+      });
+    return;
+  }
+
+  // Auto session expire
+  if (!utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
+
+    return;
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
+  // Get filters
+  let filters = {}, filtersToReturn = {};
+  let bindParams = [];
+
+  if (!isNaN(new Date(ctx.query.timeAfter))) {
+    filters['timeAfter'] = new Date(ctx.query.timeAfter);
+    filtersToReturn['timeAfter'] = ctx.query.timeAfter;
+  } else {
+    filters['timeAfter'] = new Date(0);
+  }
+  if (!isNaN(new Date(ctx.query.timeBefore))) {
+    filters['timeBefore'] = new Date(ctx.query.timeBefore);
+    filtersToReturn['timeBefore'] = ctx.query.timeBefore;
+  } else {
+    filters['timeBefore'] = new Date();
+  }
+  if (ctx.query.createdBy) {
+    filters['createdBy'] = ctx.query.createdBy;
+    filtersToReturn['createdBy'] = ctx.query.createdBy;
+  } else {
+    filters['createdBy'] = '';
+  }
+
+  bindParams.push(filters.createdBy);
+  bindParams.push(filters.timeAfter.toISOString());
+  bindParams.push(filters.timeBefore.toISOString());
+
+  if (Number.isSafeInteger(Number(ctx.query.targetID))) {
+    filters['targetID'] = ctx.query.targetID;
+    filtersToReturn['targetID'] = ctx.query.targetID;
+    bindParams.push(ctx.query.targetID);
+  }
+
+  let page = 1;
+
+  if (ctx.params.page) {
+    page = parseInt(ctx.params.page)
+  }
+
+  let limit = configEcom.SETTINGS["elements_per_page"];
+  let offset = 0;
+
+  if (ctx.params.page) {
+    offset = (parseInt(ctx.params.page) - 1) * limit;
+  }
+
+  let query =
+    `SELECT * FROM targetgroups
+    WHERE POSITION(UPPER($1) IN UPPER(username)) > 0
+      AND "createdAt" BETWEEN $2 AND $3
+      AND "deletedAt" is NULL\n`;
+
+  if (filters.targetID)
+    query += `AND id = $4\n`;
+
+  query += `ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
+
+  let queryC =
+    `SELECT COUNT(*) FROM targetgroups
+    WHERE POSITION(UPPER($1) IN UPPER(username)) > 0
+      AND "createdAt" BETWEEN $2 AND $3
+      AND "deletedAt" is NULL\n`;
+
+  if (filters.targetID)
+    queryC += `AND id = $4\n`;
+
+  let targetgroups = await db.query(query, {
+    type: 'SELECT',
+    plain: false,
+    model: TargetGroup,
+    mapToModel: true,
+    bind: bindParams
+  });
+
+  let count = (await db.query(queryC, {
+    type: 'SELECT',
+    plain: true,
+    bind: bindParams
+  })).count;
+
+  await ctx.render("/admin/targetgroups", {
+    layout: "/admin/base",
+    session: ctx.session,
+    selected: "more",
+    targetgroups: targetgroups,
+    filters: filtersToReturn,
+    page: page,
+    pages: utilsEcom.givePages(page, Math.ceil(count / limit))
+  });
+}
+
+async function adminPromotionTargetGroupsAdd(ctx) {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    utilsEcom.onNotAuthenticatedStaff(ctx);
+    return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  if (!await utilsEcom.hasPermission(ctx, "targetgroups.create")) {
+    utilsEcom.onNoPermission(ctx,
+      "You don\'t have permission to create target group",
+      {
+        level: "info",
+        message: `Staff ${ctx.session.dataValues.staffUsername} tried to create target group without rights`,
+        options:
+        {
+          user: ctx.session.dataValues.staffUsername,
+          isStaff: true
+        }
+      });
+    return;
+  }
+
+  // Auto session expire
+  if (!utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
+
+    return;
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
+  let page = 1;
+
+  if (ctx.params.page) {
+    page = parseInt(ctx.params.page)
+  }
+
+  let limit = configEcom.SETTINGS["elements_per_page"];
+  let offset = 0;
+
+  if (ctx.params.page) {
+    offset = (parseInt(ctx.params.page) - 1) * limit;
+  }
+
+  console.log(ctx.params.page);
+  console.log(offset);
+
+  // Get filters
+  let filters = {}, filtersToReturn = {};
+  let bindParams = {};
+
+  if (!isNaN(new Date(ctx.query.birthAfter))) {
+    filters['birthAfter'] = new Date(ctx.query.birthAfter);
+    filtersToReturn['birthAfter'] = ctx.query.birthAfter;
+  } else {
+    filters['birthAfter'] = new Date(0);
+  }
+  if (!isNaN(new Date(ctx.query.birthBefore))) {
+    filters['birthBefore'] = new Date(ctx.query.birthBefore);
+    filtersToReturn['birthBefore'] = ctx.query.birthBefore;
+  } else {
+    filters['birthBefore'] = new Date();
+  }
+  if (ctx.query.firstName) {
+    filters['firstName'] = ctx.query.firstName;
+    filtersToReturn['firstName'] = ctx.query.firstName;
+  } else {
+    filters['firstName'] = '';
+  }
+  if (ctx.query.lastName) {
+    filters['lastName'] = ctx.query.lastName;
+    filtersToReturn['lastName'] = ctx.query.lastName;
+  } else {
+    filters['lastName'] = '';
+  }
+  if (Number.isSafeInteger(Number(ctx.query.userID)) && Math.sign(Number(ctx.query.userID)) >= 0) {
+    filters['userID'] = ctx.query.userID;
+    filtersToReturn['userID'] = ctx.query.userID;
+    bindParams.userID = ctx.query.userID;
+  }
+  if (ctx.query.gender) {
+    // TODO: Check if gender is valid
+    // configEcom.VALID_GENDERS.includes(ctx.query.gender) for case insensitive
+    filters['gender'] = ctx.query.gender;
+    filtersToReturn['gender'] = ctx.query.gender;
+    bindParams.gender = ctx.query.gender;
+  }
+
+  bindParams.birthAfter = filters.birthAfter.toISOString();
+  bindParams.birthBefore = filters.birthBefore.toISOString();
+  bindParams.firstName = filters.firstName;
+  bindParams.lastName = filters.lastName;
+
+  let query =
+    `SELECT * FROM users
+    WHERE birthday BETWEEN $birthAfter AND $birthBefore
+    AND POSITION(UPPER($firstName) IN UPPER("firstName")) > 0
+    AND POSITION(UPPER($lastName) IN UPPER("lastName")) > 0
+    AND "deletedAt" is NULL\n`;
+
+  if (filters.userID)
+    query += `AND id = $userID\n`;
+
+  if (filters.gender)
+    query += `AND gender = $gender\n`;
+
+  query += `ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
+
+  let queryC =
+    `SELECT COUNT(*) FROM users
+    WHERE birthday BETWEEN $birthAfter AND $birthBefore
+    AND POSITION(UPPER($firstName) IN UPPER("firstName")) > 0
+    AND POSITION(UPPER($lastName) IN UPPER("lastName")) > 0
+    AND "deletedAt" is NULL\n`;
+
+  if (filters.userID)
+    queryC += `AND id = $userID\n`;
+
+  if (filters.gender)
+    queryC += `AND gender = $gender\n`;
+
+  let users = await db.query(query, {
+    type: 'SELECT',
+    plain: false,
+    model: User,
+    mapToModel: true,
+    bind: bindParams
+  });
+
+  let count = (await db.query(queryC, {
+    type: 'SELECT',
+    plain: true,
+    bind: bindParams
+  })).count;
+
+  await ctx.render("/admin/targetgroups-add", {
+    layout: "/admin/base",
+    session: ctx.session,
+    selected: "more",
+    users: users,
+    filters: filtersToReturn,
+    page: page,
+    pages: utilsEcom.givePages(page, Math.ceil(count / limit))
+  });
+}
+
 router.get("/", async ctx => getIndex(ctx));
 
 router.get("/products", async ctx => getProducts(ctx));
@@ -2535,8 +2811,6 @@ router.get('/api/products/get', async ctx => {
 });
 
 router.post('/admin/api/products/import/xlsx', async ctx => {
-  console.log(ctx.request.files);
-
   ctx.request.socket.setTimeout(0);
   ctx.req.socket.setNoDelay(true);
   ctx.req.socket.setKeepAlive(true);
@@ -2578,7 +2852,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
   } catch (e) {
     stream.write(`event: message\n`);
     stream.write(`data: ${JSON.stringify({
-      "status":"error",
+      "status": "error",
       "msg": "Can't open the file! Check if it is corrupted?"
     })}\n\n`);
 
@@ -2587,15 +2861,6 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
   }
   let seq = utilsEcom.rowSequence(worksheet);
   let attempts = 0, ignored = 0;
-
-  // Move to config
-  let TABLE_HEADERS_SEQUENCE = [
-    'Type', 'SKU', 'Name',
-    'Short description', 'Description',
-    'Quantity', 'Тегло (kg)',
-    'Regular price', 'Categories',
-    'Images'
-  ];
 
   var t = await db.transaction();
   var categoriesCache = {}; // Posible exploit, if there are too many different categories
@@ -2615,12 +2880,12 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
           // console.log(detail.value.data);
 
           if (detail.value.row == 1) {
-            for (x in TABLE_HEADERS_SEQUENCE) {
-              if (detail.value.data.getCell(parseInt(x) + 1) != TABLE_HEADERS_SEQUENCE[parseInt(x)]) {
+            for (x in configEcom.PRODUCT_IMPORT_TABLE_HEADERS) {
+              if (detail.value.data.getCell(parseInt(x) + 1) != configEcom.PRODUCT_IMPORT_TABLE_HEADERS[parseInt(x)]) {
                 stream.write(`event: message\n`);
                 stream.write(`data: ${JSON.stringify({
                   "status": "error",
-                  "msg": `Column ${parseInt(x) + 1} \ on row 1 should be "${TABLE_HEADERS_SEQUENCE[parseInt(x)]}"`
+                  "msg": `Column ${parseInt(x) + 1} \ on row 1 should be "${configEcom.PRODUCT_IMPORT_TABLE_HEADERS[parseInt(x)]}"`
                 })}\n\n`);
 
                 stream.end();
@@ -2629,27 +2894,27 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
             }
           } else {
             // Check and skip if row is empty
-            for (let z = 1; z <= TABLE_HEADERS_SEQUENCE.length; z++) {
+            for (let z = 1; z <= configEcom.PRODUCT_IMPORT_TABLE_HEADERS.length; z++) {
               let val = detail.value.data.getCell(z).value;
               if (val != undefined && val != null && val != '') {
                 break;
               }
 
               // Empty row
-              if (z == TABLE_HEADERS_SEQUENCE.length()) {
+              if (z == configEcom.PRODUCT_IMPORT_TABLE_HEADERS.length()) {
                 attempts--;
 
                 continue rowLoop;
               }
             }
 
-            let nameIndex = TABLE_HEADERS_SEQUENCE.indexOf('Name') + 1;
-            let priceIndex = TABLE_HEADERS_SEQUENCE.indexOf('Regular price') + 1;
-            let discountPriceIndex = TABLE_HEADERS_SEQUENCE.indexOf('Regular price') + 1;
-            let categoryIndex = TABLE_HEADERS_SEQUENCE.indexOf('Categories') + 1;
-            let descriptionIndex = TABLE_HEADERS_SEQUENCE.indexOf('Short description') + 1;
-            let imageIndex = TABLE_HEADERS_SEQUENCE.indexOf('Images') + 1;
-            let quantityIndex = TABLE_HEADERS_SEQUENCE.indexOf('Quantity') + 1;
+            let nameIndex = configEcom.PRODUCT_IMPORT_TABLE_HEADERS.indexOf('Name') + 1;
+            let priceIndex = configEcom.PRODUCT_IMPORT_TABLE_HEADERS.indexOf('Regular price') + 1;
+            let discountPriceIndex = configEcom.PRODUCT_IMPORT_TABLE_HEADERS.indexOf('Regular price') + 1;
+            let categoryIndex = configEcom.PRODUCT_IMPORT_TABLE_HEADERS.indexOf('Categories') + 1;
+            let descriptionIndex = configEcom.PRODUCT_IMPORT_TABLE_HEADERS.indexOf('Short description') + 1;
+            let imageIndex = configEcom.PRODUCT_IMPORT_TABLE_HEADERS.indexOf('Images') + 1;
+            let quantityIndex = configEcom.PRODUCT_IMPORT_TABLE_HEADERS.indexOf('Quantity') + 1;
 
             if (!categoriesCache[utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value)]) {
               let cat = await Category.findOne({
@@ -2923,7 +3188,7 @@ router.post('/admin/orders/add', async ctx => {
     await utilsEcom.removeProductQtyFromOrder(order);
 
     loggerEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.staffUsername} created order #${order.id} with status ${order.status}`,
+      `Staff ${ctx.session.dataValues.staffUsername} created order #${order.id} with status ${configEcom.STATUS_DISPLAY[order.status]}`,
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
     ctx.session.messages = { 'orderCreated': 'Order created!' };
@@ -3165,7 +3430,7 @@ router.get('/addToCart', async ctx => {
 
   // Invalid request
   if (!Number.isSafeInteger(Number(ctx.query.quantity)) || !Math.sign(Number(ctx.query.quantity)) > 0) {
-    ctx.session.messages = {'otherError': `Invalid quantity of product`};
+    ctx.session.messages = { 'otherError': `Invalid quantity of product` };
 
     if (ctx.query.cart)
       ctx.redirect('/cart');
@@ -3382,7 +3647,7 @@ router.get('/removeFromCart', async ctx => {
 
   // Invalid request
   if (!Number.isSafeInteger(quantity) || !Math.sign(quantity) > 0) {
-    ctx.session.messages = {'otherError': `Invalid quantity of product`};
+    ctx.session.messages = { 'otherError': `Invalid quantity of product` };
 
     if (ctx.query.cart)
       ctx.body = {
@@ -4522,29 +4787,13 @@ router.post('/admin/settings/other', async ctx => {
   ctx.redirect('/admin/settings/other');
 });
 
-router.get('/admin/promotions/targetgroups', async ctx => {
-  let page = 1;
+router.get('/admin/promotions/targetgroups', async ctx => adminPromotionTargetGroups(ctx));
+router.get('/admin/promotions/targetgroups/:page', async ctx => adminPromotionTargetGroups(ctx));
 
-  if (ctx.params.page) {
-    page = parseInt(ctx.params.page)
-  }
+router.get('/admin/promotions/targetgroup/add', async ctx => adminPromotionTargetGroupsAdd(ctx));
+router.get('/admin/promotions/targetgroup/add/:page', async ctx => adminPromotionTargetGroupsAdd(ctx));
 
-  let limit = configEcom.SETTINGS["elements_per_page"];
-  let offset = 0;
-
-  if (ctx.params.page) {
-    offset = (parseInt(ctx.params.page) - 1) * limit;
-  }
-
-  await ctx.render("/admin/targetgroups", {
-    layout: "/admin/base",
-    session: ctx.session,
-    selected: "more",
-    targetgroups: [],
-    filters: [],
-    page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(0 / limit))
-  });
+router.post('/admin/promotions/targetgroup/add', async ctx => {
   
 });
 
