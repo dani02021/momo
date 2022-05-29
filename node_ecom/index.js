@@ -42,6 +42,7 @@ const CODTransaction = models.codtransaction();
 const Log = models.log();
 const Settings = models.settings();
 const TargetGroup = models.targetgroups();
+const TargetGroupFilters = models.targetgroupfilters();
 
 const app = new Koa();
 const router = new KoaRouter();
@@ -1068,6 +1069,9 @@ async function adminPromotionTargetGroups(ctx) {
     page: page,
     pages: utilsEcom.givePages(page, Math.ceil(count / limit))
   });
+
+  // Clear old messages
+  ctx.session.messages = null;
 }
 
 async function adminPromotionTargetGroupsAdd(ctx) {
@@ -1117,9 +1121,6 @@ async function adminPromotionTargetGroupsAdd(ctx) {
   if (ctx.params.page) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
-
-  console.log(ctx.params.page);
-  console.log(offset);
 
   // Get filters
   let filters = {}, filtersToReturn = {};
@@ -1218,6 +1219,9 @@ async function adminPromotionTargetGroupsAdd(ctx) {
     page: page,
     pages: utilsEcom.givePages(page, Math.ceil(count / limit))
   });
+
+  // Clear old messages
+  ctx.session.messages = null;
 }
 
 router.get("/", async ctx => getIndex(ctx));
@@ -4794,7 +4798,151 @@ router.get('/admin/promotions/targetgroup/add', async ctx => adminPromotionTarge
 router.get('/admin/promotions/targetgroup/add/:page', async ctx => adminPromotionTargetGroupsAdd(ctx));
 
 router.post('/admin/promotions/targetgroup/add', async ctx => {
-  
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    utilsEcom.onNotAuthenticatedStaff(ctx);
+    return;
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'targetgroups.create')) {
+    utilsEcom.onNoPermission(ctx,
+      "You don\'t have permission to create target group",
+      {
+        level: "info",
+        message: `Staff ${ctx.session.dataValues.staffUsername} tried to create target group without rights`,
+        options:
+        {
+          user: ctx.session.dataValues.staffUsername,
+          isStaff: true
+        }
+      });
+    return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (!utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
+
+    return;
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
+  let name = ctx.request.fields.name;
+
+  // Check for no name
+  if (!name) {
+    ctx.body = {'error': 'Target group name is required'};
+
+    return
+  }
+
+  // Check if name contains only letters and numbers
+  if (!/^[a-z0-9]+$/ig.test(name)) {
+    ctx.body = {'error': 'Target group name must contain only letters and numbers'};
+
+    return
+  }
+
+  const result = await db.transaction(async (t) => {
+    let [targetGroup, targetGroupCreated] = await TargetGroup.findOrCreate({
+      where: {
+        name: ctx.request.fields.name,
+        username: ctx.session.dataValues.staffUsername
+      }, transaction: t});
+
+    // If target group already exists
+    if (!targetGroupCreated) {
+      ctx.body = {'error': 'Target group already exists'};
+
+      return;
+    }
+
+    let filters = {};
+
+    // MAKE QUERY
+
+    let query = `SELECT * FROM users WHERE "deletedAt" is NULL\n`;
+
+    let userID = ctx.request.fields.userID;
+    let firstName = ctx.request.fields.firstName;
+    let lastName = ctx.request.fields.lastName;
+    let birthAfter = ctx.request.fields.birthAfter;
+    let birthBefore = ctx.request.fields.birthBefore;
+
+    // Check if userID is number
+    if (Number.isSafeInteger(parseInt(userID)) && Math.sign(Number(userID)) >= 0) {
+      ctx.body = {'error': 'User ID must be a number'};
+
+      return;
+    }
+
+    if (userID) {
+      query += `AND userID = $userID\n`;
+      filters.userID = userID;
+    }
+    
+    if (firstName) {
+      query += `AND POSITION(UPPER($firstName) IN UPPER("firstName")) > 0\n`;
+      filters.firstName = firstName;
+    }
+    
+    if (lastName) {
+      query += `AND POSITION(UPPER($lastName) IN UPPER("lastName")) > 0\n`;
+      filters.lastName = lastName;
+    }
+    
+    if (birthAfter)
+      filters.birthAfter = birthAfter;
+    
+    if (birthBefore)
+      filters.birthBefore = birthBefore;
+    
+    for (f in filters) {
+      let filter = await targetGroup.getTargetgroup_filter({filter: f});
+
+      if (!filter) {
+        await targetGroup.createTargetgroup_filter({
+          filter: f,
+          value: filters[f]
+        }, {transaction: t});
+      } else {
+        // This should not happen
+        ctx.body = {'error': 'Target group filter already exists'};
+
+        return;
+      }
+    }
+
+    if (birthAfter || birthBefore) {
+      if (birthAfter && birthBefore) {
+        query += `AND birthday BETWEEN $birthAfter AND $birthBefore\n`;
+      } else if(birthAfter) {
+        query += `AND birthday >= $birthAfter\n`;
+        userFilters.birthday = {[Op.gte]: birthAfter}
+      } else {
+        query += `AND birthday <= $birthBefore\n`;
+        userFilters.birthday = {[Op.lte]: birthBefore}
+      }
+    }
+
+    let targetGroupUsers = await db.query(query, {
+      type: 'SELECT',
+      plain: false,
+      mapToModel: true,
+      model: User,
+      bind: filters
+    });
+
+    await targetGroup.addUsers(targetGroupUsers, {transaction: t});
+
+    ctx.session.messages = {'targetGroupOK': 'Target group created!'};
+    ctx.body = {'ok': 'Target group created'};
+  });
 });
 
 /* WARNING: 

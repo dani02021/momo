@@ -42,28 +42,31 @@
                               <form action="/admin/targetgroups" method="get" onsubmit="checkTargetgroupsFilter(this);">
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="col-sm-3">
-                                    <input id="timeAfter" name="timeAfter" class="form-universal" data-bs-toggle="tooltip"
-                                      data-bs-placement="top" title="From birthday" type="datetime-local"
-                                      value="<%= filters['timeAfter'] %>"><br>
+                                    <input id="timeAfter" name="timeAfter" class="form-universal"
+                                      data-bs-toggle="tooltip" data-bs-placement="top" title="From birthday"
+                                      type="datetime-local" value="<%= filters['timeAfter'] %>"><br>
                                   </div>
                                   <div class="col-sm-3">
-                                    <input id="timeBefore" name="timeBefore" class="form-universal" data-bs-toggle="tooltip"
-                                      data-bs-placement="top" title="To birthday" type="datetime-local"
-                                      value="<%= filters['timeBefore'] %>">
+                                    <input id="timeBefore" name="timeBefore" class="form-universal"
+                                      data-bs-toggle="tooltip" data-bs-placement="top" title="To birthday"
+                                      type="datetime-local" value="<%= filters['timeBefore'] %>">
                                   </div>
                                   <div class="col-sm-3">
-                                    <input id="targetID" name="targetID" class="form-select" type="number" style="background-image: none"
-                                      placeholder="Target Group ID" value="<%= filters['targetID'] %>">
+                                    <input id="targetID" name="targetID" class="form-select" type="number"
+                                      style="background-image: none" placeholder="Target Group ID"
+                                      value="<%= filters['targetID'] %>">
                                   </div>
                                   <div class="col-sm-3">
-                                    <input id="createdBy" name="createdBy" class="form-select" style="background-image: none"
-                                      placeholder="Created by" value="<%= filters['createdBy'] %>">
+                                    <input id="createdBy" name="createdBy" class="form-select"
+                                      style="background-image: none" placeholder="Created by"
+                                      value="<%= filters['createdBy'] %>">
                                   </div>
                                 </div>
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="d-grid gap-2">
                                     <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
-                                    <a href="/admin/promotions/targetgroups" class="btn btn-primary text-uppercase">Clear
+                                    <a href="/admin/promotions/targetgroups"
+                                      class="btn btn-primary text-uppercase">Clear
                                       filters</a>
                                   </div>
                                 </div>
@@ -78,32 +81,42 @@
                                     <th scope="col" class="clickable">TARGET GROUP NO.</th>
                                     <th scope="col" class="clickable">CREATED BY</th>
                                     <th scope="col" class="clickable">USERS</th>
-                                    <th scope="col">ACTION</th>
+                                    <!-- <th scope="col">ACTION</th> -->
                                   </tr>
                                 </thead>
                                 <tbody>
                                   <% for(i=0; i < targetgroups.length; i++) { %>
-                                    <tr>
-                                      <th scope="row"><input type="checkbox" /></th>
+                                    <td>
+                                      <input type="checkbox" />
+                                    </td>
+                                    <td>
+                                      <b>
+                                        <%= targetgroups[i].createdAt.toLocaleString('en-GB') %>
+                                      </b>
+                                    </td>
+                                    <td data-id="<%= targetgroups[i].id %>">
+                                      <b>
+                                        #<%= targetgroups[i].id %>
+                                      </b>
+                                    </td>
+                                    <td>
+                                      <b>
+                                        <%= await targetgroups[i].username %>
+                                      </b>
+                                    </td>
+                                    <td style="text-align: right;">
+                                      <b>
+                                        <%= (await targetgroups[i].getUsers()).length %>
+                                      </b>
+                                    </td>
+                                    <!--
                                       <td>
-                                        <b>
-                                          <%= targetgroups[i].orderedAt.toLocaleString('en-GB') %>
-                                        </b>
+                                        <a href="/admin/targetgroups/edit/<%= targetgroups[i].id %>"
+                                          class="tm-order-edit-link">
+                                          <i class="far fa-edit tm-order-edit-icon"></i>
+                                        </a>
                                       </td>
-                                      <td data-id="<%= targetgroups[i].id %>"><b>#<%= targetgroups[i].id %></b></td>
-                                      <%= (await targetgroups[i].getUsers())[0].username %>
-                                        </b></td>
-                                        <td style="text-align: right;">
-                                          <b>
-                                            $<%= await targetgroups[i].getTotalWithVATStr() %>
-                                          </b>
-                                        </td>
-                                        <td>
-                                          <a href="/admin/targetgroups/edit/<%= targetgroups[i].id %>"
-                                            class="tm-order-edit-link">
-                                            <i class="far fa-edit tm-order-edit-icon"></i>
-                                          </a>
-                                        </td>
+                                    -->
                                     </tr>
                                     <% } %>
                                 </tbody>

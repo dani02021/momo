@@ -522,11 +522,16 @@ const TargetGroup = db.define("targetgroup", {
 );
 
 TargetGroupFilters.belongsTo(TargetGroup, {
-  foreignKey: 'targetId'
+  foreignKey: {
+    name: 'targetgroupId',
+    allowNull: false
+  }
 });
 
-TargetGroup.belongsToMany(User, { through: 'targetgroup_users', allowNull: false });
-User.belongsToMany(TargetGroup, { through: 'targetgroup_users', allowNull: false });
+TargetGroup.hasOne(TargetGroupFilters);
+
+TargetGroup.belongsToMany(User, { through: 'targetgroup_users', allowNull: false, timestamps: false });
+User.belongsToMany(TargetGroup, { through: 'targetgroup_users', allowNull: false, timestamps: false });
 
 Product.prototype.getPriceWithVAT = async function () {
   return parseFloat(await this.getPriceWithVATStr());
@@ -994,9 +999,13 @@ function targetgroups() {
   return TargetGroup;
 }
 
+function targetgroupfilters() {
+  return TargetGroupFilters;
+}
+
 module.exports = {
   category, product, user, staff, session, permission, role, order, orderitem, transaction,
-  paypaltransacion, codtransaction, log, settings, targetgroups
+  paypaltransacion, codtransaction, log, settings, targetgroups, targetgroupfilters
 };
 
 // Alter the database

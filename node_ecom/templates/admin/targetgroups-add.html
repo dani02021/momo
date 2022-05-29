@@ -5,9 +5,9 @@
         <strong>Order already exists!</strong>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
-      <% } if(i=='targetgroupCreated' ) { %>
+      <% } if(i=='targetGroupOK' ) { %>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-          <strong>Order is created!</strong>
+          <strong><%= session.dataValues.messages[i] %></strong>
           <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         <% } if(i=='targetgroupDeleted' ) { %>
@@ -41,6 +41,8 @@
                             <div class="container">
                               <form id="filters-form" action="/admin/promotions/targetgroup/add" method="get"
                                 onsubmit="checkTargetgroupsFilter(this);">
+                                <input type="hidden" name="name" id="targetName">
+                                <input type="hidden" name="isAJAX" id="targetIsAJAX" value="ajax">
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="col-sm-3">
                                     <input id="userID" name="userID" class="form-select" type="number"
@@ -201,24 +203,16 @@
                       </nav>
                     </div>
                     <!-- Modal -->
-                    <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-targetgroup"
-                      tabindex="-1" aria-labelledby="add-targetgroup" aria-hidden="true">
+                    <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-targetgroup-name"
+                      tabindex="-1" aria-labelledby="add-targetgroup-name" aria-hidden="true">
                       <div class="modal-dialog">
                         <div class="modal-content">
                           <div class="modal-header">
-                            <h5 class="modal-title" id="add-targetgroup-title">Add new target group</h5>
+                            <h5 class="modal-title" id="add-targetgroup-title">Please enter the targetgroup name</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <div class="modal-body">
-                            <h4><b>Do you want to add new target group with the following filters:</b></h4>
-                            <ul>
-                              <li id="add-targetgroup-userid-li" hidden>User ID:</li>
-                              <li id="add-targetgroup-firstName-li" hidden>First name:</li>
-                              <li id="add-targetgroup-lastName-li" hidden>Last name:</li>
-                              <li id="add-targetgroup-gender-li" hidden>Gender:</li>
-                              <li id="add-targetgroup-birthAfter-li" hidden>Birthday from:</li>
-                              <li id="add-targetgroup-birthBefore-li" hidden>Birthday to:</li>
-                            </ul>
+                            
                           </div>
                           <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
@@ -228,8 +222,44 @@
                         </div>
                       </div>
                     </div>
+                    <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-targetgroup"
+                      tabindex="-1" aria-labelledby="add-targetgroup" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title" id="add-targetgroup-title">Add new target group</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body">
+                            <h6><b>Do you want to add new target group with the following filters:</b></h6>
+                            <ul>
+                              <li id="add-targetgroup-userid-li" hidden>User ID:</li>
+                              <li id="add-targetgroup-firstName-li" hidden>First name:</li>
+                              <li id="add-targetgroup-lastName-li" hidden>Last name:</li>
+                              <li id="add-targetgroup-gender-li" hidden>Gender:</li>
+                              <li id="add-targetgroup-birthAfter-li" hidden>Birthday from:</li>
+                              <li id="add-targetgroup-birthBefore-li" hidden>Birthday to:</li>
+                            </ul>
+                            <hr>
+                            <div style="display: flex; justify-content: space-between;">
+                              <label>Enter target group name:</label>
+                              <input type="text" id="targetgroup-name" required>
+                            </div>
+                            <label id="err" style="color: red;"></label>
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+                            <button type="button" class="btn btn-primary" onclick="submitForm();">Add</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     <script>
                       var addTargetgroup = document.getElementById('add-targetgroup');
+
+                      addTargetgroup.addEventListener('hidden.bs.modal', function (event) {
+                        document.getElementById("err").innerHTML = null;
+                      });
 
                       addTargetgroup.addEventListener('show.bs.modal', function (event) {
                         let atleastOneFilter = false;
@@ -289,28 +319,31 @@
                         }
                       });
 
-                      function checkTargetgroupsFilter(form) {
+                      function checkTargetgroupsFilter(form, value) {
                         for (const elem of form.elements) {
                           if (elem.value === '')
-                            elem.disabled = !elem.disabled;
+                            elem.disabled = value;
                         }
                       }
 
                       function submitForm() {
-                        checkTargetgroupsFilter(document.getElementById("filters-form"));
+                        checkTargetgroupsFilter(document.getElementById("filters-form"), false);
+
+                        document.getElementById('targetName').value = document.getElementById('targetgroup-name').value;
 
                         $.ajax({
                           type: "POST",
-                          url: "/admin/targetgroup/add",
+                          url: "/admin/promotions/targetgroup/add",
                           data: $("#filters-form").serialize()
-                        }).done(function (data) {
+                        }).done(function (data, textStatus, jqXHR) {
+                          console.log(jqXHR);
                           if (data.error) {
                             document.getElementById("err").innerHTML = data.error;
                           } else if (data.ok) {
                             window.location.reload();
                           }
-                        }).fail(function (data) { });
-
-                        checkTargetgroupsFilter(document.getElementById("filters-form"));
+                        }).fail(function (data) {
+                          document.getElementById("err").innerHTML = 'There was an error while adding target group. Please try again later.';
+                        });
                       }
                     </script>
