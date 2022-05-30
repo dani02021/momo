@@ -71,6 +71,11 @@
                                 </div>
                                 <div class="row">
                                   <div class="col-sm-3">
+                                    <input id="country" name="country" class="form-select"
+                                      style="background-image: none" placeholder="Country"
+                                      value="<%= filters['country'] %>">
+                                  </div>
+                                  <div class="col-sm-3">
                                     <input id="birthAfter" name="birthAfter" class="form-universal"
                                       data-bs-toggle="tooltip" data-bs-placement="top" title="From birthday"
                                       type="datetime-local" value="<%= filters['birthAfter'] %>"><br>
@@ -239,6 +244,7 @@
                               <li id="add-targetgroup-gender-li" hidden>Gender:</li>
                               <li id="add-targetgroup-birthAfter-li" hidden>Birthday from:</li>
                               <li id="add-targetgroup-birthBefore-li" hidden>Birthday to:</li>
+                              <li id="add-targetgroup-country-li" hidden>Country:</li>
                             </ul>
                             <hr>
                             <div style="display: flex; justify-content: space-between;">
@@ -270,6 +276,7 @@
                         let genderli = document.getElementById('add-targetgroup-gender-li');
                         let birthAfterli = document.getElementById('add-targetgroup-birthAfter-li');
                         let birthBeforeli = document.getElementById('add-targetgroup-birthBefore-li');
+                        let countryli = document.getElementById('add-targetgroup-country-li');
 
                         if (document.getElementById('userID').value !== '') {
                           useridli.innerHTML = "User ID: " + document.getElementById('userID').value;
@@ -310,6 +317,13 @@
                           birthBeforeli.innerHTML = "Birth to: " + new Date(document.getElementById('birthBefore').value).toLocaleString('en-GB');
 
                           birthBeforeli.hidden = null;
+                          atleastOneFilter = true;
+                        }
+
+                        if (document.getElementById('country').value !== '') {
+                          countryli.innerHTML = "Country: " + document.getElementById('country').value;
+
+                          countryli.hidden = null;
                           atleastOneFilter = true;
                         }
 

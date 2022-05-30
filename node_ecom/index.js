@@ -1150,6 +1150,12 @@ async function adminPromotionTargetGroupsAdd(ctx) {
   } else {
     filters['lastName'] = '';
   }
+  if (ctx.query.country) {
+    filters['country'] = ctx.query.country;
+    filtersToReturn['country'] = ctx.query.country;
+  } else {
+    filters['country'] = '';
+  }
   if (Number.isSafeInteger(Number(ctx.query.userID)) && Math.sign(Number(ctx.query.userID)) >= 0) {
     filters['userID'] = ctx.query.userID;
     filtersToReturn['userID'] = ctx.query.userID;
@@ -1167,12 +1173,14 @@ async function adminPromotionTargetGroupsAdd(ctx) {
   bindParams.birthBefore = filters.birthBefore.toISOString();
   bindParams.firstName = filters.firstName;
   bindParams.lastName = filters.lastName;
+  bindParams.country = filters.country;
 
   let query =
     `SELECT * FROM users
     WHERE birthday BETWEEN $birthAfter AND $birthBefore
     AND POSITION(UPPER($firstName) IN UPPER("firstName")) > 0
     AND POSITION(UPPER($lastName) IN UPPER("lastName")) > 0
+    AND POSITION(UPPER($country) IN UPPER("country")) > 0
     AND "deletedAt" is NULL\n`;
 
   if (filters.userID)
@@ -1188,6 +1196,7 @@ async function adminPromotionTargetGroupsAdd(ctx) {
     WHERE birthday BETWEEN $birthAfter AND $birthBefore
     AND POSITION(UPPER($firstName) IN UPPER("firstName")) > 0
     AND POSITION(UPPER($lastName) IN UPPER("lastName")) > 0
+    AND POSITION(UPPER($country) IN UPPER("country")) > 0
     AND "deletedAt" is NULL\n`;
 
   if (filters.userID)
@@ -5040,7 +5049,7 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
           force: true
         });
 
-        // await targetGroup.getUsers();
+        await targetGroup.setUsers([]);
       } else {
         ctx.body = { 'error': 'Target group already exists' };
 
@@ -5057,6 +5066,7 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
     let lastName = ctx.request.fields.lastName;
     let birthAfter = ctx.request.fields.birthAfter;
     let birthBefore = ctx.request.fields.birthBefore;
+    let country = ctx.request.fields.country;
 
     // Check if userID is number
     if (userID
@@ -5087,9 +5097,13 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
 
     if (birthBefore)
       filters.birthBefore = birthBefore;
+    
+    if (country) {
+      query += `AND POSITION(UPPER($country) IN UPPER(country)) > 0\n`;
+      filters.country = country;
+    }
 
     for (f in filters) {
-      console.log(await targetGroup.getTargetgroup_filters());
       await targetGroup.createTargetgroup_filter({
         filter: f,
         value: filters[f]
@@ -5116,7 +5130,7 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
       bind: filters
     });
 
-    await targetGroup.addUsers(targetGroupUsers, { transaction: t });
+    await targetGroup.setUsers(targetGroupUsers, { transaction: t });
 
     ctx.session.messages = { 'targetGroupOK': 'Target group created!' };
     ctx.body = { 'ok': 'Target group created' };

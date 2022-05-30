@@ -532,7 +532,6 @@ TargetGroup.hasMany(TargetGroupFilters);
 TargetGroup.belongsToMany(User, { through: 'targetgroup_users', allowNull: false, timestamps: false });
 User.belongsToMany(TargetGroup, { through: 'targetgroup_users', allowNull: false, timestamps: false });
 
-console.log(TargetGroup.prototype);
 Product.prototype.getPriceWithVAT = async function () {
   return parseFloat(await this.getPriceWithVATStr());
 }

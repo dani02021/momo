@@ -73,6 +73,11 @@
                                 </div>
                                 <div class="row">
                                   <div class="col-sm-3">
+                                    <input id="country" name="country" class="form-select"
+                                      style="background-image: none" placeholder="Country"
+                                      value="<%= filters['country'] %>">
+                                  </div>
+                                  <div class="col-sm-3">
                                     <input id="birthAfter" name="birthAfter" class="form-universal"
                                       data-bs-toggle="tooltip" data-bs-placement="top" title="From birthday"
                                       type="datetime-local" value="<%= filters['birthAfter'] %>"><br>
@@ -228,6 +233,7 @@
                               <li id="add-targetgroup-gender-li" <% if (!targetgroupfilters.gender) { %> hidden <% } %>>Gender: <%= targetgroupfilters.gender %></li>
                               <li id="add-targetgroup-birthAfter-li" <% if (!targetgroupfilters.birthAfter) { %> hidden <% } %>>Birthday from: <%= targetgroupfilters.birthAfter %></li>
                               <li id="add-targetgroup-birthBefore-li" <% if (!targetgroupfilters.birthBefore) { %> hidden <% } %>>Birthday to: <%= targetgroupfilters.birthBefore %></li>
+                              <li id="add-targetgroup-country-li" <% if (!targetgroupfilters.country) { %> hidden <% } %>>Country: <%= targetgroupfilters.country %></li>
                             </ul>
                           </div>
                           <div class="modal-footer">
