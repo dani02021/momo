@@ -85,19 +85,33 @@ const logger = winston.createLogger({
 
     let stackerr = stacktrace.parse(err);
 
-    logger.error(
-        `File: ${stackerr[0].fileName} on function ${stackerr[0].functionName} \
-        on line ${stackerr[0].lineNumber} \
-        User: ${username}, \
-        Staff User: ${staffUsername}, \
-        URL: ${ctx ? ctx.url : "undefined"}, \
-        Error message: ${err.message}`,
-        {
-            longMessage: `Unhandled exception: ${err}, Session: ${session}`,
-            fileOnly: fileOnly,
-            stacktrace: err.stack
-        }
-    );
+    if (stackerr.length == 0) {
+        logger.error(
+            `User: ${username}, \
+            Staff User: ${staffUsername}, \
+            URL: ${ctx ? ctx.url : "undefined"}, \
+            Error message: ${err.message}`,
+            {
+                longMessage: `Unhandled exception: ${err}, Session: ${session}`,
+                fileOnly: fileOnly,
+                stacktrace: err.stack
+            }
+        );
+    } else {
+        logger.error(
+            `File: ${stackerr[0].fileName} on function ${stackerr[0].functionName} \
+            on line ${stackerr[0].lineNumber} \
+            User: ${username}, \
+            Staff User: ${staffUsername}, \
+            URL: ${ctx ? ctx.url : "undefined"}, \
+            Error message: ${err.message}`,
+            {
+                longMessage: `Unhandled exception: ${err}, Session: ${session}`,
+                fileOnly: fileOnly,
+                stacktrace: err.stack
+            }
+        );
+    }
 
     console.log(err);
 }

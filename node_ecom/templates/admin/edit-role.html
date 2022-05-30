@@ -129,7 +129,6 @@
 
   function selectAll() {
     options = document.getElementById('edit-role-items').getElementsByTagName('option');
-    document.getElementById('data').value = JSON.stringify(orderitems);
     for (i = 0; i < options.length; i++) {
       options[i].selected = 'true';
     }

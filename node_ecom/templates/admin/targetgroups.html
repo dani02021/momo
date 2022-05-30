@@ -1,8 +1,8 @@
 <% for(i in session.messages) { %>
   <% if(session.messages.hasOwnProperty(i)) { %>
-    <% if(i=='targetgroupExists' ) { %>
+    <% if(i=='targetgroupError' ) { %>
       <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <strong>Order already exists!</strong>
+        <strong><%= session.dataValues.messages[i] %></strong>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
       <% } if(i=='targetgroupCreated' ) { %>
@@ -12,7 +12,7 @@
         </div>
         <% } if(i=='targetgroupDeleted' ) { %>
           <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            <strong>Selected targetgroups are deleted!</strong>
+            <strong><%= session.dataValues.messages[i] %></strong>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
           <% } if(i=='targetgroupEdited' ) { %>
@@ -79,9 +79,10 @@
                                     <th scope="col">&nbsp;</th>
                                     <th scope="col" class="clickable">TIMESTAMP</th>
                                     <th scope="col" class="clickable">TARGET GROUP NO.</th>
+                                    <th scope="col" class="clickable">NAME</th>
                                     <th scope="col" class="clickable">CREATED BY</th>
                                     <th scope="col" class="clickable">USERS</th>
-                                    <!-- <th scope="col">ACTION</th> -->
+                                    <th scope="col" style="text-align: right;">ACTION</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -101,6 +102,11 @@
                                     </td>
                                     <td>
                                       <b>
+                                        <%= targetgroups[i].name %>
+                                      </b>
+                                    </td>
+                                    <td>
+                                      <b>
                                         <%= await targetgroups[i].username %>
                                       </b>
                                     </td>
@@ -109,14 +115,12 @@
                                         <%= (await targetgroups[i].getUsers()).length %>
                                       </b>
                                     </td>
-                                    <!--
-                                      <td>
-                                        <a href="/admin/targetgroups/edit/<%= targetgroups[i].id %>"
-                                          class="tm-order-edit-link">
-                                          <i class="far fa-edit tm-order-edit-icon"></i>
-                                        </a>
-                                      </td>
-                                    -->
+                                    <td style="text-align: right;">
+                                      <a href="/admin/promotions/targetgroup/view/<%= targetgroups[i].id %>"
+                                        class="tm-order-edit-link">
+                                        <i class="fas fa-search tm-order-edit-icon"></i>
+                                      </a>
+                                    </td>
                                     </tr>
                                     <% } %>
                                 </tbody>
@@ -180,7 +184,7 @@
                       <div class="modal-dialog">
                         <div class="modal-content">
                           <div class="modal-header">
-                            <h5 class="modal-title" id="remove-cat-title">Delete targetgroups</h5>
+                            <h5 class="modal-title" id="remove-cat-title">Delete Target Groups</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <div class="modal-body">
@@ -188,7 +192,7 @@
                           </div>
                           <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-                            <form id="rem-targetgroup-form" action="/admin/targetgroups/delete" method="post"
+                            <form id="rem-targetgroup-form" action="/admin/promotions/targetgroup/delete" method="post"
                               onsubmit="return deletetargetgroups(this);">
                               <button type="submit" data-bs-dismiss="modal" class="btn btn-primary">Delete</button>
                             </form>

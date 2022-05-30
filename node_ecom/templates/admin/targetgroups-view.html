@@ -1,13 +1,17 @@
 <% for(i in session.messages) { %>
   <% if(session.messages.hasOwnProperty(i)) { %>
-    <% if(i=='targetgroupExists' ) { %>
+    <% if(i=='targetgroupError' ) { %>
       <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <strong>Order already exists!</strong>
+        <strong>
+          <%= session.dataValues.messages[i] %>
+        </strong>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
       <% } if(i=='targetGroupOK' ) { %>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-          <strong><%= session.dataValues.messages[i] %></strong>
+          <strong>
+            <%= session.dataValues.messages[i] %>
+          </strong>
           <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         <% } if(i=='targetgroupDeleted' ) { %>
@@ -37,12 +41,10 @@
                       <div class="row tm-content-row">
                         <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
                           <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1000px;">
-                            <h2 class="tm-block-title">Add Target Group</h2>
+                            <h2 class="tm-block-title">Target Group <%= targetgroup.name %></h2>
                             <div class="container">
-                              <form id="filters-form" action="/admin/promotions/targetgroup/add" method="get"
-                                onsubmit="checkTargetgroupsFilter(this);">
-                                <input type="hidden" name="name" id="targetName">
-                                <input type="hidden" name="isAJAX" id="targetIsAJAX" value="ajax">
+                              <form id="filters-form" action="/admin/promotions/targetgroup/view/<%= targetgroup.id %>"
+                                method="get" onsubmit="checkTargetgroupsFilter(this);">
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="col-sm-3">
                                     <input id="userID" name="userID" class="form-select" type="number"
@@ -84,7 +86,7 @@
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="d-grid gap-2">
                                     <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
-                                    <a href="/admin/promotions/targetgroup/add"
+                                    <a href="/admin/promotions/targetgroup/view/<%= targetgroup.id %>"
                                       class="btn btn-primary text-uppercase">Clear
                                       filters</a>
                                   </div>
@@ -95,7 +97,6 @@
                               <table id="table1" class="table table-hover tm-table-small tm-product-table sortable">
                                 <thead>
                                   <tr>
-                                    <th scope="col">&nbsp;</th>
                                     <th scope="col" class="clickable">TIMESTAMP</th>
                                     <th scope="col" class="clickable">ACCOUNT NO.</th>
                                     <th scope="col" class="clickable">USERNAME</th>
@@ -110,42 +111,42 @@
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  <% for (i=0; i < users.length; i++) { %>
+                                  <% for (i=0; i < targetgroupusers.length; i++) { %>
                                     <tr>
-                                      <th scope="row"><input type="checkbox" /></th>
                                       <td><b>
-                                          <%= users[i].createdAt.toLocaleString('en-GB') %>
+                                          <%= targetgroupusers[i].createdAt.toLocaleString('en-GB') %>
                                         </b></td>
-                                      <td data-id="<%= users[i].id %>"><b>#<%= users[i].id %></b></td>
+                                      <td data-id="<%= targetgroupusers[i].id %>"><b>#<%= targetgroupusers[i].id %></b>
+                                      </td>
                                       <td><b>
-                                          <%= users[i].username %>
-                                        </b></td>
-                                      <td><b>
-                                          <%= users[i].firstName + ' ' + users[i].lastName %>
+                                          <%= targetgroupusers[i].username %>
                                         </b></td>
                                       <td><b>
-                                          <%= users[i].country %>
+                                          <%= targetgroupusers[i].firstName + ' ' + targetgroupusers[i].lastName %>
                                         </b></td>
                                       <td><b>
-                                          <%= users[i].address %>
+                                          <%= targetgroupusers[i].country %>
                                         </b></td>
                                       <td><b>
-                                          <%= users[i].email %>
+                                          <%= targetgroupusers[i].address %>
                                         </b></td>
-                                      <% if (users[i].emailConfirmed) { %>
+                                      <td><b>
+                                          <%= targetgroupusers[i].email %>
+                                        </b></td>
+                                      <% if (targetgroupusers[i].emailConfirmed) { %>
                                         <td><b>Yes</b></td>
                                         <% } else { %>
                                           <td><b>No</b></td>
                                           <% } %>
                                             <td><b>
-                                                <%= users[i].gender %>
+                                                <%= targetgroupusers[i].gender %>
                                               </b></td>
                                             <td><b>
-                                                <%= users[i].birthday %>
+                                                <%= targetgroupusers[i].birthday %>
                                               </b></td>
-                                            <% if (users[i].lastLogin) { %>
+                                            <% if (targetgroupusers[i].lastLogin) { %>
                                               <td><b>
-                                                  <%= users[i].lastLogin.toLocaleString('en-GB') %>
+                                                  <%= targetgroupusers[i].lastLogin.toLocaleString('en-GB') %>
                                                 </b></td>
                                               <% } else { %>
                                                 <td><b></b></td>
@@ -157,8 +158,10 @@
                             </div>
                             <!-- table container -->
                             <div class="d-grid gap-2">
-                              <a href="#" class="btn btn-primary text-uppercase mb-3" data-bs-target="#add-targetgroup"
-                                data-bs-toggle="modal" data-bs-dismiss="modal">Add new Target Group</a>
+                              <button class="btn btn-primary text-uppercase" data-bs-target="#show-targetgroup-filters"
+                                data-bs-toggle="modal">
+                                Show Target Group filters
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -170,7 +173,8 @@
                         <ul class="pagination justify-content-center">
                           <% if(page> 1) { %>
                             <li class="page-item">
-                              <a class="page-link" href="javascript:moveToPage(<%= page - 1 %>);">Previous</a>
+                              <a class="page-link"
+                                href="javascript:moveToPage(<%= page - 1 %>, '<%= targetgroup.id %>');">Previous</a>
                             </li>
                             <% } else { %>
                               <li class="page-item disabled">
@@ -184,7 +188,8 @@
                                       </a></li>
                                     <% } else { %>
                                       <li class="page-item <% if (pages[i] == '...') { %> disabled <% } %>"><a
-                                          class="page-link" href="javascript:moveToPage(<%= pages[i] %>);">
+                                          class="page-link"
+                                          href="javascript:moveToPage(<%= pages[i] %>, '<%= targetgroup.id %>');">
                                           <%= pages[i] %>
                                         </a></li>
                                       <% } %>
@@ -192,7 +197,7 @@
                                           <% if(page < pages[pages.length - 1]) { %>
                                             <li class="page-item">
                                               <a class="page-link"
-                                                href="javascript:moveToPage(<%= page + 1 %>);">Next</a>
+                                                href="javascript:moveToPage(<%= page + 1 %>, '<%= targetgroup.id %>');">Next</a>
                                             </li>
                                             <% } else { %>
                                               <li class="page-item disabled">
@@ -203,147 +208,39 @@
                       </nav>
                     </div>
                     <!-- Modal -->
-                    <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-targetgroup-name"
-                      tabindex="-1" aria-labelledby="add-targetgroup-name" aria-hidden="true">
+                    <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="show-targetgroup-filters"
+                      tabindex="-1" aria-labelledby="show-targetgroup-filters" aria-hidden="true">
                       <div class="modal-dialog">
                         <div class="modal-content">
                           <div class="modal-header">
-                            <h5 class="modal-title" id="add-targetgroup-title">Please enter the targetgroup name</h5>
+                            <h5 class="modal-title" id="remove-cat-title">Target Groups Filters</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <div class="modal-body">
-                            
-                          </div>
-                          <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-                            <button type="button" data-bs-dismiss="modal" class="btn btn-primary"
-                              onclick="submitForm();">Add</button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-targetgroup"
-                      tabindex="-1" aria-labelledby="add-targetgroup" aria-hidden="true">
-                      <div class="modal-dialog">
-                        <div class="modal-content">
-                          <div class="modal-header">
-                            <h5 class="modal-title" id="add-targetgroup-title">Add new target group</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                          </div>
-                          <div class="modal-body">
-                            <h6><b>Do you want to add new target group with the following filters:</b></h6>
+                            <h4><b>Filters:</b></h4>
                             <ul>
-                              <li id="add-targetgroup-userid-li" hidden>User ID:</li>
-                              <li id="add-targetgroup-firstName-li" hidden>First name:</li>
-                              <li id="add-targetgroup-lastName-li" hidden>Last name:</li>
-                              <li id="add-targetgroup-gender-li" hidden>Gender:</li>
-                              <li id="add-targetgroup-birthAfter-li" hidden>Birthday from:</li>
-                              <li id="add-targetgroup-birthBefore-li" hidden>Birthday to:</li>
+                              <% let c = true; for (i in targetgroupfilters) c = false; if (c) { %>
+                              <li id="add-targetgroup-userid-li">None</li>
+                              <% } %>
+                              <li id="add-targetgroup-userid-li" <% if (!targetgroupfilters.id) { %> hidden <% } %>>User ID: <%= targetgroupfilters.id %></li>
+                              <li id="add-targetgroup-firstName-li" <% if (!targetgroupfilters.firstName) { %> hidden <% } %>>First name: <%= targetgroupfilters.firstName %></li>
+                              <li id="add-targetgroup-lastName-li" <% if (!targetgroupfilters.lastName) { %> hidden <% } %>>Last name: <%= targetgroupfilters.lastName %></li>
+                              <li id="add-targetgroup-gender-li" <% if (!targetgroupfilters.gender) { %> hidden <% } %>>Gender: <%= targetgroupfilters.gender %></li>
+                              <li id="add-targetgroup-birthAfter-li" <% if (!targetgroupfilters.birthAfter) { %> hidden <% } %>>Birthday from: <%= targetgroupfilters.birthAfter %></li>
+                              <li id="add-targetgroup-birthBefore-li" <% if (!targetgroupfilters.birthBefore) { %> hidden <% } %>>Birthday to: <%= targetgroupfilters.birthBefore %></li>
                             </ul>
-                            <hr>
-                            <div style="display: flex; justify-content: space-between;">
-                              <label>Enter target group name:</label>
-                              <input type="text" id="targetgroup-name" required>
-                            </div>
-                            <label id="err" style="color: red;"></label>
                           </div>
                           <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-                            <button type="button" class="btn btn-primary" onclick="submitForm();">Add</button>
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Back</button>
                           </div>
                         </div>
                       </div>
                     </div>
                     <script>
-                      var addTargetgroup = document.getElementById('add-targetgroup');
-
-                      addTargetgroup.addEventListener('hidden.bs.modal', function (event) {
-                        document.getElementById("err").innerHTML = null;
-                      });
-
-                      addTargetgroup.addEventListener('show.bs.modal', function (event) {
-                        let atleastOneFilter = false;
-
-                        let useridli = document.getElementById('add-targetgroup-userid-li');
-                        let firstNameli = document.getElementById('add-targetgroup-firstName-li');
-                        let lastNameli = document.getElementById('add-targetgroup-lastName-li');
-                        let genderli = document.getElementById('add-targetgroup-gender-li');
-                        let birthAfterli = document.getElementById('add-targetgroup-birthAfter-li');
-                        let birthBeforeli = document.getElementById('add-targetgroup-birthBefore-li');
-
-                        if (document.getElementById('userID').value !== '') {
-                          useridli.innerHTML = "User ID: " + document.getElementById('userID').value;
-
-                          useridli.hidden = null;
-                          atleastOneFilter = true;
-                        }
-
-                        if (document.getElementById('firstName').value !== '') {
-                          firstNameli.innerHTML = "First name: " + document.getElementById('firstName').value;
-
-                          firstNameli.hidden = null;
-                          atleastOneFilter = true;
-                        }
-
-                        if (document.getElementById('lastName').value !== '') {
-                          lastNameli.innerHTML = "Last name: " + document.getElementById('lastName').value;
-
-                          lastNameli.hidden = null;
-                          atleastOneFilter = true;
-                        }
-
-                        if (document.getElementById('gender').value !== '') {
-                          genderli.innerHTML = "Gender: " + document.getElementById('gender').value;
-
-                          genderli.hidden = null;
-                          atleastOneFilter = true;
-                        }
-
-                        if (document.getElementById('birthAfter').value !== '') {
-                          birthAfterli.innerHTML = "Birth from: " + new Date(document.getElementById('birthAfter').value).toLocaleString('en-GB');
-
-                          birthAfterli.hidden = null;
-                          atleastOneFilter = true;
-                        }
-
-                        if (document.getElementById('birthBefore').value !== '') {
-                          birthBeforeli.innerHTML = "Birth to: " + new Date(document.getElementById('birthBefore').value).toLocaleString('en-GB');
-
-                          birthBeforeli.hidden = null;
-                          atleastOneFilter = true;
-                        }
-
-                        if (!atleastOneFilter) {
-                          useridli.innerHTML = "No filters";
-                          useridli.hidden = null;
-                        }
-                      });
-
                       function checkTargetgroupsFilter(form, value = true) {
                         for (const elem of form.elements) {
                           if (elem.value === '')
                             elem.disabled = value;
                         }
-                      }
-
-                      function submitForm() {
-                        checkTargetgroupsFilter(document.getElementById("filters-form"), false);
-
-                        document.getElementById('targetName').value = document.getElementById('targetgroup-name').value;
-
-                        $.ajax({
-                          type: "POST",
-                          url: "/admin/promotions/targetgroup/add",
-                          data: $("#filters-form").serialize()
-                        }).done(function (data, textStatus, jqXHR) {
-                          console.log(jqXHR);
-                          if (data.error) {
-                            document.getElementById("err").innerHTML = data.error;
-                          } else if (data.ok) {
-                            window.location.pathname = "/admin/promotions/targetgroups";
-                          }
-                        }).fail(function (data) {
-                          document.getElementById("err").innerHTML = 'There was an error while adding target group. Please try again later.';
-                        });
                       }
                     </script>

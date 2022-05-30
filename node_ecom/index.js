@@ -1071,7 +1071,7 @@ async function adminPromotionTargetGroups(ctx) {
   });
 
   // Clear old messages
-  ctx.session.messages = null;
+  // ctx.session.messages = null;
 }
 
 async function adminPromotionTargetGroupsAdd(ctx) {
@@ -1222,6 +1222,156 @@ async function adminPromotionTargetGroupsAdd(ctx) {
 
   // Clear old messages
   ctx.session.messages = null;
+}
+
+async function adminPromotionTargetGroupsView(ctx) {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    utilsEcom.onNotAuthenticatedStaff(ctx);
+    return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  if (!await utilsEcom.hasPermission(ctx, "targetgroups.view")) {
+    utilsEcom.onNoPermission(ctx,
+      "You don\'t have permission to view target group",
+      {
+        level: "info",
+        message: `Staff ${ctx.session.dataValues.staffUsername} tried to view target group without rights`,
+        options:
+        {
+          user: ctx.session.dataValues.staffUsername,
+          isStaff: true
+        }
+      });
+    return;
+  }
+
+  // Auto session expire
+  if (!utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
+
+    return;
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
+  // Check if targetgroupID is number
+  if (!Number.isSafeInteger(parseInt(ctx.params.targetgroupid))
+    || Math.sign(Number(ctx.params.targetgroupid)) < 0) {
+    ctx.session.messages = { 'targetgroupError': 'Target group ID must be a non-negative number' };
+
+    ctx.redirect('/admin/promotions/targetgroups');
+    return;
+  }
+
+  // Get filters
+  let filters = {}, filtersToReturn = {};
+  let whereParams = {};
+
+  if (!isNaN(new Date(ctx.query.birthAfter))) {
+    filters['birthAfter'] = new Date(ctx.query.birthAfter);
+    filtersToReturn['birthAfter'] = ctx.query.birthAfter;
+  } else {
+    filters['birthAfter'] = new Date(0);
+  }
+  if (!isNaN(new Date(ctx.query.birthBefore))) {
+    filters['birthBefore'] = new Date(ctx.query.birthBefore);
+    filtersToReturn['birthBefore'] = ctx.query.birthBefore;
+  } else {
+    filters['birthBefore'] = new Date();
+  }
+  if (ctx.query.firstName) {
+    filters['firstName'] = ctx.query.firstName;
+    filtersToReturn['firstName'] = ctx.query.firstName;
+    whereParams.firstName = { [Op.iLike]: filters.firstName };
+  } else {
+    filters['firstName'] = '';
+  }
+  if (ctx.query.lastName) {
+    filters['lastName'] = ctx.query.lastName;
+    filtersToReturn['lastName'] = ctx.query.lastName;
+    whereParams.lastName = { [Op.iLike]: filters.lastName };
+  } else {
+    filters['lastName'] = '';
+  }
+  if (Number.isSafeInteger(Number(ctx.query.userID)) && Math.sign(Number(ctx.query.userID)) >= 0) {
+    filters['userID'] = ctx.query.userID;
+    filtersToReturn['userID'] = ctx.query.userID;
+    whereParams.id = ctx.query.userID;
+  }
+  if (ctx.query.gender) {
+    // TODO: Check if gender is valid
+    filters['gender'] = ctx.query.gender;
+    filtersToReturn['gender'] = ctx.query.gender;
+    whereParams.gender = ctx.query.gender;
+  }
+
+  if (filters.birthAfter || filters.birthBefore) {
+    if (filters.birthAfter && filters.birthBefore) {
+      whereParams.birthday = { [Op.between]: [filters.birthAfter, filters.birthBefore] };
+    } else if (filters.birthAfter) {
+      whereParams.birthday = { [Op.gte]: filters.birthAfter };
+    } else {
+      whereParams.birthday = { [Op.lte]: filters.birthBefore };
+    }
+  }
+
+  let page = 1;
+
+  if (ctx.params.page) {
+    page = parseInt(ctx.params.page)
+  }
+
+  let limit = configEcom.SETTINGS["elements_per_page"];
+  let offset = 0;
+
+  if (ctx.params.page) {
+    offset = (parseInt(ctx.params.page) - 1) * limit;
+  }
+
+  let targetgroup = await TargetGroup.findOne({
+    where: {
+      id: ctx.params.targetgroupid
+    }
+  });
+
+  if (!targetgroup) {
+    ctx.session.messages = { 'targetgroupError': 'Target group not found' };
+
+    ctx.redirect('/admin/promotions/targetgroups');
+    return;
+  }
+
+  let targetgroupfilters = await TargetGroupFilters.findAll({
+    where: {
+      targetgroupId: ctx.params.targetgroupid
+    }
+  });
+
+  let targetgroupfiltersRet = {};
+
+  for(i = 0; i < targetgroupfilters.length; i++) {
+    targetgroupfiltersRet[targetgroupfilters[i].dataValues.filter] = targetgroupfilters[i].dataValues.value;
+  }
+
+  let targetgroupusersAll = await targetgroup.getUsers({ where: whereParams });
+  let targetgroupusers = await targetgroup.getUsers({ where: whereParams, limit: limit, offset: offset });
+
+  await ctx.render('/admin/targetgroups-view', {
+    layout: "/admin/base",
+    selected: 'more',
+    session: ctx.session,
+    targetgroup: targetgroup,
+    targetgroupusers: targetgroupusers,
+    targetgroupfilters: targetgroupfiltersRet,
+    filters: filtersToReturn,
+    page: page,
+    pages: utilsEcom.givePages(page, Math.ceil(targetgroupusersAll.length / configEcom.SETTINGS["elements_per_page"]))
+  });
 }
 
 router.get("/", async ctx => getIndex(ctx));
@@ -4832,18 +4982,35 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
     });
   }
 
-  let name = ctx.request.fields.name;
-
-  // Check for no name
-  if (!name) {
-    ctx.body = {'error': 'Target group name is required'};
+  // Check for no fields
+  if (!ctx.request.fields) {
+    ctx.body = { 'error': 'Unexpected error occured! Please try again later' };
 
     return
   }
 
+  let name = ctx.request.fields.name;
+
+  // Check for no name
+  if (!name) {
+    ctx.body = { 'error': 'Target group name is required' };
+
+    return
+  }
+
+  // Check if target group name is of needed length
+  if (ctx.request.fields.name.length < 3 ||
+    ctx.request.fields.name.length > 100) {
+    ctx.body = { 'error': 'Target group name must be within range [3-100]' };
+
+    return;
+  }
+
+  name = name.trim();
+
   // Check if name contains only letters and numbers
-  if (!/^[a-z0-9]+$/ig.test(name)) {
-    ctx.body = {'error': 'Target group name must contain only letters and numbers'};
+  if (!/^[a-z0-9"'-_ ]+$/ig.test(name)) {
+    ctx.body = { 'error': 'Target group name must contain only letters and numbers and [",\',-,_]' };
 
     return
   }
@@ -4853,18 +5020,35 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
       where: {
         name: ctx.request.fields.name,
         username: ctx.session.dataValues.staffUsername
-      }, transaction: t});
+      }, transaction: t, paranoid: false
+    });
 
     // If target group already exists
     if (!targetGroupCreated) {
-      ctx.body = {'error': 'Target group already exists'};
+      if (targetGroup.deletedAt) {
+        await targetGroup.restore({transaction: t});
+        await targetGroup.update({
+          name: ctx.request.fields.name,
+          username: ctx.session.dataValues.staffUsername
+        }, {transaction: t, paranoid: false});
 
-      return;
+        
+        TargetGroupFilters.destroy({
+          where: {
+            targetgroupId: targetGroup.id
+          },
+          force: true
+        });
+
+        // await targetGroup.getUsers();
+      } else {
+        ctx.body = { 'error': 'Target group already exists' };
+
+        return;
+      }
     }
 
     let filters = {};
-
-    // MAKE QUERY
 
     let query = `SELECT * FROM users WHERE "deletedAt" is NULL\n`;
 
@@ -4875,58 +5059,52 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
     let birthBefore = ctx.request.fields.birthBefore;
 
     // Check if userID is number
-    if (Number.isSafeInteger(parseInt(userID)) && Math.sign(Number(userID)) >= 0) {
-      ctx.body = {'error': 'User ID must be a number'};
+    if (userID
+          && (!Number.isSafeInteger(parseInt(userID))
+          || Math.sign(Number(userID)) < 0)) {
+      ctx.body = { 'error': 'User ID must be a number' };
 
       return;
     }
 
     if (userID) {
-      query += `AND userID = $userID\n`;
+      query += `AND id = $userID\n`;
       filters.userID = userID;
     }
-    
+
     if (firstName) {
       query += `AND POSITION(UPPER($firstName) IN UPPER("firstName")) > 0\n`;
       filters.firstName = firstName;
     }
-    
+
     if (lastName) {
       query += `AND POSITION(UPPER($lastName) IN UPPER("lastName")) > 0\n`;
       filters.lastName = lastName;
     }
-    
+
     if (birthAfter)
       filters.birthAfter = birthAfter;
-    
+
     if (birthBefore)
       filters.birthBefore = birthBefore;
-    
+
     for (f in filters) {
-      let filter = await targetGroup.getTargetgroup_filter({filter: f});
-
-      if (!filter) {
-        await targetGroup.createTargetgroup_filter({
-          filter: f,
-          value: filters[f]
-        }, {transaction: t});
-      } else {
-        // This should not happen
-        ctx.body = {'error': 'Target group filter already exists'};
-
-        return;
-      }
+      console.log(await targetGroup.getTargetgroup_filters());
+      await targetGroup.createTargetgroup_filter({
+        filter: f,
+        value: filters[f]
+      }, { transaction: t });
     }
 
     if (birthAfter || birthBefore) {
       if (birthAfter && birthBefore) {
         query += `AND birthday BETWEEN $birthAfter AND $birthBefore\n`;
-      } else if(birthAfter) {
+      } else if (birthAfter) {
         query += `AND birthday >= $birthAfter\n`;
-        userFilters.birthday = {[Op.gte]: birthAfter}
+        userFilters.birthday = { [Op.gte]: birthAfter }
       } else {
         query += `AND birthday <= $birthBefore\n`;
-        userFilters.birthday = {[Op.lte]: birthBefore}
+        userFilters.birthday = { [Op.lte]: birthBefore }
       }
     }
 
@@ -4938,11 +5116,63 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
       bind: filters
     });
 
-    await targetGroup.addUsers(targetGroupUsers, {transaction: t});
+    await targetGroup.addUsers(targetGroupUsers, { transaction: t });
 
-    ctx.session.messages = {'targetGroupOK': 'Target group created!'};
-    ctx.body = {'ok': 'Target group created'};
+    ctx.session.messages = { 'targetGroupOK': 'Target group created!' };
+    ctx.body = { 'ok': 'Target group created' };
   });
+});
+
+router.get('/admin/promotions/targetgroup/view/:targetgroupid', async ctx => adminPromotionTargetGroupsView(ctx));
+router.get('/admin/promotions/targetgroup/view/:targetgroupid/:page', async ctx => adminPromotionTargetGroupsView(ctx));
+
+router.post('/admin/promotions/targetgroup/delete', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    utilsEcom.onNotAuthenticatedStaff(ctx);
+    return;
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'targetgroups.delete')) {
+    utilsEcom.onNoPermission(ctx,
+      "You don\'t have permission to delete a target group",
+      {
+        level: "info",
+        message: `Staff ${ctx.session.dataValues.staffUsername} tried to delete target group/s with id/s ${ctx.params.id} without rights`,
+        options:
+        {
+          user: ctx.session.dataValues.staffUsername,
+          isStaff: true
+        }
+      });
+    return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (!utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
+
+    return;
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
+  await TargetGroup.destroy({
+    where: {
+      id: ctx.request.fields.id
+    }
+  });
+
+  ctx.session.messages = { 'targetgroupDeleted': `Selected target groups have been deleted!` };
+  loggerEcom.logger.log('info',
+    `Staff ${ctx.session.dataValues.staffUsername} deleted target group/s with id/s ${ctx.request.fields.id}`,
+    { user: ctx.session.dataValues.staffUsername, isStaff: true });
+  
+  ctx.redirect('/admin/promotions/targetgroups');
 });
 
 /* WARNING: 

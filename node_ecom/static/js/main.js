@@ -618,27 +618,32 @@ function clearFilter(filter) {
 }
 
 function moveToPage(page, prefix = false, ret = false) {
-    if(hasPage()) {
+    if(hasPage(prefix)) {
         if (ret)
             return replacePage(page, prefix, ret);
         else replacePage(page, prefix, ret);
     } else {
-        let pathname = (window.location.pathname.endsWith("/") ? "" : "/") + (prefix ? prefix + "/" : "") + page;
-        
+        // let pathname = (window.location.pathname.endsWith("/") ? "" : "/") + (prefix ? prefix + "/" : "") + page;
+        let pathname = (window.location.pathname.endsWith("/") ? "" : "/") + page;
+
         if (ret)
             return window.location.pathname + pathname;
         else window.location.pathname += pathname;
     }
 }
 
-function hasPage() {
-    return new RegExp("/[0-9]+/*").test(window.location.pathname);
+function hasPage(prefix) {
+    return new RegExp(prefix ? `(?<=/${prefix})/[0-9]+/*$` : "/[0-9]+/*$").test(window.location.pathname);
 }
 
 function replacePage(page, prefix, ret) {    
+    // if (ret)
+    //    return window.location.pathname.replace(new RegExp(prefix ? `(?<=/${prefix})/[0-9]+/*$` : "/[0-9]+/*$"), (prefix ? prefix + "/" : "/") + page);
+    // else window.location.pathname = window.location.pathname.replace(new RegExp(prefix ? `(?<=/${prefix})/[0-9]+/*$` : "/[0-9]+/*$"), (prefix ? prefix + "/" : "/") + page);
+
     if (ret)
-        return window.location.pathname.replace(new RegExp(((prefix ? prefix : "")) + "/[0-9]+/*"), (prefix ? prefix + "/" : "/") + page);
-    else window.location.pathname = window.location.pathname.replace(new RegExp(((prefix ? prefix : "")) + "/[0-9]+/*"), (prefix ? prefix + "/" : "/") + page);
+        return window.location.pathname.replace(new RegExp(prefix ? `(?<=/${prefix})/[0-9]+/*$` : "/[0-9]+/*$"), "/" + page);
+    else window.location.pathname = window.location.pathname.replace(new RegExp(prefix ? `(?<=/${prefix})/[0-9]+/*$` : "/[0-9]+/*$"), "/" + page);
 }
 
 function checkRegisterForm() {
