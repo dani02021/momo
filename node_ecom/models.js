@@ -523,16 +523,16 @@ const TargetGroup = db.define("targetgroup", {
 
 TargetGroupFilters.belongsTo(TargetGroup, {
   foreignKey: {
-    name: 'targetgroupId',
-    allowNull: false
+    name: 'targetgroupId'
   }
 });
 
-TargetGroup.hasOne(TargetGroupFilters);
+TargetGroup.hasMany(TargetGroupFilters);
 
 TargetGroup.belongsToMany(User, { through: 'targetgroup_users', allowNull: false, timestamps: false });
 User.belongsToMany(TargetGroup, { through: 'targetgroup_users', allowNull: false, timestamps: false });
 
+console.log(TargetGroup.prototype);
 Product.prototype.getPriceWithVAT = async function () {
   return parseFloat(await this.getPriceWithVATStr());
 }
@@ -1052,6 +1052,8 @@ module.exports = {
   Permission.create({name: 'settings.other'});
   Permission.create({name: 'targetgroups.read'});
   Permission.create({name: 'targetgroups.create'});
+  Permission.create({name: 'targetgroups.view'});
+  Permission.create({name: 'targetgroups.delete'});
   */
 
   // Create associations
@@ -1084,6 +1086,8 @@ module.exports = {
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'settings.other'}}).then(perm => {role.addPermission(perm);})});
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'targetgroups.read'}}).then(perm => {role.addPermission(perm);})});
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'targetgroups.create'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'targetgroups.view'}}).then(perm => {role.addPermission(perm);})});
+  Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'targetgroups.delete'}}).then(perm => {role.addPermission(perm);})});
   */
   
   // Staff.findOne({where: {username: 'dakata'}}).then(user => {Role.findOne({where: {name: 'Admin'}}).then(role => {user.addRole(role);})});

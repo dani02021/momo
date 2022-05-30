@@ -1186,7 +1186,7 @@ async function generateLogs(x = 100) {
  */
 function onNoPermission(ctx, message, logOptions, redirectLoc = "/admin")
 {
-    if (ctx.request.fields.isAJAX)
+    if (ctx.request.fields && ctx.request.fields.isAJAX)
         ctx.body = {'error': message};
     else {
         ctx.session.messages = { "noPermission": message };
@@ -1209,7 +1209,7 @@ function onNotAuthenticatedStaff(ctx, message = "You are not logged in as staff!
     assert(typeof redirectLoc === "string");
     assert(typeof message === "string");
 
-    if (ctx.request.fields.isAJAX)
+    if (ctx.request.fields && ctx.request.fields.isAJAX)
         ctx.body = {'error': message};
     else {
         ctx.session.messages = { "noPermission": message };
@@ -1228,7 +1228,7 @@ function onNotAuthenticatedUser(ctx, message = "You are not logged in as user!",
     assert(typeof redirectLoc === "string");
     assert(typeof message === "string");
 
-    if (ctx.request.fields.isAJAX)
+    if (ctx.request.fields && ctx.request.fields.isAJAX)
         ctx.body = {'error': message};
     else {
         ctx.session.messages = { "noPermission": message };
@@ -1241,7 +1241,7 @@ function onSessionExpired(ctx, message = "Session expired!", redirectLoc = "/adm
     assert(typeof redirectLoc === "string");
     assert(typeof message === "string");
 
-    if (ctx.request.fields.isAJAX)
+    if (ctx.request.fields && ctx.request.fields.isAJAX)
         ctx.body = {'error': message};
     else {
         ctx.session.messages = { "sessionExpired": message };
