@@ -73,9 +73,13 @@
                                 </div>
                                 <div class="row">
                                   <div class="col-sm-3">
-                                    <input id="country" name="country" class="form-select"
-                                      style="background-image: none" placeholder="Country"
-                                      value="<%= filters['country'] %>">
+                                    <select class="form-select" id="country" name="country">
+                                      <option value="" selected disabled>Select country</option>
+                                      <% for (i=0;i<countries.length;i++) { %>
+                                        <option value="<%= countries[i] %>" <% if (filters['country']==='countries[i]' ) { %> selected <% } %>
+                                          ><%=countries[i]%></option>
+                                      <% } %>
+                                    </select>
                                   </div>
                                   <div class="col-sm-3">
                                     <input id="birthAfter" name="birthAfter" class="form-universal"

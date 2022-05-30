@@ -71,9 +71,13 @@
                                 </div>
                                 <div class="row">
                                   <div class="col-sm-3">
-                                    <input id="country" name="country" class="form-select"
-                                      style="background-image: none" placeholder="Country"
-                                      value="<%= filters['country'] %>">
+                                    <select class="form-select" id="country" name="country">
+                                      <option value="" selected disabled>Select country</option>
+                                      <% for (i=0;i<countries.length;i++) { %>
+                                        <option value="<%= countries[i] %>" <% if (filters['country']===countries[i] ) { %> selected <% } %>
+                                          ><%=countries[i]%></option>
+                                      <% } %>
+                                    </select>
                                   </div>
                                   <div class="col-sm-3">
                                     <input id="birthAfter" name="birthAfter" class="form-universal"
@@ -238,6 +242,7 @@
                           <div class="modal-body">
                             <h6><b>Do you want to add new target group with the following filters:</b></h6>
                             <ul>
+                              <li id="add-targetgroup-nofilters-li" hidden>No Filters</li>
                               <li id="add-targetgroup-userid-li" hidden>User ID:</li>
                               <li id="add-targetgroup-firstName-li" hidden>First name:</li>
                               <li id="add-targetgroup-lastName-li" hidden>Last name:</li>
@@ -270,6 +275,7 @@
                       addTargetgroup.addEventListener('show.bs.modal', function (event) {
                         let atleastOneFilter = false;
 
+                        let nofiltersli = document.getElementById('add-targetgroup-nofilters-li');
                         let useridli = document.getElementById('add-targetgroup-userid-li');
                         let firstNameli = document.getElementById('add-targetgroup-firstName-li');
                         let lastNameli = document.getElementById('add-targetgroup-lastName-li');
@@ -328,8 +334,10 @@
                         }
 
                         if (!atleastOneFilter) {
-                          useridli.innerHTML = "No filters";
-                          useridli.hidden = null;
+                          nofiltersli.innerHTML = "No filters";
+                          nofiltersli.hidden = null;
+                        } else {
+                          nofiltersli.hidden = "hidden";
                         }
                       });
 

@@ -348,8 +348,13 @@ thead {
 .btn-primary:active,
 .btn-primary:hover {
   color: #f5a623;
-  background-color: transparent;
+  background-color: transparent !important;
   border: 2px solid #f5a623;
+}
+.btn-primary:focus {
+  background-color: #f5a623;
+  border-color: #f5a623 !important;
+  box-shadow: none !important;
 }
 .custom-file-input {
   cursor: pointer;

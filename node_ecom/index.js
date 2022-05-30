@@ -1225,6 +1225,7 @@ async function adminPromotionTargetGroupsAdd(ctx) {
     selected: "more",
     users: users,
     filters: filtersToReturn,
+    countries: configEcom.COUNTRY_LIST,
     page: page,
     pages: utilsEcom.givePages(page, Math.ceil(count / limit))
   });
@@ -1378,6 +1379,7 @@ async function adminPromotionTargetGroupsView(ctx) {
     targetgroupusers: targetgroupusers,
     targetgroupfilters: targetgroupfiltersRet,
     filters: filtersToReturn,
+    countries: configEcom.COUNTRY_LIST,
     page: page,
     pages: utilsEcom.givePages(page, Math.ceil(targetgroupusersAll.length / configEcom.SETTINGS["elements_per_page"]))
   });
@@ -1399,7 +1401,8 @@ router.get("/register", async ctx => {
   await ctx.render('register', {
     selected: 'register',
     session: ctx.session,
-    cartQty: cartQty
+    cartQty: cartQty,
+    countries: `"` + configEcom.COUNTRY_LIST.join(`","`) + `"`
   });
 
   // Clear the messages
