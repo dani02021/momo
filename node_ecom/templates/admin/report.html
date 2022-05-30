@@ -1,3 +1,8 @@
+<style>
+  .ui-autocomplete-loading {
+    background: white url("/img/ui-anim_basic_16x16.gif") right center no-repeat;
+  }
+</style>
 <div class="container mt-5">
   <div class="row tm-content-row">
     <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
@@ -33,13 +38,15 @@
           </form>
         </div>
         <div class="tm-product-table-container">
-          <table id="table1" class="table table-hover tm-table-small tm-product-table">
+          <table id="table1" class="table table-hover tm-table-small tm-product-table sortable">
             <thead>
               <tr>
-                <th scope="col">TIMESTAMP</th>
-                <th scope="col">ORDERS</th>
-                <th scope="col">PRODUCTS</th>
-                <th scope="col">TOTAL PRICE</th>
+                <th scope="col" class="clickable">TIMESTAMP</th>
+                <th scope="col" class="clickable">ORDERS</th>
+                <th scope="col" class="clickable">PRODUCTS</th>
+                <th scope="col" class="clickable">SUB TOTAL</th>
+                <th scope="col" class="clickable">VAT</th>
+                <th scope="col" class="clickable">GRAND TOTAL</th>
               </tr>
             </thead>
             <tbody>
@@ -50,7 +57,9 @@
                 <td>
                   <%= report[i].dataValues.products %>
                 </td>
-                <td style="text-align: right;"><b>$<%= report[i].dataValues.total %></b></td>
+                <td style="text-align: right;"><b>$<%= report[i].dataValues.subtotal %></b></td>
+                <td style="text-align: right;"><b>$<%= report[i].dataValues.vatsum %></b></td>
+                <td style="text-align: right;"><b>$<%= report[i].dataValues.grandtotal %></b></td>
               </tr>
               <% } %>
             </tbody>

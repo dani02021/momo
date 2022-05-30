@@ -608,10 +608,20 @@ async function validateStatus(ctx, orderId, responce) {
 async function getReportResponce(filters, limit, offset, time) {
     let text = 
     `SELECT
-        date_trunc($1, orders."orderedAt") as "startDate", 
-        SUM(orderitems.quantity) as products, 
-        COUNT(distinct orders.id) as orders, 
-        SUM(price * orderitems.quantity) as total 
+        date_trunc($1, orders."orderedAt")      AS "startDate", 
+        SUM(orderitems.quantity)                AS products, 
+        COUNT(distinct orders.id)               AS orders, 
+        SUM(price * orderitems.quantity)        AS subtotal,
+        COALESCE( SUM( ROUND(
+            price *
+            orderitems.quantity *
+            (1 + ${configEcom.SETTINGS.vat})
+            , 2 )), 0.00)                       AS grandtotal,
+        COALESCE( SUM( ROUND(
+            price *
+            orderitems.quantity *
+            ${configEcom.SETTINGS.vat},
+            2)), 0.00)                          AS vatsum
     FROM orders 
     INNER JOIN orderitems
         ON orderitems."orderId" = orders.id 
