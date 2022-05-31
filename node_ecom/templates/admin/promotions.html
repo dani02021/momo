@@ -37,35 +37,32 @@
                       <div class="row tm-content-row">
                         <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
                           <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1000px;">
-                            <h2 class="tm-block-title">Target Groups</h2>
+                            <h2 class="tm-block-title">Promotions</h2>
                             <div class="container">
-                              <form action="/admin/targetgroups" method="get" onsubmit="checkTargetgroupsFilter(this);">
+                              <form action="/admin/promotions" method="get" onsubmit="checkPromotionsFilter(this);">
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="col-sm-3">
-                                    <input id="timeAfter" name="timeAfter" class="form-universal"
-                                      data-bs-toggle="tooltip" data-bs-placement="top" title="From birthday"
-                                      type="datetime-local" value="<%= filters['timeAfter'] %>"><br>
+                                    <select name="status" id="status">
+                                      <% for(i=0;i<statuses.length;i++) { %>
+                                      <option value="<%= statuses[i] %>" <% if (statuses[i] == filters['status']) { %> selected <% } %>><%= statuses[i] %></option>
+                                      <% } %>
+                                    </select>
                                   </div>
                                   <div class="col-sm-3">
-                                    <input id="timeBefore" name="timeBefore" class="form-universal"
-                                      data-bs-toggle="tooltip" data-bs-placement="top" title="To birthday"
-                                      type="datetime-local" value="<%= filters['timeBefore'] %>">
+                                    <input id="name" name="name" class="form-select"
+                                      style="background-image: none" placeholder="Name"
+                                      value="<%= filters['name'] %>">
                                   </div>
                                   <div class="col-sm-3">
-                                    <input id="targetID" name="targetID" class="form-select" type="number"
-                                      style="background-image: none" placeholder="Target Group ID"
-                                      value="<%= filters['targetID'] %>">
-                                  </div>
-                                  <div class="col-sm-3">
-                                    <input id="createdBy" name="createdBy" class="form-select"
-                                      style="background-image: none" placeholder="Created by"
-                                      value="<%= filters['createdBy'] %>">
+                                    <input id="targetName" name="targetName" class="form-select"
+                                      style="background-image: none" placeholder="Target Group Name"
+                                      value="<%= filters['targetName'] %>">
                                   </div>
                                 </div>
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="d-grid gap-2">
                                     <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
-                                    <a href="/admin/promotions/targetgroups"
+                                    <a href="/admin/promotions/promotions"
                                       class="btn btn-primary text-uppercase">Clear
                                       filters</a>
                                   </div>
@@ -78,39 +75,47 @@
                                   <tr>
                                     <th scope="col">&nbsp;</th>
                                     <th scope="col" class="clickable">TIMESTAMP</th>
-                                    <th scope="col" class="clickable">TARGET GROUP NO.</th>
+                                    <th scope="col" class="clickable">PROMOTION NO.</th>
+                                    <th scope="col" class="clickable">STATUS</th>
                                     <th scope="col" class="clickable">NAME</th>
-                                    <th scope="col" class="clickable">USERS</th>
+                                    <th scope="col" class="clickable">VALIDITY</th>
+                                    <th scope="col" class="clickable">VALUE</th>
+                                    <th scope="col" class="clickable">TARGET GROUP</th>
                                     <th scope="col" style="text-align: right;">ACTION</th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  <% for(i=0; i < targetgroups.length; i++) { %>
+                                  <% for(i=0; i < promotions.length; i++) { %>
                                     <td>
                                       <input type="checkbox" />
                                     </td>
                                     <td>
                                       <b>
-                                        <%= targetgroups[i].createdAt.toLocaleString('en-GB') %>
+                                        <%= promotions[i].createdAt.toLocaleString('en-GB') %>
                                       </b>
                                     </td>
-                                    <td data-id="<%= targetgroups[i].id %>">
+                                    <td data-id="<%= promotions[i].id %>">
                                       <b>
-                                        #<%= targetgroups[i].id %>
+                                        #<%= promotions[i].id %>
                                       </b>
                                     </td>
                                     <td>
                                       <b>
-                                        <%= targetgroups[i].name %>
+                                        <%= promotions[i].name %>
+                                      </b>
+                                    </td>
+                                    <td>
+                                      <b>
+                                        <%= await promotions[i].username %>
                                       </b>
                                     </td>
                                     <td style="text-align: right;">
                                       <b>
-                                        <%= (await targetgroups[i].getUsers()).length %>
+                                        <%= (await promotions[i].getUsers()).length %>
                                       </b>
                                     </td>
                                     <td style="text-align: right;">
-                                      <a href="/admin/promotions/targetgroup/view/<%= targetgroups[i].id %>"
+                                      <a href="/admin/promotions/view/<%= promotions[i].id %>"
                                         class="tm-order-edit-link">
                                         <i class="fas fa-search tm-order-edit-icon"></i>
                                       </a>
@@ -122,10 +127,10 @@
                             </div>
                             <!-- table container -->
                             <div class="d-grid gap-2">
-                              <a href="/admin/promotions/targetgroup/add" class="btn btn-primary text-uppercase mb-3">
+                              <a href="/admin/promotion/add" class="btn btn-primary text-uppercase mb-3">
                                 Add new Target Group
                               </a>
-                              <button class="btn btn-primary text-uppercase" data-bs-target="#rem-targetgroup"
+                              <button class="btn btn-primary text-uppercase" data-bs-target="#rem-promotion"
                                 data-bs-toggle="modal" data-bs-dismiss="modal">
                                 Delete selected Target Groups
                               </button>
@@ -173,8 +178,8 @@
                       </nav>
                     </div>
                     <!-- Modal -->
-                    <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="rem-targetgroup"
-                      tabindex="-1" aria-labelledby="rem-targetgroup" aria-hidden="true">
+                    <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="rem-promotion"
+                      tabindex="-1" aria-labelledby="rem-promotion" aria-hidden="true">
                       <div class="modal-dialog">
                         <div class="modal-content">
                           <div class="modal-header">
@@ -186,8 +191,8 @@
                           </div>
                           <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-                            <form id="rem-targetgroup-form" action="/admin/promotions/targetgroup/delete" method="post"
-                              onsubmit="return deletetargetgroups(this);">
+                            <form id="rem-promotion-form" action="/admin/promotion/delete" method="post"
+                              onsubmit="return deletepromotions(this);">
                               <button type="submit" data-bs-dismiss="modal" class="btn btn-primary">Delete</button>
                             </form>
                           </div>
@@ -195,7 +200,7 @@
                       </div>
                     </div>
                     <script>
-                      function deletetargetgroups(elem) {
+                      function deletepromotions(elem) {
                         var table = document.getElementById('table1');
                         var ok = false;
 
@@ -217,14 +222,14 @@
                           input.type = 'number';
                           input.defaultValue = id;
                           input.name = 'id';
-                          document.getElementById('rem-targetgroup-form').appendChild(input);
+                          document.getElementById('rem-promotion-form').appendChild(input);
                           ok = true;
                         }
 
                         return ok;
                       }
 
-                      function checkTargetgroupsFilter(form) {
+                      function checkPromotionsFilter(form) {
                         for (const elem of form.elements) {
                           if (elem.value === '')
                             elem.disabled = true;

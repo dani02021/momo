@@ -339,7 +339,11 @@ let PRODUCT_IMPORT_TABLE_HEADERS = [
     'Quantity', 'Тегло (kg)',
     'Regular price', 'Categories',
     'Images'
-  ];
+];
+
+let PROMOTION_STATUSES = [
+    'active', 'pending', 'expired'
+];
 
 /**
  * 
@@ -401,5 +405,6 @@ module.exports = {
     VALID_GENDERS,
     COUNTRY_LIST,
     PRODUCT_IMPORT_TABLE_HEADERS,
+    PROMOTION_STATUSES,
     loadSettings
 }

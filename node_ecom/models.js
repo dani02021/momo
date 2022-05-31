@@ -377,7 +377,6 @@ const Role = db.define("role", {
     type: DataTypes.STRING(25),
     allowNull: false,
     unique: {
-      name: true,
       msg: "Role name must be unique"
     },
     validate: {
@@ -420,7 +419,9 @@ const Product = db.define("product", {
   name: {
     type: DataTypes.STRING(200),
     allowNull: false,
-    unique: true
+    unique: {
+      msg: 'Product name must be unique!'
+    }
   },
   price: {
     type: DataTypes.DECIMAL(7, 2),
@@ -509,11 +510,15 @@ const TargetGroup = db.define("targetgroup", {
   name: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true
-  },
-  username: {
-    type: DataTypes.STRING(50)
-  },
+    unique: {
+      msg: 'Target group name must be unique'
+    },
+    validate: {
+      notNull: {
+        msg: "Target group name should not be empty"
+      }
+    }
+  }
 },
   {
     paranoid: true,
@@ -521,16 +526,101 @@ const TargetGroup = db.define("targetgroup", {
   }
 );
 
-TargetGroupFilters.belongsTo(TargetGroup, {
-  foreignKey: {
-    name: 'targetgroupId'
-  }
-});
+TargetGroupFilters.belongsTo(TargetGroup);
 
 TargetGroup.hasMany(TargetGroupFilters);
 
 TargetGroup.belongsToMany(User, { through: 'targetgroup_users', allowNull: false, timestamps: false });
 User.belongsToMany(TargetGroup, { through: 'targetgroup_users', allowNull: false, timestamps: false });
+
+const Promotion = db.define("promotion", {
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: {
+      msg: 'Promotion name must be unique'
+    },
+    validate: {
+      notNull: {
+        msg: "Promotion name should not be empty"
+      }
+    }
+  },
+  status: {
+    // type: DataTypes.ENUM('pending', 'active', 'expired'), -> SEQUELIZE BUG
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      notNull: {
+        msg: "Promotion status should not be empty"
+      },
+      isIn: {
+        args: [configEcom.PROMOTION_STATUSES],
+        msg: "Promotion status is invalid"
+      }
+    }
+  },
+  startDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
+    defaultValue: Sequelize.fn("NOW"),
+    validate: {
+      notNull: {
+        msg: "Promotion start date should not be empty"
+      }
+    }
+  },
+  endDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
+    validate: {
+      notNull: {
+        msg: "Promotion end date should not be empty"
+      }
+    }
+  }
+}, {
+  paranoid: true
+});
+
+const Voucher = db.define("voucher", {
+  startDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
+    defaultValue: Sequelize.fn("NOW"),
+    validate: {
+      notNull: {
+        msg: "Promotion start date should not be empty"
+      }
+    }
+  },
+  endDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
+    validate: {
+      notNull: {
+        msg: "Voucher end date should not be empty"
+      }
+    }
+  },
+  value: {
+    type: DataTypes.DECIMAL(7, 2),
+    allowNull: false,
+    validate: {
+      notNull: {
+        msg: "Voucher value should not be empty"
+      }
+    }
+  }
+}, {
+  paranoid: true
+});
+
+Promotion.hasOne(Voucher);
+Voucher.belongsTo(Promotion);
+
+Promotion.belongsTo(TargetGroup);
+TargetGroup.hasOne(Promotion);
 
 Product.prototype.getPriceWithVAT = async function () {
   return parseFloat(await this.getPriceWithVATStr());
@@ -626,9 +716,7 @@ const PayPalTransaction = db.define("paypaltransacion", {
 });
 
 // Cash On Delivery
-const CODTransaction = db.define("codtransaction", {
-
-},
+const CODTransaction = db.define("codtransaction", { },
 {
   paranoid: false,
   timestamp: false
@@ -922,6 +1010,9 @@ Order.prototype.getVATSumStr = async function() {
 Order.hasOne(Transaction, {foreignKey: {name: 'orderid'}});
 Transaction.belongsTo(Order, {foreignKey: {name: 'orderid'}});
 
+Voucher.belongsToMany(Order, { through: 'order_vouches', allowNull: false, timestamps: false });
+Order.belongsToMany(Voucher, { through: 'order_vouches', allowNull: false, timestamps: false });
+
 Transaction.hasOne(PayPalTransaction, {foreignKey: {name: 'transactionid'}});
 PayPalTransaction.belongsTo(Transaction, {foreignKey: {name: 'transactionid'}});
 
@@ -1002,9 +1093,13 @@ function targetgroupfilters() {
   return TargetGroupFilters;
 }
 
+function promotions() {
+  return Promotion;
+}
+
 module.exports = {
   category, product, user, staff, session, permission, role, order, orderitem, transaction,
-  paypaltransacion, codtransaction, log, settings, targetgroups, targetgroupfilters
+  paypaltransacion, codtransaction, log, settings, targetgroups, targetgroupfilters, promotions
 };
 
 // Alter the database
@@ -1053,6 +1148,7 @@ module.exports = {
   Permission.create({name: 'targetgroups.create'});
   Permission.create({name: 'targetgroups.view'});
   Permission.create({name: 'targetgroups.delete'});
+  Permission.create({name: 'promotions.read'});
   */
 
   // Create associations

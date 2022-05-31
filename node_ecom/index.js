@@ -43,6 +43,7 @@ const Log = models.log();
 const Settings = models.settings();
 const TargetGroup = models.targetgroups();
 const TargetGroupFilters = models.targetgroupfilters();
+const Promotion = models.promotions();
 
 const app = new Koa();
 const router = new KoaRouter();
@@ -1003,7 +1004,6 @@ async function adminPromotionTargetGroups(ctx) {
     filters['createdBy'] = '';
   }
 
-  bindParams.push(filters.createdBy);
   bindParams.push(filters.timeAfter.toISOString());
   bindParams.push(filters.timeBefore.toISOString());
 
@@ -1028,23 +1028,21 @@ async function adminPromotionTargetGroups(ctx) {
 
   let query =
     `SELECT * FROM targetgroups
-    WHERE POSITION(UPPER($1) IN UPPER(username)) > 0
-      AND "createdAt" BETWEEN $2 AND $3
-      AND "deletedAt" is NULL\n`;
+    WHERE "deletedAt" is NULL\n
+      AND "createdAt" BETWEEN $1 AND $2\n`;
 
   if (filters.targetID)
-    query += `AND id = $4\n`;
+    query += `AND id = $3\n`;
 
   query += `ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
 
   let queryC =
     `SELECT COUNT(*) FROM targetgroups
-    WHERE POSITION(UPPER($1) IN UPPER(username)) > 0
-      AND "createdAt" BETWEEN $2 AND $3
-      AND "deletedAt" is NULL\n`;
+    WHERE "deletedAt" is NULL\n
+      AND "createdAt" BETWEEN $1 AND $2\n`;
 
   if (filters.targetID)
-    queryC += `AND id = $4\n`;
+    queryC += `AND id = $3\n`;
 
   let targetgroups = await db.query(query, {
     type: 'SELECT',
@@ -1383,6 +1381,132 @@ async function adminPromotionTargetGroupsView(ctx) {
     page: page,
     pages: utilsEcom.givePages(page, Math.ceil(targetgroupusersAll.length / configEcom.SETTINGS["elements_per_page"]))
   });
+}
+
+async function adminPromotions(ctx) {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    utilsEcom.onNotAuthenticatedStaff(ctx);
+    return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  if (!await utilsEcom.hasPermission(ctx, "promotions.read")) {
+    utilsEcom.onNoPermission(ctx,
+      "You don\'t have permission to see promotions",
+      {
+        level: "info",
+        message: `Staff ${ctx.session.dataValues.staffUsername} tried to see promotions without rights`,
+        options:
+        {
+          user: ctx.session.dataValues.staffUsername,
+          isStaff: true
+        }
+      });
+    return;
+  }
+
+  // Auto session expire
+  if (!utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
+
+    return;
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
+  let page = 1;
+  let filters = {};
+  let filtersToReturn = {};
+  let bindParams = {};
+
+  if (ctx.params.page) {
+    page = parseInt(ctx.params.page)
+  }
+
+  let limit = configEcom.SETTINGS["elements_per_page"];
+  let offset = 0;
+
+  if (ctx.params.page) {
+    offset = (parseInt(ctx.params.page) - 1) * limit;
+  }
+
+  if (ctx.query.name) {
+    filters['name'] = ctx.query.name;
+    filtersToReturn['name'] = ctx.query.name;
+  } else {
+    filters['name'] = '';
+  }
+  if (ctx.query.targetName) {
+    filters['targetName'] = ctx.query.targetName;
+    filtersToReturn['targetName'] = ctx.query.targetName;
+  } else {
+    filters['targetName'] = '';
+  }
+  if (ctx.query.status) {
+    // TODO: Check if status is valid
+    filters['status'] = ctx.query.status;
+    filtersToReturn['status'] = ctx.query.status;
+    bindParams.status = ctx.query.status;
+  } else {
+    filters['status'] = '';
+  }
+
+  bindParams.name = filters.name;
+  bindParams.targetName = filters.targetName;
+
+  let query = 
+    `SELECT * FROM promotions
+    INNER JOIN targetgroups ON targetgroups.id = "targetgroupId"
+    WHERE "deletedAt" is NULL
+      AND POSITION(UPPER($targetName) IN UPPER("targetgroups"."name")) > 0
+      AND POSITION(UPPER($name) IN UPPER("name")) > 0\n`;
+  
+  if (filters.status)
+    query += `AND status = $status`
+  
+  query += `ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
+
+  let queryC = 
+    `SELECT COUNT(*) FROM promotions
+    INNER JOIN targetgroups ON targetgroups.id = targetgroupId
+    WHERE "deletedAt" is NULL
+      AND POSITION(UPPER($targetName) IN UPPER("targetgroups"."name")) > 0
+      AND POSITION(UPPER($name) IN UPPER("name")) > 0\n`;
+
+  if (filters.status)
+    queryC += `AND status = $status\n`;
+
+  let promotions = await db.query(query, {
+    type: 'SELECT',
+    plain: false,
+    model: Promotion,
+    mapToModel: true,
+    bind: bindParams
+  });
+
+  let count = (await db.query(queryC, {
+    type: 'SELECT',
+    plain: true,
+    bind: bindParams
+  })).count;
+
+  await ctx.render("/admin/promotions", {
+    layout: "/admin/base",
+    session: ctx.session,
+    selected: "more",
+    promotions: promotions,
+    filters: filtersToReturn,
+    statuses: configEcom.PROMOTION_STATUSES,
+    page: page,
+    pages: utilsEcom.givePages(page, Math.ceil(count / limit))
+  });
+
+  // Clear old messages
+  ctx.session.messages = null;
 }
 
 router.get("/", async ctx => getIndex(ctx));
@@ -5021,7 +5145,7 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
   name = name.trim();
 
   // Check if name contains only letters and numbers
-  if (!/^[a-z0-9"'-_ ]+$/ig.test(name)) {
+  if (!/^[a-z0-9"'\-_ ]+$/ig.test(name)) {
     ctx.body = { 'error': 'Target group name must contain only letters and numbers and [",\',-,_]' };
 
     return
@@ -5030,8 +5154,7 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
   const result = await db.transaction(async (t) => {
     let [targetGroup, targetGroupCreated] = await TargetGroup.findOrCreate({
       where: {
-        name: ctx.request.fields.name,
-        username: ctx.session.dataValues.staffUsername
+        name: ctx.request.fields.name
       }, transaction: t, paranoid: false
     });
 
@@ -5040,8 +5163,7 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
       if (targetGroup.deletedAt) {
         await targetGroup.restore({transaction: t});
         await targetGroup.update({
-          name: ctx.request.fields.name,
-          username: ctx.session.dataValues.staffUsername
+          name: ctx.request.fields.name
         }, {transaction: t, paranoid: false});
 
         
@@ -5135,6 +5257,10 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
 
     await targetGroup.setUsers(targetGroupUsers, { transaction: t });
 
+    loggerEcom.logger.log('info',
+    `Staff ${ctx.session.dataValues.staffUsername} created new target group #${ctx.request.fields.id}`,
+    { user: ctx.session.dataValues.staffUsername, isStaff: true });
+
     ctx.session.messages = { 'targetGroupOK': 'Target group created!' };
     ctx.body = { 'ok': 'Target group created' };
   });
@@ -5191,6 +5317,9 @@ router.post('/admin/promotions/targetgroup/delete', async ctx => {
   
   ctx.redirect('/admin/promotions/targetgroups');
 });
+
+router.get('/admin/promotions', async ctx => adminPromotions(ctx));
+router.get('/admin/promotions/:page', async ctx => adminPromotions(ctx));
 
 /* WARNING: 
    The session can be null at any request
