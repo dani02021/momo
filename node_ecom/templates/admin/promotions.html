@@ -2,7 +2,9 @@
   <% if(session.messages.hasOwnProperty(i)) { %>
     <% if(i=='targetgroupError' ) { %>
       <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <strong><%= session.dataValues.messages[i] %></strong>
+        <strong>
+          <%= session.dataValues.messages[i] %>
+        </strong>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
       <% } if(i=='targetgroupCreated' ) { %>
@@ -12,7 +14,9 @@
         </div>
         <% } if(i=='targetgroupDeleted' ) { %>
           <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            <strong><%= session.dataValues.messages[i] %></strong>
+            <strong>
+              <%= session.dataValues.messages[i] %>
+            </strong>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
           <% } if(i=='targetgroupEdited' ) { %>
@@ -41,19 +45,21 @@
                             <div class="container">
                               <form action="/admin/promotions" method="get" onsubmit="checkPromotionsFilter(this);">
                                 <div class="row" style="margin-bottom: 12px;">
-                                  <div class="col-sm-3">
-                                    <select name="status" id="status">
+                                  <div class="col-sm-4">
+                                    <select name="status" id="status" class="form-select">
+                                      <option value="Select status:" selected disabled>Select target group:</option>
                                       <% for(i=0;i<statuses.length;i++) { %>
-                                      <option value="<%= statuses[i] %>" <% if (statuses[i] == filters['status']) { %> selected <% } %>><%= statuses[i] %></option>
-                                      <% } %>
+                                        <option value="<%= statuses[i] %>" <% if (statuses[i]==filters['status']) { %>
+                                          selected <% } %>><%= statuses[i] %>
+                                        </option>
+                                        <% } %>
                                     </select>
                                   </div>
-                                  <div class="col-sm-3">
-                                    <input id="name" name="name" class="form-select"
-                                      style="background-image: none" placeholder="Name"
-                                      value="<%= filters['name'] %>">
+                                  <div class="col-sm-4">
+                                    <input id="name" name="name" class="form-select" style="background-image: none"
+                                      placeholder="Promotion Name" value="<%= filters['name'] %>">
                                   </div>
-                                  <div class="col-sm-3">
+                                  <div class="col-sm-4">
                                     <input id="targetName" name="targetName" class="form-select"
                                       style="background-image: none" placeholder="Target Group Name"
                                       value="<%= filters['targetName'] %>">
@@ -62,8 +68,7 @@
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="d-grid gap-2">
                                     <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
-                                    <a href="/admin/promotions/promotions"
-                                      class="btn btn-primary text-uppercase">Clear
+                                    <a href="/admin/promotions/promotions" class="btn btn-primary text-uppercase">Clear
                                       filters</a>
                                   </div>
                                 </div>
@@ -127,12 +132,13 @@
                             </div>
                             <!-- table container -->
                             <div class="d-grid gap-2">
-                              <a href="/admin/promotion/add" class="btn btn-primary text-uppercase mb-3">
-                                Add new Target Group
+                              <a class="btn btn-primary text-uppercase mb-3" data-bs-target="#add-promotion"
+                                data-bs-toggle="modal">
+                                Add new Promotion
                               </a>
                               <button class="btn btn-primary text-uppercase" data-bs-target="#rem-promotion"
                                 data-bs-toggle="modal" data-bs-dismiss="modal">
-                                Delete selected Target Groups
+                                Delete selected Promotions
                               </button>
                             </div>
                           </div>
@@ -199,6 +205,79 @@
                         </div>
                       </div>
                     </div>
+                    <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-promotion"
+                      tabindex="-1" aria-labelledby="add-promotion" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title">Add Promotion</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <form id="add-promotion-form" action="/admin/promotion/add" method="post">
+                            <input type="hidden" name="isAJAX" value="ajax">
+                            <div class="modal-body">
+                              <div class="row">
+                                <div class="col-md-5 mx-auto">
+                                  <label>Name:</label>
+                                  <div class="ui-widget">
+                                    <input style="height: 30px; width: 100%;" name="name" id="name">
+                                  </div>
+                                </div>
+                                <div class="col-md-5 mx-auto">
+                                  <div class="ui-widget">
+                                    <label>Target group:</label>
+                                    <select style="height: 30px; width: 100%;" id="add-promotion-targetgroups" name="targetgroup">
+                                      <option value="Select target group:" selected disabled>Select target group:
+                                      </option>
+                                      <% for (i=0; i < targetgroups.length; i++) { %>
+                                        <option value="<%= targetgroups[i].id %>">
+                                          <%= targetgroups[i].name %>
+                                        </option>
+                                        <% } %>
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                              <div class="row">
+                                <div class="col-md-5 mx-auto">
+                                  <label>Start date:</label>
+                                  <div class="ui-widget">
+                                    <input style="height: 30px; width: 100%;" type="date" name="startDate" id="startDate" onchange="changeMinOfEndDate(this);">
+                                  </div>
+                                </div>
+                                <div class="col-md-5 mx-auto">
+                                  <label>End date:</label>
+                                  <div class="ui-widget">
+                                    <input style="height: 30px; width: 100%;" type="date" name="endDate" id="endDate" min="<%= new Date().toLocaleDateString('fr-CA') %>" onchange="changeMaxOfStartDate(this);">
+                                  </div>
+                                </div>
+                              </div>
+                              <hr>
+                              <label>Voucher:</label><br>
+                              <div class="row">
+                                <div class="col-md-5 mx-auto">
+                                  <label>Voucher value:</label>
+                                  <div class="ui-widget">
+                                    <input style="height: 30px; width: 100%;" type="number" name="voucherValue" id="voucherValue">
+                                  </div>
+                                </div>
+                                <div class="col-md-5 mx-auto">
+                                  <label>Voucher End date:</label>
+                                  <div class="ui-widget">
+                                    <input style="height: 30px; width: 100%;" type="date" name="voucherEndDate" id="voucherEndDate" min="<%= new Date().toLocaleDateString('fr-CA') %>">
+                                  </div>
+                                </div>
+                              </div>
+                              <label id="err" style="color: red; font-weight: 300;"></label>
+                            </div>
+                            <div class="modal-footer">
+                              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                              <button type="button" class="btn btn-primary" onclick="toAJAX();">Add</button>
+                            </div>
+                        </div>
+                        </form>
+                      </div>
+                    </div>
                     <script>
                       function deletepromotions(elem) {
                         var table = document.getElementById('table1');
@@ -229,10 +308,33 @@
                         return ok;
                       }
 
+                      function toAJAX() {
+                        $.ajax({
+                          type: "POST",
+                          url: "/admin/promotion/add",
+                          data: $("#add-promotion-form").serialize()
+                        }).done(function (data) {
+                          if (data.error) {
+                            document.getElementById("err").innerHTML = data.error;
+                          } else if (data.ok) {
+                            window.location.reload();
+                          }
+                        }).fail(function (data) { });
+                      }
+
                       function checkPromotionsFilter(form) {
                         for (const elem of form.elements) {
                           if (elem.value === '')
                             elem.disabled = true;
                         }
+                      }
+
+                      function changeMinOfEndDate(elem) {
+                        document.getElementById('endDate').min = document.getElementById('startDate').value;
+                        document.getElementById('voucherEndDate').min = document.getElementById('startDate').value;
+                      }
+
+                      function changeMaxOfStartDate(elem) {
+                        document.getElementById('startDate').max = document.getElementById('endDate').value;
                       }
                     </script>

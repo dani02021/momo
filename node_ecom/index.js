@@ -1458,24 +1458,32 @@ async function adminPromotions(ctx) {
   bindParams.name = filters.name;
   bindParams.targetName = filters.targetName;
 
+  let queryTargetGroups = 
+    `SELECT * FROM targetgroups
+    WHERE "deletedAt" is NULL
+      AND POSITION(UPPER($targetName) IN UPPER(name)) > 0
+    ORDER BY "createdAt"`;
+  
   let query = 
     `SELECT * FROM promotions
     INNER JOIN targetgroups ON targetgroups.id = "targetgroupId"
-    WHERE "deletedAt" is NULL
+    WHERE promotions."deletedAt" is NULL
+      AND targetgroups."deletedAt" is NULL
       AND POSITION(UPPER($targetName) IN UPPER("targetgroups"."name")) > 0
-      AND POSITION(UPPER($name) IN UPPER("name")) > 0\n`;
+      AND POSITION(UPPER($name) IN UPPER(promotions."name")) > 0\n`;
   
   if (filters.status)
     query += `AND status = $status`
   
-  query += `ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
+  query += `ORDER BY promotions."createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
 
   let queryC = 
     `SELECT COUNT(*) FROM promotions
-    INNER JOIN targetgroups ON targetgroups.id = targetgroupId
-    WHERE "deletedAt" is NULL
+    INNER JOIN targetgroups ON targetgroups.id = "targetgroupId"
+    WHERE promotions."deletedAt" is NULL
+      AND targetgroups."deletedAt" is NULL
       AND POSITION(UPPER($targetName) IN UPPER("targetgroups"."name")) > 0
-      AND POSITION(UPPER($name) IN UPPER("name")) > 0\n`;
+      AND POSITION(UPPER($name) IN UPPER(promotions."name")) > 0\n`;
 
   if (filters.status)
     queryC += `AND status = $status\n`;
@@ -1494,6 +1502,14 @@ async function adminPromotions(ctx) {
     bind: bindParams
   })).count;
 
+  let targetgroups = await db.query(queryTargetGroups, {
+    type: 'SELECT',
+    plain: false,
+    model: TargetGroup,
+    mapToModel: true,
+    bind: bindParams
+  });
+
   await ctx.render("/admin/promotions", {
     layout: "/admin/base",
     session: ctx.session,
@@ -1501,6 +1517,7 @@ async function adminPromotions(ctx) {
     promotions: promotions,
     filters: filtersToReturn,
     statuses: configEcom.PROMOTION_STATUSES,
+    targetgroups: targetgroups,
     page: page,
     pages: utilsEcom.givePages(page, Math.ceil(count / limit))
   });
@@ -1623,8 +1640,7 @@ router.get('/verify_account/:token', async ctx => {
   });
 
   if (user == null) {
-    let messages = { 'verfError': 'Invalid token!' };
-    ctx.session.messages = messages;
+    ctx.session.messages = { 'verfError': 'Invalid token!' };
 
     loggerEcom.logger.log('info',
       `Someone has entered invalid token ${ctx.params.token}!`);
@@ -1633,15 +1649,13 @@ router.get('/verify_account/:token', async ctx => {
   }
 
   if (!user.emailConfirmed) {
-    var messages = { 'registerSuccess': 'Your email is validated!' };
+    ctx.session.messages = { 'registerSuccess': 'Your email is validated!' };
 
     user.set({ emailConfirmed: true });
     await user.save();
   } else {
-    var messages = { 'registerSuccess': 'Your email is already validated!' };
+    ctx.session.messages = { 'registerSuccess': 'Your email is already validated!' };
   }
-
-  ctx.session.messages = messages;
 
   loggerEcom.logger.log('info',
     `User ${user.username} validated their e-mail!`,
@@ -3121,8 +3135,10 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
     "status": "progress", "count": 0
   })}\n\n`);
 
+  let fileName = ctx.request.files[0].name;
+
   // Supported only .xlsx and .xls
-  if (!(/.xlsx|.xls/g.exec(ctx.request.files[0].name))) {
+  if (! (fileName.endsWith(".xlsx") || fileName.endsWith(".xls"))) {
     stream.write(`event: message\n`);
     stream.write(`data: ${JSON.stringify({
       "status": "error",
@@ -3134,11 +3150,15 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
   }
 
   const workbook = new ExcelJS.Workbook();
-  var worksheet;
+  let worksheet;
+
   try {
+    // Move as stream -> problem is that i dont know number of rows
+    // const rs = fs.createReadStream(ctx.request.files[0].path)
+    // await workbook.xlsx.read(rs);
     await workbook.xlsx.readFile(ctx.request.files[0].path);
 
-    var worksheet = workbook.getWorksheet(1);
+    worksheet = workbook.getWorksheet(1);
   } catch (e) {
     stream.write(`event: message\n`);
     stream.write(`data: ${JSON.stringify({
@@ -3152,14 +3172,18 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
   let seq = utilsEcom.rowSequence(worksheet);
   let attempts = 0, ignored = 0;
 
-  var t = await db.transaction();
-  var categoriesCache = {}; // Posible exploit, if there are too many different categories
+  // bad name
+  let dbTr = await db.transaction();
+  let categoriesCache = {}; // Posible exploit, if there are too many different categories
 
-  var products = [];
+  // Difference between map and object
+  let products = new Map();
 
   (async () => {
     try {
-      var detail = seq.next();
+      // bad name
+      // remove rowsCount -> not needed in generator
+      let detail = seq.next();
 
       while (true) {
         rowLoop:
@@ -3169,6 +3193,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
           // Check headers
           // console.log(detail.value.data);
 
+          // Not needed code?! Don't hard code headers
           if (detail.value.row == 1) {
             for (x in configEcom.PRODUCT_IMPORT_TABLE_HEADERS) {
               if (detail.value.data.getCell(parseInt(x) + 1) != configEcom.PRODUCT_IMPORT_TABLE_HEADERS[parseInt(x)]) {
@@ -3191,13 +3216,14 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
               }
 
               // Empty row
-              if (z == configEcom.PRODUCT_IMPORT_TABLE_HEADERS.length()) {
-                attempts--;
+              if (configEcom.PRODUCT_IMPORT_TABLE_HEADERS.length() == z) {
+                rowsProcessed--;
 
                 continue rowLoop;
               }
             }
 
+            // recode
             let nameIndex = configEcom.PRODUCT_IMPORT_TABLE_HEADERS.indexOf('Name') + 1;
             let priceIndex = configEcom.PRODUCT_IMPORT_TABLE_HEADERS.indexOf('Regular price') + 1;
             let discountPriceIndex = configEcom.PRODUCT_IMPORT_TABLE_HEADERS.indexOf('Regular price') + 1;
@@ -3219,7 +3245,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
                   name: utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value),
                   imageCss: "fas fa-random",
                 }, {
-                  transaction: t
+                  transaction: dbTr
                 });
               }
 
@@ -3235,17 +3261,23 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
               quantity: utilsEcom.richToString(detail.value.data.getCell(quantityIndex).value),
             };
 
+            // Don't use code for validation, use constaints in db
             await Product.build(product).validate();
 
+            // rename to isRowValid
             let isProductValid = true;
 
             // Image processing
             let url = utilsEcom.richToString(detail.value.data.getCell(imageIndex).value);
 
             if (url && url.length != 0) {
+              // Dont use internal try catch
+              // Make client exceptions
               try {
                 url = url.trim();
 
+                // Think of ways to dont use this await.
+                // Make it concurent somehow.
                 let imageRes = await fetch(url, { size: configEcom.DEFAULT_MAX_IMAGE_SIZE });
 
                 if (!imageRes.redirected && imageRes.status === 200) {
@@ -3272,18 +3304,13 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
               }
             }
 
-            products.every(element => {
-              if (element.name == product.name) {
-                isProductValid = false;
-                return false;
-              }
+            if (products.has(product.name))
+              isProductValid = false;
 
-              return true;
-            });
-
+            // Use curly braces? Dont use if without curly braces
             if (!isProductValid)
               ignored++;
-            else products.push(product);
+            else products.set(product.name, product);
           }
 
           detail = seq.next();
@@ -3296,9 +3323,9 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
             })}\n\n`);
 
             // Bulk upsert
-            await Product.bulkCreate(products, {
+            await Product.bulkCreate(Array.from( products.values() ), {
               updateOnDuplicate: ["price", "discountPrice", "description", "categoryId", "quantity"],
-              transaction: t
+              transaction: dbTr
             });
 
             await t.commit();
@@ -3314,12 +3341,12 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
         }
 
         // Bulk upsert
-        await Product.bulkCreate(products, {
+        await Product.bulkCreate(Array.from( products.values() ), {
           updateOnDuplicate: ["price", "discountPrice", "description", "categoryId", "quantity"],
-          transaction: t
+          transaction: dbTr
         });
 
-        products = [];
+        products.clear();
 
         stream.write(`event: message\n`);
         stream.write(`data: ${JSON.stringify({
@@ -3423,29 +3450,29 @@ router.post('/admin/orders/add', async ctx => {
     return;
   }
 
-  const t = await db.transaction(async (t) => {
+  await db.transaction(async (dbTr) => {
     let order = await Order.create({
       status: ctx.request.fields.status,
       orderedAt: Sequelize.fn("NOW"),
-    }, { transaction: t });
+    }, { transaction: dbTr });
 
     if (Object.keys(items).length === 0) {
       ctx.body = { "error": `Selected items are invalid or no items are selected!` };
-      await order.destroy({ transaction: t });
+      await order.destroy({ transaction: dbTr });
       return;
     }
 
     for (id in items) {
       if (!Number.isSafeInteger(Number(id)) || Math.sign(id) <= 0) {
         ctx.body = { "error": `Invalid product!` };
-        await order.destroy({ transaction: t });
+        await order.destroy({ transaction: dbTr });
 
         return;
       }
 
       if (!Number.isSafeInteger(Number(items[id])) || Math.sign(items[id]) <= 0) {
         ctx.body = { "error": `Invalid quantity of product #${id}!` };
-        await order.destroy({ transaction: t });
+        await order.destroy({ transaction: dbTr });
 
         return;
       }
@@ -3454,26 +3481,26 @@ router.post('/admin/orders/add', async ctx => {
 
       if (!product) {
         ctx.body = { 'error': `Product with id ${id} does not exist!` };
-        await order.destroy({ transaction: t });
+        await order.destroy({ transaction: dbTr });
 
         return;
       }
 
       if (await utilsEcom.compareQtyAndProductQty(id, items[id]) == 0) {
         ctx.body = { "error": `Not enough quantity of ${product.name}!` };
-        await order.destroy({ transaction: t });
+        await order.destroy({ transaction: dbTr });
 
         return;
       }
 
-      let orderitem = await OrderItem.create({ quantity: items[id] }, { transaction: t });
+      let orderitem = await OrderItem.create({ quantity: items[id] }, { transaction: dbTr });
 
-      await orderitem.setProduct(product, { transaction: t });
-      await orderitem.update({ price: product.discountPrice }, { transaction: t });
-      await order.addOrderitem(orderitem, { transaction: t });
+      await orderitem.setProduct(product, { transaction: dbTr });
+      await orderitem.update({ price: product.discountPrice }, { transaction: dbTr });
+      await order.addOrderitem(orderitem, { transaction: dbTr });
     }
 
-    await user.addOrder(order, { transaction: t });
+    await user.addOrder(order, { transaction: dbTr });
 
     await utilsEcom.removeProductQtyFromOrder(order);
 
@@ -5077,6 +5104,9 @@ router.post('/admin/settings/other', async ctx => {
   ctx.redirect('/admin/settings/other');
 });
 
+
+// USE DISPATCH TABLE
+// let dispatchTable = {'/admin/promotions/targetgroups': {cb: adminPromotionTargetGroups, requireSession: true}};
 router.get('/admin/promotions/targetgroups', async ctx => adminPromotionTargetGroups(ctx));
 router.get('/admin/promotions/targetgroups/:page', async ctx => adminPromotionTargetGroups(ctx));
 
@@ -5145,26 +5175,26 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
   name = name.trim();
 
   // Check if name contains only letters and numbers
-  if (!/^[a-z0-9"'\-_ ]+$/ig.test(name)) {
+  if (! /^[a-z0-9"'\-_ ]+$/ig.test(name)) {
     ctx.body = { 'error': 'Target group name must contain only letters and numbers and [",\',-,_]' };
 
     return
   }
 
-  const result = await db.transaction(async (t) => {
+  await db.transaction(async (dbTr) => {
     let [targetGroup, targetGroupCreated] = await TargetGroup.findOrCreate({
       where: {
         name: ctx.request.fields.name
-      }, transaction: t, paranoid: false
+      }, transaction: dbTr, paranoid: false
     });
 
     // If target group already exists
     if (!targetGroupCreated) {
       if (targetGroup.deletedAt) {
-        await targetGroup.restore({transaction: t});
+        await targetGroup.restore({transaction: dbTr});
         await targetGroup.update({
           name: ctx.request.fields.name
-        }, {transaction: t, paranoid: false});
+        }, {transaction: dbTr, paranoid: false});
 
         
         TargetGroupFilters.destroy({
@@ -5232,7 +5262,7 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
       await targetGroup.createTargetgroup_filter({
         filter: f,
         value: filters[f]
-      }, { transaction: t });
+      }, { transaction: dbTr });
     }
 
     if (birthAfter || birthBefore) {
@@ -5255,7 +5285,7 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
       bind: filters
     });
 
-    await targetGroup.setUsers(targetGroupUsers, { transaction: t });
+    await targetGroup.setUsers(targetGroupUsers, { transaction: dbTr });
 
     loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} created new target group #${ctx.request.fields.id}`,
@@ -5320,6 +5350,98 @@ router.post('/admin/promotions/targetgroup/delete', async ctx => {
 
 router.get('/admin/promotions', async ctx => adminPromotions(ctx));
 router.get('/admin/promotions/:page', async ctx => adminPromotions(ctx));
+
+router.post('/admin/promotion/add', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    utilsEcom.onNotAuthenticatedStaff(ctx);
+    return;
+  }
+
+  if (!await utilsEcom.hasPermission(ctx, 'promotions.create')) {
+    utilsEcom.onNoPermission(ctx,
+      "You don\'t have permission to create promotions",
+      {
+        level: "info",
+        message: `Staff ${ctx.session.dataValues.staffUsername} tried to create promotions without rights`,
+        options:
+        {
+          user: ctx.session.dataValues.staffUsername,
+          isStaff: true
+        }
+      });
+    return;
+  }
+
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+  // Auto session expire
+  if (!utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
+
+    return;
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
+  // Check for no fields
+  if (!ctx.request.fields) {
+    ctx.body = { 'error': 'Unexpected error occured! Please try again later' };
+
+    return
+  }
+
+  let name = ctx.request.fields.name;
+
+  // Check for no name
+  if (!name) {
+    ctx.body = { 'error': 'Promotion name is required' };
+
+    return
+  }
+
+  // Check if target group name is of needed length
+  if (ctx.request.fields.name.length < 3 ||
+    ctx.request.fields.name.length > 100) {
+    ctx.body = { 'error': 'Promotion name must be within range [3-100]' };
+
+    return;
+  }
+
+  name = name.trim();
+
+  // Check if name contains only letters and numbers
+  if (!/^[a-z0-9"'\-_ ]+$/ig.test(name)) {
+    ctx.body = { 'error': 'Promotions name must contain only letters and numbers and [",\',-,_]' };
+
+    return
+  }
+
+  let targetgroupId = ctx.query.fields.targetgroup;
+
+  // Check if targetgroup is valid id
+  if (!Number.isSafeInteger(Number(targetgroup)) ||
+      Math.sign(Number(targetgroup)) < 0) {
+        ctx.body = {'error': 'Target group id must be a non-negative number!'};
+      
+        return;
+  }
+
+  let targetgroup = await TargetGroup.findOne({where: {id: targetgroupId}});
+
+  if (!targetgroup) {
+      ctx.body = {'error': `Target group with id #${targetgroupId} does not exist!`};
+      
+      return;
+  }
+
+  let startDate = ctx.query.fields.startDate;
+  let endDate = ctx.query.fields.endDate;
+
+  // todo: check startDate and endDate is valid and are > 1970 and endDate > startDate
+});
 
 /* WARNING: 
    The session can be null at any request

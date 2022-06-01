@@ -584,16 +584,6 @@ const Promotion = db.define("promotion", {
 });
 
 const Voucher = db.define("voucher", {
-  startDate: {
-    type: DataTypes.DATEONLY,
-    allowNull: false,
-    defaultValue: Sequelize.fn("NOW"),
-    validate: {
-      notNull: {
-        msg: "Promotion start date should not be empty"
-      }
-    }
-  },
   endDate: {
     type: DataTypes.DATEONLY,
     allowNull: false,
@@ -615,6 +605,19 @@ const Voucher = db.define("voucher", {
 }, {
   paranoid: true
 });
+
+const UserVoucher = db.define("user_voucher", {
+  used: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false
+  }
+}, {
+  paranoid: true,
+  timestamps: false,
+});
+
+User.belongsToMany(Voucher, {through: UserVoucher});
+Voucher.belongsToMany(User, {through: UserVoucher});
 
 Promotion.hasOne(Voucher);
 Voucher.belongsTo(Promotion);
@@ -1097,9 +1100,18 @@ function promotions() {
   return Promotion;
 }
 
+function vouchers() {
+  return Voucher;
+}
+
+function uservouchers() {
+  return UserVoucher
+}
+
 module.exports = {
   category, product, user, staff, session, permission, role, order, orderitem, transaction,
-  paypaltransacion, codtransaction, log, settings, targetgroups, targetgroupfilters, promotions
+  paypaltransacion, codtransaction, log, settings, targetgroups, targetgroupfilters, promotions,
+  vouchers, uservouchers
 };
 
 // Alter the database

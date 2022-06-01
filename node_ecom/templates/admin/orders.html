@@ -206,6 +206,7 @@
                           </div>
                           <form id="add-order-form" action="/admin/orders/add" method="post">
                             <input type="hidden" name="data" id="data">
+                            <input type="hidden" name="isAJAX" value="ajax">
                             <div class="modal-body">
                               <label>Items:</label>
                               <div>
@@ -303,8 +304,8 @@
                         items = document.getElementById('add-order-items');
 
                         if (!qty.value || !element.value ||
-                            !Number.isSafeInteger(Number(qty.value)) ||
-                            Math.sign(Number(qty.value)) <= 0)
+                          !Number.isSafeInteger(Number(qty.value)) ||
+                          Math.sign(Number(qty.value)) <= 0)
                           return;
 
                         for (var i = 0; i < items.length; i++) {

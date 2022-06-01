@@ -225,7 +225,6 @@ function generateSessionKey() {
     return crypto.randomBytes(20).toString('hex');
 }
 
-// Generate email verification token
 function generateEmailVerfToken() {
     return crypto.randomBytes(60).toString('hex');
 }
@@ -871,7 +870,7 @@ async function saveReportExcel(reportRes, filters, time, currency) {
                 .toFixed(2)),
         currency]);
 
-    /*TITLE*/
+    // TITLE
     worksheet.mergeCells('A1', 'E1');
     worksheet.getCell('A1').value =
         `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`;

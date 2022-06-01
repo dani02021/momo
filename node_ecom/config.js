@@ -351,9 +351,13 @@ let PROMOTION_STATUSES = [
  */
 async function loadSettings(settings) 
 {
+    assert(settings !== null);
     assert(typeof settings === "object");
     
-    if (settings instanceof Promise)
+    // if (settings instanceof Promise) NOT GOOD PRACTICE
+    //    settings = await settings;
+
+    if (typeof settings.then === "function")
         settings = await settings;
 
     for (i = 0; i < settings.length; i++) 
