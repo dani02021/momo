@@ -86,6 +86,8 @@ const logger = winston.createLogger({
 
     let stackerr = stacktrace.parse(err);
 
+    if (err instanceof)
+
     if (stackerr.length == 0) {
         logger.error(
             `User: ${username}, \

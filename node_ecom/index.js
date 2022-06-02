@@ -17,6 +17,7 @@ const { PassThrough } = require("stream");
 const bodyClean = require('koa-body-clean');
 const fetch = require('node-fetch');
 const { imageHash } = require('image-hash');
+const exceptions = require('./exceptions.js');
 
 const fs = require('fs');
 const db = require("./db.js");
@@ -2015,14 +2016,18 @@ router.post('/admin/products/add', async ctx => {
     defaultParams.hide = false;
   }
 
-  const [product, created] = await (Product.findOrCreate({
+  const [product, created] = (await Product.findOrCreate({
     where: {
       name: ctx.request.fields.name
     },
     paranoid: false,
     defaults: defaultParams
   }).catch((e) => {
-    console.log("error");
+    console.log(e);
+
+    // TODO Check for SequelizeDatabaseError
+    if (e.errors && e.errors[0].type === "Validation error")
+      throw new exceptions.ClientException(e.errors[0].message, {ctx: ctx});
   }));
 
   if (!created) {
@@ -2035,7 +2040,7 @@ router.post('/admin/products/add', async ctx => {
     } else {
       await product.restore();
 
-      if (ctx.request.files.length && ctx.request.files[0].size != 0) {
+      if (ctx.request.files && ctx.request.files[0].size != 0) {
         fs.renameSync(ctx.request.files[0].path + '', __dirname + '/static/media/id' + product.id + '/' + ctx.request.files[0].name, function (err) {
           if (err)
             throw err;
@@ -3376,8 +3381,9 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
       }
     } catch (e) {
       if (e instanceof FetchError) {
-        throw new utilsEcom.ClientException(`Can't load image on row ${row.value.index} `);
+        throw new exceptions.ClientException(`Can't load image on row ${row.value.index} `);
       }
+      
       console.log(e);
 
       if (e.errors) {

@@ -421,6 +421,12 @@ const Product = db.define("product", {
     allowNull: false,
     unique: {
       msg: 'Product name must be unique!'
+    },
+    validate: {
+      len: {
+        args: [3, 255],
+        msg: 'Product name length must be within range [3-255]'
+      }
     }
   },
   price: {

@@ -35,23 +35,7 @@ const stacktrace = require("stack-trace");
 
 const excelJS = require("exceljs");
 const configEcom = require("./config.js");
-
-// Exceptions
-class NotEnoughQuantityException extends Error {
-    constructor(message) {
-        super(message);
-        this.name = "NotEnoughQuantityException";
-        this.code = "NOT_ENOUGH_QUANTITY";
-    }
-}
-
-class ClientException extends Error {
-    constructor(message) {
-        super(message);
-        this.name = "ClientException";
-        this.code = "CLIENT_EXCEPTION";
-    }
-}
+const exceptions = require("./exceptions.js");
 
 const EmailTransport = nodemailer.createTransport({
     pool: true,
@@ -516,9 +500,9 @@ async function removeProductQtyFromOrder(cart) {
         let cartProduct = await cartOrderItems[i].getProduct();
 
         if (cartProduct.quantity < cartOrderItems[i].quantity) {
-            const err = new NotEnoughQuantityException(cartProduct.name + " has only " + cartProduct.quantity + " quantity, but order #" + cartOrderItems[i].id + " is trying to order " + cartOrderItems[i].quantity + "!");
+            const err = new exceptions.NotEnoughQuantityException(cartProduct.name + " has only " + cartProduct.quantity + " quantity, but order #" + cartOrderItems[i].id + " is trying to order " + cartOrderItems[i].quantity + "!");
 
-            logger.log('alert',
+            loggerEcom.logger.log('alert',
                 `Not enough quantity for ${cartProduct.name}!
                 ${err.message}`);
 
@@ -1313,7 +1297,6 @@ def validate_status(request, uid, order_id, order):
 */
 
 module.exports = {
-    ClientException,
     getHost,
     givePages,
     generateEmailVerfToken,
