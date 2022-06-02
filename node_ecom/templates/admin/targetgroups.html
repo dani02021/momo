@@ -41,25 +41,20 @@
                             <div class="container">
                               <form action="/admin/targetgroups" method="get" onsubmit="checkTargetgroupsFilter(this);">
                                 <div class="row" style="margin-bottom: 12px;">
-                                  <div class="col-sm-3">
+                                  <div class="col-sm-4">
                                     <input id="timeAfter" name="timeAfter" class="form-universal"
                                       data-bs-toggle="tooltip" data-bs-placement="top" title="From birthday"
                                       type="datetime-local" value="<%= filters['timeAfter'] %>"><br>
                                   </div>
-                                  <div class="col-sm-3">
+                                  <div class="col-sm-4">
                                     <input id="timeBefore" name="timeBefore" class="form-universal"
                                       data-bs-toggle="tooltip" data-bs-placement="top" title="To birthday"
                                       type="datetime-local" value="<%= filters['timeBefore'] %>">
                                   </div>
-                                  <div class="col-sm-3">
+                                  <div class="col-sm-4">
                                     <input id="targetID" name="targetID" class="form-select" type="number"
                                       style="background-image: none" placeholder="Target Group ID"
                                       value="<%= filters['targetID'] %>">
-                                  </div>
-                                  <div class="col-sm-3">
-                                    <input id="createdBy" name="createdBy" class="form-select"
-                                      style="background-image: none" placeholder="Created by"
-                                      value="<%= filters['createdBy'] %>">
                                   </div>
                                 </div>
                                 <div class="row" style="margin-bottom: 12px;">

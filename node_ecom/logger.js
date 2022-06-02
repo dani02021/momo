@@ -70,17 +70,18 @@ const logger = winston.createLogger({
  * @param {import('koa').Context} ctx 
  * @param {boolean} fileOnly 
  */
- async function handleError(err, ctx, fileOnly = false) {
+ async function handleError(err, options) {
     assert(err instanceof Error);
+    assert(typeof options === "object");
 
     let username;
     let staffUsername;
     let session;
 
-    if (ctx && ctx.session && ctx.session.dataValues) {
-        username = ctx.session.dataValues.username;
-        staffUsername = ctx.session.dataValues.staffUsername;
-        session = JSON.stringify(ctx.session.dataValues);
+    if (options.ctx && options.ctx.session && options.ctx.session.dataValues) {
+        username = options.ctx.session.dataValues.username;
+        staffUsername = options.ctx.session.dataValues.staffUsername;
+        session = JSON.stringify(options.ctx.session.dataValues);
     }
 
     let stackerr = stacktrace.parse(err);
@@ -89,11 +90,11 @@ const logger = winston.createLogger({
         logger.error(
             `User: ${username}, \
             Staff User: ${staffUsername}, \
-            URL: ${ctx ? ctx.url : "undefined"}, \
+            URL: ${options.ctx ? options.ctx.url : "undefined"}, \
             Error message: ${err.message}`,
             {
                 longMessage: `Unhandled exception: ${err}, Session: ${session}`,
-                fileOnly: fileOnly,
+                fileOnly: options.fileOnly,
                 stacktrace: err.stack
             }
         );
@@ -103,11 +104,11 @@ const logger = winston.createLogger({
             on line ${stackerr[0].lineNumber} \
             User: ${username}, \
             Staff User: ${staffUsername}, \
-            URL: ${ctx ? ctx.url : "undefined"}, \
+            URL: ${options.ctx ? options.ctx.url : "undefined"}, \
             Error message: ${err.message}`,
             {
                 longMessage: `Unhandled exception: ${err}, Session: ${session}`,
-                fileOnly: fileOnly,
+                fileOnly: options.fileOnly,
                 stacktrace: err.stack
             }
         );

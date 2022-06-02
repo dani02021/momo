@@ -548,7 +548,7 @@ const Promotion = db.define("promotion", {
   },
   status: {
     // type: DataTypes.ENUM('pending', 'active', 'expired'), -> SEQUELIZE BUG
-    type: DataTypes.STRING,
+    type: DataTypes.SMALLINT,
     allowNull: false,
     validate: {
       notNull: {

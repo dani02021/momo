@@ -45,6 +45,14 @@ class NotEnoughQuantityException extends Error {
     }
 }
 
+class ClientException extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "ClientException";
+        this.code = "CLIENT_EXCEPTION";
+    }
+}
+
 const EmailTransport = nodemailer.createTransport({
     pool: true,
     service: 'gmail',
@@ -427,7 +435,7 @@ async function captureOrder(orderId, debug) {
         return response;
     }
     catch (e) {
-        loggerEcom.handleError(e, null, true);
+        loggerEcom.handleError(e, {fileOnly: true});
 
         logger.log('alert',
             `There was an error while trying to capture paypal order #${orderId}!
@@ -675,7 +683,7 @@ function createTempFile(name = 'temp_file', data = '', encoding = 'utf8') {
     })
 }
 
-async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, sort) {
+async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, sort, vat = true) {
     let text = 
     `SELECT * FROM products 
     LEFT JOIN (
@@ -698,12 +706,18 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
     }
 
     if (minval && minval != 0) {
-        text += ` AND "discountPrice" * (1 + ${configEcom.SETTINGS.vat}) >= $minPrice\n`;
+        if (vat)
+            text += ` AND "discountPrice" * (1 + ${configEcom.SETTINGS.vat}) >= $minPrice\n`;
+        else text += ` AND "discountPrice" >= $minPrice\n`;
+
         returnParamsBind.minPrice = minval;
     }
 
     if (maxval && maxval != 99999) {
-        text += ` AND "discountPrice" * (1 + ${configEcom.SETTINGS.vat}) <= $maxPrice\n`;
+        if (vat)
+            text += ` AND "discountPrice" * (1 + ${configEcom.SETTINGS.vat}) <= $maxPrice\n`;
+        else text += ` AND "discountPrice" <= $maxPrice\n`;
+
         returnParamsBind.maxPrice = maxval;
     }
 
@@ -714,7 +728,7 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
 
     if (sort) {
         if (sort == "sales") {
-            text += ` ORDER BY (sum IS NULL),sum desc`;
+            text += ` ORDER BY (sum IS NULL), sum DESC`;
         } else text += ` ORDER BY "createdAt" DESC`;
     } else text += ` ORDER BY "createdAt" DESC`;
 
@@ -901,8 +915,7 @@ function* rowSequence(worksheet) {
         let row = worksheet.getRow(i);
 
         yield {
-            "row": i,
-            "rowCount": worksheet.rowCount,
+            "index": i,
             "data": row,
         }
     }
@@ -1300,6 +1313,7 @@ def validate_status(request, uid, order_id, order):
 */
 
 module.exports = {
+    ClientException,
     getHost,
     givePages,
     generateEmailVerfToken,

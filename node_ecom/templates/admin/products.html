@@ -58,10 +58,10 @@
                 <input name="name" class="form-select" style="background-image: none" placeholder="Product name" value="<%= filters['name'] %>">
               </div>
               <div class="col-sm-3">
-                <input name="minprice" class="form-universal" placeholder="Min Price" value="<%= filters['minprice'] %>">
+                <input type="number" name="minprice" class="form-universal" placeholder="Min Price" value="<%= filters['minprice'] %>">
               </div>
               <div class="col-sm-3">
-                <input name="maxprice" class="form-universal" placeholder="Max Price" value="<%= filters['maxprice'] %>"><br>
+                <input type="number" name="maxprice" class="form-universal" placeholder="Max Price" value="<%= filters['maxprice'] %>"><br>
               </div>
             </div>
             <div class="row" style="margin-bottom: 12px;">
@@ -243,6 +243,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="add-product-form" action="/admin/products/add/" enctype="multipart/form-data" method="post">
+        <input type="hidden" name="isAJAX" value="ajax">
         <div class="modal-body" style="padding-right: 48px;">
           <div class="row">
             <div class="col-md-5 mx-auto">

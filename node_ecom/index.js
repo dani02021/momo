@@ -126,7 +126,7 @@ async function getProducts(ctx) {
     offset = (parseInt(ctx.params.page) - 1) * limit;
   }
 
-  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval, ctx.query.sort);
+  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval, ctx.query.sort, true);
 
   let cartQty = await utilsEcom.getCartQuantity(ctx);
 
@@ -283,7 +283,7 @@ async function getAdminProducts(ctx) {
     categoriesNames[categories[i].id] = categories[i].name;
   }
 
-  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.name, filters.category, filters.minprice, filters.maxprice);
+  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.name, filters.category, filters.minprice, filters.maxprice, null, false);
 
   let cartQty = await utilsEcom.getCartQuantity(ctx);
 
@@ -1943,7 +1943,7 @@ router.post('/admin/products/add', async ctx => {
     return;
   }
 
-  if (!await utilsEcom.hasPermission(ctx, 'product.create')) {
+  if (!await utilsEcom.hasPermission(ctx, 'products.create')) {
     utilsEcom.onNoPermission(ctx,
       "You don\'t have permission to create product",
       {
@@ -2028,7 +2028,7 @@ router.post('/admin/products/add', async ctx => {
     }
   }
   else {
-    if (ctx.request.files.length && ctx.request.files[0].size != 0) {
+    if (ctx.request.files && ctx.request.files[0].size != 0) {
       fs.renameSync(ctx.request.files[0].path + '', __dirname + '/static/media/id' + product.id + '/' + ctx.request.files[0].name, function (err) {
         if (err)
           throw err;
@@ -3153,9 +3153,15 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
   let worksheet;
 
   try {
-    // Move as stream -> problem is that i dont know number of rows
-    // const rs = fs.createReadStream(ctx.request.files[0].path)
-    // await workbook.xlsx.read(rs);
+    /* TODO: Move as stream
+    *  This library don't support streaming
+    *  Usually excel files should be < 50 MB, but still,
+    *  Even if you block files larger than 50 MB,
+    *  if 100 people import file 50MB, this is 5 GB.
+    *  50 MB xlsx when loaded in ram is not 50 MB ! Its probably 2x or even worser
+    *  XLSX Reading with Stream library -> https://github.com/DaSpawn/xlsx-stream-reader
+    */
+
     await workbook.xlsx.readFile(ctx.request.files[0].path);
 
     worksheet = workbook.getWorksheet(1);
@@ -3170,33 +3176,29 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
     return;
   }
   let seq = utilsEcom.rowSequence(worksheet);
-  let attempts = 0, ignored = 0;
+  let rowsProcessed = 0, rowsIgnored = 0;
 
-  // bad name
   let dbTr = await db.transaction();
-  let categoriesCache = {}; // Posible exploit, if there are too many different categories
+  
+  // FIXME Posible memory exploit, if there are too many different categories
+  let categoriesCache = {};
 
   // Difference between map and object
   let products = new Map();
 
   (async () => {
     try {
-      // bad name
-      // remove rowsCount -> not needed in generator
-      let detail = seq.next();
+      var row = seq.next();
 
       while (true) {
         rowLoop:
-        for (let i = 0; i < Math.min(detail.value.rowCount / 5, 50); i++) {
-          attempts++;
-
-          // Check headers
-          // console.log(detail.value.data);
+        for (var i = 0; i < Math.min(worksheet.rowCount / 5, 50); i++) {
+          rowsProcessed++;
 
           // Not needed code?! Don't hard code headers
-          if (detail.value.row == 1) {
+          if (row.value.index == 1) {
             for (x in configEcom.PRODUCT_IMPORT_TABLE_HEADERS) {
-              if (detail.value.data.getCell(parseInt(x) + 1) != configEcom.PRODUCT_IMPORT_TABLE_HEADERS[parseInt(x)]) {
+              if (row.value.data.getCell(parseInt(x) + 1) != configEcom.PRODUCT_IMPORT_TABLE_HEADERS[parseInt(x)]) {
                 stream.write(`event: message\n`);
                 stream.write(`data: ${JSON.stringify({
                   "status": "error",
@@ -3210,7 +3212,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
           } else {
             // Check and skip if row is empty
             for (let z = 1; z <= configEcom.PRODUCT_IMPORT_TABLE_HEADERS.length; z++) {
-              let val = detail.value.data.getCell(z).value;
+              let val = row.value.data.getCell(z).value;
               if (val != undefined && val != null && val != '') {
                 break;
               }
@@ -3232,43 +3234,42 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
             let imageIndex = configEcom.PRODUCT_IMPORT_TABLE_HEADERS.indexOf('Images') + 1;
             let quantityIndex = configEcom.PRODUCT_IMPORT_TABLE_HEADERS.indexOf('Quantity') + 1;
 
-            if (!categoriesCache[utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value)]) {
+            if (!categoriesCache[utilsEcom.richToString(row.value.data.getCell(categoryIndex).value)]) {
               let cat = await Category.findOne({
                 where: {
                   name:
-                    utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value)
+                    utilsEcom.richToString(row.value.data.getCell(categoryIndex).value)
                 }
               });
 
               if (!cat) {
                 cat = await Category.create({
-                  name: utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value),
+                  name: utilsEcom.richToString(row.value.data.getCell(categoryIndex).value),
                   imageCss: "fas fa-random",
                 }, {
                   transaction: dbTr
                 });
               }
 
-              categoriesCache[utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value)] = cat;
+              categoriesCache[utilsEcom.richToString(row.value.data.getCell(categoryIndex).value)] = cat;
             }
 
             let product = {
-              name: utilsEcom.richToString(detail.value.data.getCell(nameIndex).value),
-              price: utilsEcom.richToString(detail.value.data.getCell(priceIndex).value),
-              discountPrice: utilsEcom.richToString(detail.value.data.getCell(discountPriceIndex).value),
-              description: utilsEcom.richToString(detail.value.data.getCell(descriptionIndex).value),
-              categoryId: categoriesCache[utilsEcom.richToString(detail.value.data.getCell(categoryIndex).value)].id,
-              quantity: utilsEcom.richToString(detail.value.data.getCell(quantityIndex).value),
+              name: utilsEcom.richToString(row.value.data.getCell(nameIndex).value),
+              price: utilsEcom.richToString(row.value.data.getCell(priceIndex).value),
+              discountPrice: utilsEcom.richToString(row.value.data.getCell(discountPriceIndex).value),
+              description: utilsEcom.richToString(row.value.data.getCell(descriptionIndex).value),
+              categoryId: categoriesCache[utilsEcom.richToString(row.value.data.getCell(categoryIndex).value)].id,
+              quantity: utilsEcom.richToString(row.value.data.getCell(quantityIndex).value),
             };
 
             // Don't use code for validation, use constaints in db
             await Product.build(product).validate();
 
-            // rename to isRowValid
-            let isProductValid = true;
+            let isRowValid = true;
 
             // Image processing
-            let url = utilsEcom.richToString(detail.value.data.getCell(imageIndex).value);
+            let url = utilsEcom.richToString(row.value.data.getCell(imageIndex).value);
 
             if (url && url.length != 0) {
               // Dont use internal try catch
@@ -3277,7 +3278,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
                 url = url.trim();
 
                 // Think of ways to dont use this await.
-                // Make it concurent somehow.
+                // Make it concurrent somehow.
                 let imageRes = await fetch(url, { size: configEcom.DEFAULT_MAX_IMAGE_SIZE });
 
                 if (!imageRes.redirected && imageRes.status === 200) {
@@ -3296,30 +3297,29 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
 
                   product.image = image;
                 } else {
-                  isProductValid = false;
+                  isRowValid = false;
                 }
-
               } catch (e) {
-                isProductValid = false;
+                isRowValid = false;
               }
             }
 
             if (products.has(product.name))
-              isProductValid = false;
+              isRowValid = false;
 
             // Use curly braces? Dont use if without curly braces
-            if (!isProductValid)
-              ignored++;
-            else products.set(product.name, product);
+            if (isRowValid) {
+              products.set(product.name, product);
+            } else rowsIgnored++;
           }
 
-          detail = seq.next();
+          row = seq.next();
 
-          if (detail.done) {
+          if (row.done) {
             stream.write(`event: message\n`);
             stream.write(`data: ${JSON.stringify({
               "status": "done",
-              "ignored": ignored, "count": attempts - ignored
+              "ignored": rowsIgnored, "count": rowsProcessed - rowsIgnored
             })}\n\n`);
 
             // Bulk upsert
@@ -3328,12 +3328,12 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
               transaction: dbTr
             });
 
-            await t.commit();
+            await dbTr.commit();
 
             stream.end();
 
             loggerEcom.logger.log('info',
-              `Staff ${ctx.session.dataValues.staffUsername} imported ${attempts} products from XLSX`,
+              `Staff ${ctx.session.dataValues.staffUsername} imported ${rowsProcessed - rowsIgnored} products from XLSX`,
               { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
             return;
@@ -3351,25 +3351,28 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
         stream.write(`event: message\n`);
         stream.write(`data: ${JSON.stringify({
           "status": "progress",
-          "count": attempts / detail.value.rowCount
+          "count": rowsProcessed / worksheet.rowCount
         })}\n\n`);
       }
     } catch (e) {
+      if (e instanceof FetchError) {
+        throw new utilsEcom.ClientException(`Can't load image on row ${row.value.index} `);
+      }
       console.log(e);
 
       if (e.errors) {
         stream.write(`event: message\n`);
         stream.write(`data: ${JSON.stringify({
           "status": "error",
-          "msg": `Error on row: ${detail.value.row} with message: ${e.errors[0].message}`
+          "msg": `Error on row: ${row.value.index} with message: ${e.errors[0].message}`
         })}\n\n`);
 
         stream.end();
         return;
       }
 
-      if (!t.finished)
-        await t.rollback();
+      if (!dbTr.finished)
+        await dbTr.rollback();
 
       stream.write(`event: message\n`);
       stream.write(`data: ${JSON.stringify({
@@ -5476,7 +5479,7 @@ app.use(favicon(__dirname + '/static/img/favicon.ico'));
 
 // Global Unhandled Error Handler
 app.on("error", (err, ctx) => {
-  loggerEcom.handleError(err, ctx);
+  loggerEcom.handleError(err, {ctx: ctx});
 });
 
 // app.listen(3210);
