@@ -269,7 +269,7 @@
             <div class="col-md-5 mx-auto">
               <label>Discount Price (USD):</label>
               <div>
-                <input name="discountPrice" type="number" required></input>
+                <input name="discountPrice" type="number"></input>
               </div>
             </div>
           </div>
@@ -283,7 +283,8 @@
             <div class="col-md-5 mx-auto">
               <label>Category:</label>
               <div>
-                <select name="category" id="category">
+                <select name="category" id="category" required>
+                  <option value="Select a category:" disabled selected>Select a category:</option>
                   <% for(var i = 0; i < categories.length; i++) { %>
                     <option value="<%= categories[i].id %>"> <%= categories[i].name %></option>
                   <% } %>

@@ -1974,6 +1974,14 @@ router.post('/admin/products/add', async ctx => {
   let price = parseFloat(parseFloat(ctx.request.fields.price).toFixed(2));
   let discountPrice = parseFloat(parseFloat(ctx.request.fields.discountPrice).toFixed(2));
 
+  if (!price) {
+    ctx.body = { "error": "Product must have price" }
+    return;
+  }
+
+  if (!discountPrice)
+    discountPrice = price;
+
   if (price > 9999.99 || price <= 0 || discountPrice > 9999.99 || discountPrice <= 0) {
     // ctx.session.messages = { 'productErrorPrice': 'Product has invalid price (0 - 9999.99)' };
     // ctx.redirect('/admin/products/');
@@ -1991,19 +1999,31 @@ router.post('/admin/products/add', async ctx => {
     categoryId: ctx.request.fields.category
   };
 
+  if (!defaultParams.name) {
+    ctx.body = { "error": "Product must have name" }
+    return;
+  }
+
+  if (!defaultParams.quantity) {
+    ctx.body = { "error": "Product must have quantity" }
+    return;
+  }
+
   if (ctx.request.fields.hide == 'on') {
     defaultParams.hide = true;
   } else {
     defaultParams.hide = false;
   }
 
-  const [product, created] = await Product.findOrCreate({
+  const [product, created] = await (Product.findOrCreate({
     where: {
       name: ctx.request.fields.name
     },
     paranoid: false,
     defaults: defaultParams
-  });
+  }).catch((e) => {
+    console.log("error");
+  }));
 
   if (!created) {
     if (!product.deletedAt) {
