@@ -3376,9 +3376,9 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
         })}\n\n`);
       }
     } catch (e) {
-      if (e instanceof FetchError) {
-        throw new exceptions.ClientException(`Can't load image on row ${row.value.index} `);
-      }
+      // if (e instanceof FetchError) {
+      //   throw new exceptions.ClientException(`Can't load image on row ${row.value.index} `);
+      // }
 
       console.log(e);
 
@@ -5513,7 +5513,7 @@ app.on("error", (err, ctx) => {
       var message = err.message;
     } 
 
-    if (ctx.request.fields.isAJAX) {
+    if (ctx.request.fields.isAJAX) { // no fields error
       err.status = 200;
 
       err.message = JSON.stringify({'error': message});
