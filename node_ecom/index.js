@@ -29,6 +29,7 @@ const Op = Sequelize.Op;
 const models = require("./models.js");
 const { parse, resolve } = require('path');
 const { bind } = require('koa-route');
+const { assert_isValidISODate, assert_notNull, assert_stringLength, assert_regex, assert_isSafeInteger } = require('./asserts.js');
 const Category = models.category();
 const Product = models.product();
 const User = models.user();
@@ -1782,7 +1783,7 @@ router.post("/login", async ctx => {
 
     loggerEcom.logger.log('info',
       `User ${ctx.request.fields.username} logged in!`,
-      { user: ctx.request.fields.username });
+      { user: ctx.request.fields.username, isStaff: false });
 
     await user.update({
       lastLogin: Sequelize.fn("NOW")
@@ -1801,13 +1802,15 @@ router.post("/login", async ctx => {
 });
 
 router.get('/logout', async ctx => {
-  ctx.session.messages = { 'logout': 'Log-out successful!' };
+  if (ctx.session.username) {
+    ctx.session.messages = { 'logout': 'Log-out successful!' };
 
-  loggerEcom.logger.log('info',
-    `User ${ctx.session.username} logged out!`,
-    { user: ctx.session.username });
-
-  ctx.session.username = null;
+    loggerEcom.logger.log('info',
+      `User ${ctx.session.username} logged out!`,
+      { user: ctx.session.username });
+  
+    ctx.session.username = null;
+  }
 
   ctx.redirect('/')
 });
@@ -1925,12 +1928,15 @@ router.post('/admin/login', async ctx => {
 });
 
 router.get('/admin/logout', async ctx => {
-  ctx.session.messages = { 'logout': 'Log-out successful!' };
-  loggerEcom.logger.log('info',
-    `Staff ${ctx.session.dataValues.staffUsername} logged out!`,
-    { user: ctx.session.dataValues.staffUsername, isStaff: true });
+  if (ctx.session.dataValues.staffUsername) {
+    ctx.session.messages = { 'logout': 'Log-out successful!' };
 
-  ctx.session.staffUsername = null
+    loggerEcom.logger.log('info',
+      `Staff ${ctx.session.dataValues.staffUsername} logged out!`,
+      { user: ctx.session.dataValues.staffUsername, isStaff: true });
+  
+    ctx.session.staffUsername = null;
+  }
 
   ctx.redirect('/admin/login');
 });
@@ -5411,41 +5417,32 @@ router.post('/admin/promotion/add', async ctx => {
     });
   }
 
-  // Check for no fields
-  if (!ctx.request.fields) {
-    ctx.body = { 'error': 'Unexpected error occured! Please try again later' };
-
-    return
-  }
-
+  assert_notNull(ctx.request.fields, ctx,
+    {message: 'Unexpected error occured! Please try again later'});
+  
   let name = ctx.request.fields.name;
 
-  // Check for no name
-  if (!name) {
-    ctx.body = { 'error': 'Promotion name is required' };
+  assert_notNull(name, ctx, {"message": 'Promotion name is required'});
 
-    return
-  }
-
-  // Check if target group name is of needed length
-  if (ctx.request.fields.name.length < 3 ||
-    ctx.request.fields.name.length > 100) {
-    ctx.body = { 'error': 'Promotion name must be within range [3-100]' };
-
-    return;
-  }
+  assert_stringLength(name, ctx,  {
+    message: 'Promotion name must be within range [3-100]',
+    min: 3,
+    max: 100
+  });
 
   name = name.trim();
 
-  // Check if name contains only letters and numbers
-  if (!/^[a-z0-9"'\-_ ]+$/ig.test(name)) {
-    ctx.body = { 'error': 'Promotions name must contain only letters and numbers and [",\',-,_]' };
-
-    return
-  }
+  assert_regex(name, ctx, {
+    "regex": `^[a-z0-9"'-_ ]+$`,
+    "parameters": "ig",
+    "message": `Promotions name must contain only letters and numbers and [",',-,_]`
+  });
 
   let targetgroupId = ctx.query.fields.targetgroup;
 
+  assert_isSafeInteger(targetgroupId, ctx, {
+    message: 'Target group id must be a number!'
+  })
   // Check if targetgroup is valid id
   if (!Number.isSafeInteger(Number(targetgroup)) ||
     Math.sign(Number(targetgroup)) < 0) {
@@ -5456,7 +5453,7 @@ router.post('/admin/promotion/add', async ctx => {
 
   let targetgroup = await TargetGroup.findOne({ where: { id: targetgroupId } });
 
-  if (!targetgroup) {
+  if (assert_notNull(targetgroup)) {
     ctx.body = { 'error': `Target group with id #${targetgroupId} does not exist!` };
 
     return;
@@ -5464,6 +5461,9 @@ router.post('/admin/promotion/add', async ctx => {
 
   let startDate = ctx.query.fields.startDate;
   let endDate = ctx.query.fields.endDate;
+
+  assert_isValidISODate(startDate);
+  assert_isValidISODate(endDate);
 
   // todo: check startDate and endDate is valid and are > 1970 and endDate > startDate
 });
