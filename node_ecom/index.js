@@ -18,6 +18,7 @@ const bodyClean = require('koa-body-clean');
 const fetch = require('node-fetch');
 const { imageHash } = require('image-hash');
 const { ClientException, NotEnoughQuantityException } = require('./exceptions.js');
+var mv = require('mv');
 
 const fs = require('fs');
 const db = require("./db.js");
@@ -2183,8 +2184,14 @@ router.post('/admin/products/edit/:id', async ctx => {
   }
 
   // Upload the image
-  if (ctx.request.files.length && ctx.request.files[0].size != 0) {
-    fs.renameSync(ctx.request.files[0].path + '', __dirname + '/static/media/id' + ctx.params.id + '/' + ctx.request.files[0].name, function (err) {
+  let imgDir = __dirname + '/static/media/id' + ctx.params.id;
+
+  if (!fs.existsSync(imgDir)) {
+    fs.mkdirSync(imgDir);
+  }
+
+  if (ctx.request.files && ctx.request.files[0].size != 0) {
+    mv(ctx.request.files[0].path + '', imgDir + '/' + ctx.request.files[0].name, function (err) {
       if (err) {
         loggerEcom.logger.log('error',
           `There was an error while trying to edit the image of product # ${ctx.params.id}!
@@ -5477,7 +5484,7 @@ app.use(session({
 app.use(serve('./static'));
 
 app.use(KoaBodyParser());
-app.use(bodyClean());
+// app.use(bodyClean());
 
 render(app, {
   root: path.join(__dirname, "templates"),
