@@ -396,6 +396,7 @@
     $.ajax({
         type: "POST",
         url: "/admin/products/add",
+        dataType: "json",
         data: $("#add-product-form").serialize()
       }).done(function(data) {
         if (data.error)  {
@@ -403,7 +404,7 @@
         } else if (data.ok) {
           window.location.reload();
         }
-      }).fail(function(data) { });
+      }).fail(function(data) { console.log(data); });
   }
 
   function toAJAXImport(elem) {

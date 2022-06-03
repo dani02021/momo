@@ -201,7 +201,7 @@
             </div>
         </div>
         <% } %>
-        <% if(i == 'validationError') { %>
+        <% if(i == 'validationError' || i == 'clientError') { %>
             <div class="alert alert-danger alert-dismissible fade show align-items-center" role="alert">
                 <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
               <strong><%= session.dataValues.messages[i] %></strong>

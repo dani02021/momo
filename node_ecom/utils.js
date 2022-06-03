@@ -160,7 +160,7 @@ async function getOrderAsTableHTML(cart, table, options) {
     {
         if (table[z] == "subtotal") 
         {
-            html += `<td style="text-align: right; border: 1px solid black">$${await cart.getTotalWithVAT()}</td>\n`;
+            html += `<td style="text-align: right; border: 1px solid black">$${await cart.getTotalWithVATStr()}</td>\n`;
         } else 
         {
             if (table[z+1] == "subtotal")
