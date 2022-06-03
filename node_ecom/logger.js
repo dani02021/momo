@@ -3,7 +3,8 @@ const stacktrace = require("stack-trace");
 const winston = require('winston');
 const WinstonTransport = require('winston-transport');
 const models = require("./models.js");
-const configEcom = require("./config.js")
+const configEcom = require("./config.js");
+const { ClientException } = require("./exceptions.js");
 
 const Log = models.log();
 
@@ -86,7 +87,13 @@ const logger = winston.createLogger({
 
     let stackerr = stacktrace.parse(err);
 
-    if (err instanceof)
+    if (err instanceof ClientException) {
+        // Options attribute should exist !
+        assert(typeof err.options === "object");
+        assert(typeof err.options.ctx === "object");
+
+        console.log("cr");
+    }
 
     if (stackerr.length == 0) {
         logger.error(
