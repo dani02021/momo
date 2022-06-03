@@ -17,7 +17,7 @@ const { PassThrough } = require("stream");
 const bodyClean = require('koa-body-clean');
 const fetch = require('node-fetch');
 const { imageHash } = require('image-hash');
-const exceptions = require('./exceptions.js');
+const { ClientException, NotEnoughQuantityException } = require('./exceptions.js');
 
 const fs = require('fs');
 const db = require("./db.js");
@@ -1363,7 +1363,7 @@ async function adminPromotionTargetGroupsView(ctx) {
 
   let targetgroupfiltersRet = {};
 
-  for(i = 0; i < targetgroupfilters.length; i++) {
+  for (i = 0; i < targetgroupfilters.length; i++) {
     targetgroupfiltersRet[targetgroupfilters[i].dataValues.filter] = targetgroupfilters[i].dataValues.value;
   }
 
@@ -1459,26 +1459,26 @@ async function adminPromotions(ctx) {
   bindParams.name = filters.name;
   bindParams.targetName = filters.targetName;
 
-  let queryTargetGroups = 
+  let queryTargetGroups =
     `SELECT * FROM targetgroups
     WHERE "deletedAt" is NULL
       AND POSITION(UPPER($targetName) IN UPPER(name)) > 0
     ORDER BY "createdAt"`;
-  
-  let query = 
+
+  let query =
     `SELECT * FROM promotions
     INNER JOIN targetgroups ON targetgroups.id = "targetgroupId"
     WHERE promotions."deletedAt" is NULL
       AND targetgroups."deletedAt" is NULL
       AND POSITION(UPPER($targetName) IN UPPER("targetgroups"."name")) > 0
       AND POSITION(UPPER($name) IN UPPER(promotions."name")) > 0\n`;
-  
+
   if (filters.status)
     query += `AND status = $status`
-  
+
   query += `ORDER BY promotions."createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
 
-  let queryC = 
+  let queryC =
     `SELECT COUNT(*) FROM promotions
     INNER JOIN targetgroups ON targetgroups.id = "targetgroupId"
     WHERE promotions."deletedAt" is NULL
@@ -2000,13 +2000,8 @@ router.post('/admin/products/add', async ctx => {
     categoryId: ctx.request.fields.category
   };
 
-  if (!defaultParams.name) {
-    ctx.body = { "error": "Product must have name" }
-    return;
-  }
-
-  if (!defaultParams.quantity) {
-    ctx.body = { "error": "Product must have quantity" }
+  if (!defaultParams.categoryId) {
+    ctx.body = { "error": "Please select a category" }
     return;
   }
 
@@ -2016,19 +2011,13 @@ router.post('/admin/products/add', async ctx => {
     defaultParams.hide = false;
   }
 
-  const [product, created] = (await Product.findOrCreate({
+  const [product, created] = await Product.findOrCreate({
     where: {
       name: ctx.request.fields.name
     },
     paranoid: false,
     defaults: defaultParams
-  }).catch((e) => {
-    console.log(e);
-
-    // TODO Check for SequelizeDatabaseError
-    if (e.errors && e.errors[0].type === "Validation error")
-      throw new exceptions.ClientException(e.errors[0].message, {ctx: ctx});
-  }));
+  });
 
   if (!created) {
     if (!product.deletedAt) {
@@ -3163,7 +3152,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
   let fileName = ctx.request.files[0].name;
 
   // Supported only .xlsx and .xls
-  if (! (fileName.endsWith(".xlsx") || fileName.endsWith(".xls"))) {
+  if (!(fileName.endsWith(".xlsx") || fileName.endsWith(".xls"))) {
     stream.write(`event: message\n`);
     stream.write(`data: ${JSON.stringify({
       "status": "error",
@@ -3204,7 +3193,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
   let rowsProcessed = 0, rowsIgnored = 0;
 
   let dbTr = await db.transaction();
-  
+
   // FIXME Posible memory exploit, if there are too many different categories
   let categoriesCache = {};
 
@@ -3348,7 +3337,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
             })}\n\n`);
 
             // Bulk upsert
-            await Product.bulkCreate(Array.from( products.values() ), {
+            await Product.bulkCreate(Array.from(products.values()), {
               updateOnDuplicate: ["price", "discountPrice", "description", "categoryId", "quantity"],
               transaction: dbTr
             });
@@ -3366,7 +3355,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
         }
 
         // Bulk upsert
-        await Product.bulkCreate(Array.from( products.values() ), {
+        await Product.bulkCreate(Array.from(products.values()), {
           updateOnDuplicate: ["price", "discountPrice", "description", "categoryId", "quantity"],
           transaction: dbTr
         });
@@ -3383,7 +3372,7 @@ router.post('/admin/api/products/import/xlsx', async ctx => {
       if (e instanceof FetchError) {
         throw new exceptions.ClientException(`Can't load image on row ${row.value.index} `);
       }
-      
+
       console.log(e);
 
       if (e.errors) {
@@ -5220,12 +5209,12 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
     // If target group already exists
     if (!targetGroupCreated) {
       if (targetGroup.deletedAt) {
-        await targetGroup.restore({transaction: dbTr});
+        await targetGroup.restore({ transaction: dbTr });
         await targetGroup.update({
           name: ctx.request.fields.name
-        }, {transaction: dbTr, paranoid: false});
+        }, { transaction: dbTr, paranoid: false });
 
-        
+
         TargetGroupFilters.destroy({
           where: {
             targetgroupId: targetGroup.id
@@ -5254,8 +5243,8 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
 
     // Check if userID is number
     if (userID
-          && (!Number.isSafeInteger(parseInt(userID))
-          || Math.sign(Number(userID)) < 0)) {
+      && (!Number.isSafeInteger(parseInt(userID))
+        || Math.sign(Number(userID)) < 0)) {
       ctx.body = { 'error': 'User ID must be a number' };
 
       return;
@@ -5281,7 +5270,7 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
 
     if (birthBefore)
       filters.birthBefore = birthBefore;
-    
+
     if (country) {
       query += `AND POSITION(UPPER($country) IN UPPER(country)) > 0\n`;
       filters.country = country;
@@ -5317,8 +5306,8 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
     await targetGroup.setUsers(targetGroupUsers, { transaction: dbTr });
 
     loggerEcom.logger.log('info',
-    `Staff ${ctx.session.dataValues.staffUsername} created new target group #${ctx.request.fields.id}`,
-    { user: ctx.session.dataValues.staffUsername, isStaff: true });
+      `Staff ${ctx.session.dataValues.staffUsername} created new target group #${ctx.request.fields.id}`,
+      { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
     ctx.session.messages = { 'targetGroupOK': 'Target group created!' };
     ctx.body = { 'ok': 'Target group created' };
@@ -5373,7 +5362,7 @@ router.post('/admin/promotions/targetgroup/delete', async ctx => {
   loggerEcom.logger.log('info',
     `Staff ${ctx.session.dataValues.staffUsername} deleted target group/s with id/s ${ctx.request.fields.id}`,
     { user: ctx.session.dataValues.staffUsername, isStaff: true });
-  
+
   ctx.redirect('/admin/promotions/targetgroups');
 });
 
@@ -5452,18 +5441,18 @@ router.post('/admin/promotion/add', async ctx => {
 
   // Check if targetgroup is valid id
   if (!Number.isSafeInteger(Number(targetgroup)) ||
-      Math.sign(Number(targetgroup)) < 0) {
-        ctx.body = {'error': 'Target group id must be a non-negative number!'};
-      
-        return;
+    Math.sign(Number(targetgroup)) < 0) {
+    ctx.body = { 'error': 'Target group id must be a non-negative number!' };
+
+    return;
   }
 
-  let targetgroup = await TargetGroup.findOne({where: {id: targetgroupId}});
+  let targetgroup = await TargetGroup.findOne({ where: { id: targetgroupId } });
 
   if (!targetgroup) {
-      ctx.body = {'error': `Target group with id #${targetgroupId} does not exist!`};
-      
-      return;
+    ctx.body = { 'error': `Target group with id #${targetgroupId} does not exist!` };
+
+    return;
   }
 
   let startDate = ctx.query.fields.startDate;
@@ -5505,7 +5494,34 @@ app.use(favicon(__dirname + '/static/img/favicon.ico'));
 
 // Global Unhandled Error Handler
 app.on("error", (err, ctx) => {
-  loggerEcom.handleError(err, {ctx: ctx});
+  if (
+      ( err.errors && err.errors[0].type === "Validation error" )
+      || err.name === "SequelizeDatabaseError") {
+    // On error, Koa replaces ctx.status and ctx.body based on err.status and err.message !
+    err.expose = true;
+
+    if (err.errors && err.errors[0].type === "Validation error") {
+      var message = err.errors[0].message;
+    } else {
+      var message = err.message;
+    } 
+
+    if (ctx.request.fields.isAJAX) {
+      err.status = 200;
+
+      err.message = JSON.stringify({'error': message});
+    } else {
+      // Redirect
+      err.status = 302;
+
+      err.message = ctx.body;
+    }
+
+    // Shadow reference
+    err = new ClientException(message, { ctx: ctx });
+  }
+
+  loggerEcom.handleError(err, { ctx: ctx });
 });
 
 // app.listen(3210);

@@ -71,7 +71,7 @@ const logger = winston.createLogger({
  * @param {import('koa').Context} ctx 
  * @param {boolean} fileOnly 
  */
- async function handleError(err, options) {
+async function handleError(err, options) {
     assert(err instanceof Error);
     assert(typeof options === "object");
 
@@ -92,7 +92,9 @@ const logger = winston.createLogger({
         assert(typeof err.options === "object");
         assert(typeof err.options.ctx === "object");
 
-        console.log("cr");
+        // Don't log in file
+
+        return;
     }
 
     if (stackerr.length == 0) {

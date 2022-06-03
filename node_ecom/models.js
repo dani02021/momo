@@ -211,7 +211,7 @@ const User = db.define("user", {
         msg: "Gender cannot be null!"
       },
       isIn: {
-        args: configEcom.VALID_GENDERS,
+        args: [configEcom.VALID_GENDERS],
         msg: "Gender is not valid!"
       }
     }
@@ -439,7 +439,7 @@ const Product = db.define("product", {
     validate: {
       min: {
         args: 0.01,
-        msg: 'Price must be minimum 0.01!'
+        msg: 'Price must be minimum 0.01'
       }
     }
   },
@@ -454,7 +454,15 @@ const Product = db.define("product", {
   quantity: {
     type: DataTypes.INTEGER,
     defaultValue: 1,
-    allowNull: false
+    allowNull: false,
+    validate: {
+      notNull: {
+        msg: "Product's quantity must not be null"
+      },
+      isInt: {
+        msg: "Product's quantity must be integer"
+      }
+    }
   },
   hide: {
     type: DataTypes.BOOLEAN,
@@ -475,7 +483,12 @@ const Session = db.define("session", {
     unique: true
   },
   maxAge: {
-    type: DataTypes.INTEGER
+    type: DataTypes.INTEGER,
+    validate: {
+      isInt: {
+        msg: "Session's max age must be integer"
+      }
+    }
   },
   expire: {
     type: DataTypes.DATE
@@ -561,8 +574,11 @@ const Promotion = db.define("promotion", {
         msg: "Promotion status should not be empty"
       },
       isIn: {
-        args: [configEcom.PROMOTION_STATUSES],
+        args: [Array.from(Array(configEcom.PROMOTION_STATUSES.length).keys())],
         msg: "Promotion status is invalid"
+      },
+      isInt: {
+        msg: "Status is invalid"
       }
     }
   },
@@ -734,7 +750,12 @@ const CODTransaction = db.define("codtransaction", { },
 const OrderItem = db.define("orderitem", {
   quantity: {
     type: DataTypes.INTEGER,
-    defaultValue: 1
+    defaultValue: 1,
+    validate: {
+      isInt: {
+        msg: "Order's product quantity must be integer"
+      }
+    }
   },
   price: {
     type: DataTypes.DECIMAL(7, 2),
