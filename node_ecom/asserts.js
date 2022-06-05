@@ -142,7 +142,7 @@ function assert_isSafeInteger(value, ctx, options) {
 }
 
 /**
- * Checks if value is positive integer.
+ * Checks if value is positive number.
  * Converted by Number constructor.
  * 0 is included
  * @param {*} value 
@@ -150,13 +150,33 @@ function assert_isSafeInteger(value, ctx, options) {
  * @param {*} options 
  */
 function assert_isNonNegativeNumber(value, ctx, options) {
-    // TODO
     assert_type(options, ctx, {"type": "object", "throwError": "assert"});
 
     let valid = Number(value) >= 0;
 
     if (!valid) {
         let message = "Value is smaller than 0";
+
+        return onFalse(value, ctx, options, message);
+    }
+
+    return true;
+}
+
+/**
+ * Checks if value is integer.
+ * Converted by Number constructor.
+ * @param {*} value 
+ * @param {*} ctx 
+ * @param {*} options 
+ */
+ function assert_isInteger(value, ctx, options) {
+    assert_type(options, ctx, {"type": "object", "throwError": "assert"});
+
+    let valid = Number(value) % 1 === 0;
+
+    if (!valid) {
+        let message = "Value is not an integer";
 
         return onFalse(value, ctx, options, message);
     }
@@ -199,5 +219,6 @@ module.exports = {
     assert_type,
     assert_regex,
     assert_isSafeInteger,
-    assert_isNonNegativeInteger
+    assert_isNonNegativeNumber,
+    assert_isInteger,
 };
