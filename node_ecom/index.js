@@ -5632,11 +5632,7 @@ app.on("error", (err, ctx) => {
       var message = err.message;
     }
 
-<<<<<<< HEAD
-    if (ctx.request.fields.isAJAX) { // no fields error
-=======
     if (ctx.request.fields && ctx.request.fields.isAJAX) {
->>>>>>> origin/dev
       err.status = 200;
 
       err.message = JSON.stringify({ 'error': message });
