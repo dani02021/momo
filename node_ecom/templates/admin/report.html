@@ -53,10 +53,8 @@
               <% for(i = 0; i < report.length; i++) { %>
               <tr>
                 <td><b><%= report[i].dataValues.startDate.toISOString().substring(0, report[i].dataValues.startDate.toISOString().indexOf("T")) %></b></td>
-                <td id="id"><b><%= report[i].dataValues.orders %></b></td>
-                <td>
-                  <%= report[i].dataValues.products %>
-                </td>
+                <td id="id" style="text-align: right;"><b><%= report[i].dataValues.orders %></b></td>
+                <td style="text-align: right;"><%= report[i].dataValues.products %></td>
                 <td style="text-align: right;"><b>$<%= report[i].dataValues.subtotal %></b></td>
                 <td style="text-align: right;"><b>$<%= report[i].dataValues.vatsum %></b></td>
                 <td style="text-align: right;"><b>$<%= report[i].dataValues.grandtotal %></b></td>

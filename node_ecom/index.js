@@ -23,13 +23,14 @@ var mv = require('mv');
 const fs = require('fs');
 const db = require("./db.js");
 
-const { Sequelize, ValidationError } = require("sequelize");
+const { Sequelize, ValidationError, ValidationErrorItem } = require("sequelize");
 const Op = Sequelize.Op;
 
 const models = require("./models.js");
 const { parse, resolve } = require('path');
 const { bind } = require('koa-route');
-const { assert_isValidISODate, assert_notNull, assert_stringLength, assert_regex, assert_isSafeInteger, assert_isNonNegativeNumber, assert_isInteger } = require('./asserts.js');
+const { assert_isValidISODate, assert_notNull, assert_stringLength, assert_regex, assert_isSafeInteger, assert_isNonNegativeNumber, assert_isInteger, assert_isElementInArrayCaseInsensitive } = require('./asserts.js');
+const { AssertionError } = require('assert');
 const Category = models.category();
 const Product = models.product();
 const User = models.user();
@@ -47,6 +48,7 @@ const Settings = models.settings();
 const TargetGroup = models.targetgroups();
 const TargetGroupFilters = models.targetgroupfilters();
 const Promotion = models.promotions();
+const Voucher = models.vouchers();
 
 const app = new Koa();
 const router = new KoaRouter();
@@ -358,8 +360,10 @@ async function getAdminAccounts(ctx) {
     filters['email'] = '';
   }
   if (ctx.query.country) {
-    filters['country'] = ctx.query.country;
-    filtersToReturn['country'] = ctx.query.country;
+    if (assert_isElementInArrayCaseInsensitive(ctx.query.country, ctx, { array: configEcom.COUNTRY_LIST })) {
+      filters['country'] = ctx.query.country;
+      filtersToReturn['country'] = ctx.query.country;
+    }
   } else {
     filters['country'] = '';
   }
@@ -1127,17 +1131,11 @@ async function adminPromotionTargetGroupsAdd(ctx) {
   let filters = {}, filtersToReturn = {};
   let bindParams = {};
 
-  if (!isNaN(new Date(ctx.query.birthAfter))) {
-    filters['birthAfter'] = new Date(ctx.query.birthAfter);
-    filtersToReturn['birthAfter'] = ctx.query.birthAfter;
-  } else {
-    filters['birthAfter'] = new Date(0);
-  }
-  if (!isNaN(new Date(ctx.query.birthBefore))) {
-    filters['birthBefore'] = new Date(ctx.query.birthBefore);
-    filtersToReturn['birthBefore'] = ctx.query.birthBefore;
-  } else {
-    filters['birthBefore'] = new Date();
+  if (/^\d{2}\/\d{2}$/.test(ctx.query.birthday)) {
+    filters['birthday'] = ctx.query.birthday;
+    filtersToReturn['birthday'] = ctx.query.birthday;
+
+    bindParams.birthday = filters.birthday;
   }
   if (ctx.query.firstName) {
     filters['firstName'] = ctx.query.firstName;
@@ -1152,8 +1150,10 @@ async function adminPromotionTargetGroupsAdd(ctx) {
     filters['lastName'] = '';
   }
   if (ctx.query.country) {
-    filters['country'] = ctx.query.country;
-    filtersToReturn['country'] = ctx.query.country;
+    if (assert_isElementInArrayCaseInsensitive(ctx.query.country, ctx, { array: configEcom.COUNTRY_LIST })) {
+      filters['country'] = ctx.query.country;
+      filtersToReturn['country'] = ctx.query.country;
+    }
   } else {
     filters['country'] = '';
   }
@@ -1163,26 +1163,23 @@ async function adminPromotionTargetGroupsAdd(ctx) {
     bindParams.userID = ctx.query.userID;
   }
   if (ctx.query.gender) {
-    // TODO: Check if gender is valid
-    // configEcom.VALID_GENDERS.includes(ctx.query.gender) for case insensitive
-    filters['gender'] = ctx.query.gender;
-    filtersToReturn['gender'] = ctx.query.gender;
-    bindParams.gender = ctx.query.gender;
+    if (assert_isElementInArrayCaseInsensitive(ctx.query.gender, ctx, { array: configEcom.VALID_GENDERS })) {
+      filters['gender'] = ctx.query.gender;
+      filtersToReturn['gender'] = ctx.query.gender;
+      bindParams.gender = ctx.query.gender;
+    }
   }
 
-  bindParams.birthAfter = filters.birthAfter.toISOString();
-  bindParams.birthBefore = filters.birthBefore.toISOString();
   bindParams.firstName = filters.firstName;
   bindParams.lastName = filters.lastName;
   bindParams.country = filters.country;
 
   let query =
     `SELECT * FROM users
-    WHERE birthday BETWEEN $birthAfter AND $birthBefore
-    AND POSITION(UPPER($firstName) IN UPPER("firstName")) > 0
-    AND POSITION(UPPER($lastName) IN UPPER("lastName")) > 0
-    AND POSITION(UPPER($country) IN UPPER("country")) > 0
-    AND "deletedAt" is NULL\n`;
+    WHERE "deletedAt" is NULL
+      AND POSITION(UPPER($firstName) IN UPPER("firstName")) > 0
+      AND POSITION(UPPER($lastName) IN UPPER("lastName")) > 0
+      AND POSITION(UPPER($country) IN UPPER("country")) > 0\n`;
 
   if (filters.userID)
     query += `AND id = $userID\n`;
@@ -1190,21 +1187,26 @@ async function adminPromotionTargetGroupsAdd(ctx) {
   if (filters.gender)
     query += `AND gender = $gender\n`;
 
+  if (filters.birthday)
+    query += `AND to_char(birthday, 'MM/DD') = $birthday\n`;
+
   query += `ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
 
   let queryC =
     `SELECT COUNT(*) FROM users
-    WHERE birthday BETWEEN $birthAfter AND $birthBefore
+    WHERE "deletedAt" is NULL
     AND POSITION(UPPER($firstName) IN UPPER("firstName")) > 0
     AND POSITION(UPPER($lastName) IN UPPER("lastName")) > 0
-    AND POSITION(UPPER($country) IN UPPER("country")) > 0
-    AND "deletedAt" is NULL\n`;
+    AND POSITION(UPPER($country) IN UPPER("country")) > 0\n`;
 
   if (filters.userID)
     queryC += `AND id = $userID\n`;
 
   if (filters.gender)
     queryC += `AND gender = $gender\n`;
+
+  if (filters.birthday)
+    queryC += `AND to_char(birthday, 'DD/MM') = $birthday\n`;
 
   let users = await db.query(query, {
     type: 'SELECT',
@@ -1315,10 +1317,11 @@ async function adminPromotionTargetGroupsView(ctx) {
     whereParams.id = ctx.query.userID;
   }
   if (ctx.query.gender) {
-    // TODO: Check if gender is valid
-    filters['gender'] = ctx.query.gender;
-    filtersToReturn['gender'] = ctx.query.gender;
-    whereParams.gender = ctx.query.gender;
+    if (assert_isElementInArrayCaseInsensitive(ctx.query.gender, ctx, { array: configEcom.VALID_GENDERS })) {
+      filters['gender'] = ctx.query.gender;
+      filtersToReturn['gender'] = ctx.query.gender;
+      whereParams.gender = ctx.query.gender;
+    }
   }
 
   if (filters.birthAfter || filters.birthBefore) {
@@ -1328,6 +1331,14 @@ async function adminPromotionTargetGroupsView(ctx) {
       whereParams.birthday = { [Op.gte]: filters.birthAfter };
     } else {
       whereParams.birthday = { [Op.lte]: filters.birthBefore };
+    }
+  }
+
+  if (ctx.query.country) {
+    if (assert_isElementInArrayCaseInsensitive(ctx.query.country, ctx, { array: configEcom.COUNTRY_LIST })) {
+      filters['country'] = ctx.query.country;
+      filtersToReturn['country'] = ctx.query.country;
+      whereParams.country = ctx.query.country;
     }
   }
 
@@ -1468,7 +1479,11 @@ async function adminPromotions(ctx) {
     ORDER BY "createdAt"`;
 
   let query =
-    `SELECT * FROM promotions
+    `SELECT promotions.id, promotions.name, promotions."startDate",
+            promotions."endDate", promotions."targetgroupId",
+            promotions.status, targetgroups.name AS "targetName",
+            promotions."createdAt"
+    FROM promotions
     INNER JOIN targetgroups ON targetgroups.id = "targetgroupId"
     WHERE promotions."deletedAt" is NULL
       AND targetgroups."deletedAt" is NULL
@@ -1476,7 +1491,7 @@ async function adminPromotions(ctx) {
       AND POSITION(UPPER($name) IN UPPER(promotions."name")) > 0\n`;
 
   if (filters.status)
-    query += `AND status = $status`
+    query += `AND status = $status\n`
 
   query += `ORDER BY promotions."createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
 
@@ -1512,6 +1527,8 @@ async function adminPromotions(ctx) {
     mapToModel: true,
     bind: bindParams
   });
+
+  console.log(promotions);
 
   await ctx.render("/admin/promotions", {
     layout: "/admin/base",
@@ -1808,7 +1825,7 @@ router.get('/logout', async ctx => {
     loggerEcom.logger.log('info',
       `User ${ctx.session.username} logged out!`,
       { user: ctx.session.username });
-  
+
     ctx.session.username = null;
   }
 
@@ -1934,7 +1951,7 @@ router.get('/admin/logout', async ctx => {
     loggerEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} logged out!`,
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
-  
+
     ctx.session.staffUsername = null;
   }
 
@@ -5227,7 +5244,6 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
           name: ctx.request.fields.name
         }, { transaction: dbTr, paranoid: false });
 
-
         TargetGroupFilters.destroy({
           where: {
             targetgroupId: targetGroup.id
@@ -5250,9 +5266,9 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
     let userID = ctx.request.fields.userID;
     let firstName = ctx.request.fields.firstName;
     let lastName = ctx.request.fields.lastName;
-    let birthAfter = ctx.request.fields.birthAfter;
-    let birthBefore = ctx.request.fields.birthBefore;
+    let birthday = ctx.request.fields.birthday;
     let country = ctx.request.fields.country;
+    let gender = ctx.request.fields.gender;
 
     // Check if userID is number
     if (userID
@@ -5278,15 +5294,19 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
       filters.lastName = lastName;
     }
 
-    if (birthAfter)
-      filters.birthAfter = birthAfter;
-
-    if (birthBefore)
-      filters.birthBefore = birthBefore;
+    if (birthday) {
+      query += `AND to_char(birthday, 'MM/DD') = $birthday`;
+      filters.birthday = birthday;
+    }
 
     if (country) {
       query += `AND POSITION(UPPER($country) IN UPPER(country)) > 0\n`;
       filters.country = country;
+    }
+
+    if (gender) {
+      query += `AND gender = $gender\n`;
+      filters.gender = gender;
     }
 
     for (f in filters) {
@@ -5294,18 +5314,6 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
         filter: f,
         value: filters[f]
       }, { transaction: dbTr });
-    }
-
-    if (birthAfter || birthBefore) {
-      if (birthAfter && birthBefore) {
-        query += `AND birthday BETWEEN $birthAfter AND $birthBefore\n`;
-      } else if (birthAfter) {
-        query += `AND birthday >= $birthAfter\n`;
-        userFilters.birthday = { [Op.gte]: birthAfter }
-      } else {
-        query += `AND birthday <= $birthBefore\n`;
-        userFilters.birthday = { [Op.lte]: birthBefore }
-      }
     }
 
     let targetGroupUsers = await db.query(query, {
@@ -5417,52 +5425,164 @@ router.post('/admin/promotion/add', async ctx => {
     });
   }
 
-  assert_notNull(ctx.request.fields, ctx,
-    {message: 'Unexpected error occured! Please try again later'});
-  
   let name = ctx.request.fields.name;
 
-  assert_notNull(name, ctx, {"message": 'Promotion name is required'});
+  assert_notNull(name, ctx, {
+    message: 'Promotion name is required',
+    throwError: 'client'
+  });
 
-  assert_stringLength(name, ctx,  {
+  assert_stringLength(name, ctx, {
     message: 'Promotion name must be within range [3-100]',
     min: 3,
-    max: 100
+    max: 100,
+    throwError: 'client'
   });
 
   name = name.trim();
 
   assert_regex(name, ctx, {
-    "regex": `^[a-z0-9"'-_ ]+$`,
-    "parameters": "ig",
-    "message": `Promotions name must contain only letters and numbers and [",',-,_]`
+    regex: `^[a-z0-9"'-_ ]+$`,
+    parameters: "ig",
+    throwError: 'client',
+    message: `Promotions name must contain only letters and numbers and [",',-,_]`
   });
 
-  let targetgroupId = ctx.query.fields.targetgroup;
+  let targetgroupId = ctx.request.fields.targetgroup;
 
   assert_isInteger(targetgroupId, ctx, {
-    message: 'Target group id must be whole number is required'
+    throwError: 'client',
+    message: 'Target group id must be whole number'
   });
 
   assert_isNonNegativeNumber(targetgroupId, ctx, {
+    throwError: 'client',
     message: 'Target group id must be a non-negative integer'
   });
 
   let targetgroup = await TargetGroup.findOne({ where: { id: targetgroupId } });
 
-  if (assert_notNull(targetgroup)) {
-    ctx.body = { 'error': `Target group with id #${targetgroupId} does not exist!` };
+  assert_notNull(targetgroup, ctx, {
+    throwError: 'client',
+    message: `Target group with id #${targetgroupId} does not exist!`
+  });
 
+  let startDate = ctx.request.fields.startDate;
+  let endDate = ctx.request.fields.endDate;
+
+  let voucherEndDate = ctx.request.fields.voucherEndDate;
+
+  assert_isValidISODate(voucherEndDate, ctx, {
+    throwError: 'client',
+    message: 'Voucher date is not valid'
+  });
+
+  let voucherValue = ctx.request.fields.voucherValue;
+
+  assert_isInteger(voucherValue, ctx, {
+    throwError: 'client',
+    message: 'Voucher price must be whole number'
+  });
+
+  assert_isNonNegativeNumber(voucherValue, ctx, {
+    throwError: 'client',
+    message: 'Voucher price must be a non-negative integer'
+  });
+
+  assert_isValidISODate(startDate, ctx, { throwError: "client" });
+  assert_isValidISODate(endDate, ctx, { throwError: "client" });
+
+  await db.transaction(async (dbTr) => {
+    let [promotion, created] = await Promotion.findOrCreate({
+      where: {
+        name: name,
+        startDate: startDate,
+        endDate: endDate
+      },
+      transaction: dbTr
+    });
+  
+    // If target group already exists
+    if (!created) {
+      if (promotion.deletedAt) {
+        await promotion.restore({ transaction: dbTr });
+        await promotion.update({
+          name: name,
+          startDate: startDate,
+          endDate: endDate
+        }, { transaction: dbTr, paranoid: false });
+  
+        await promotion.setTargetgroup();
+        await promotion.setVoucher();
+      } else {
+        ctx.body = { 'error': 'Target group already exists' };
+  
+        return;
+      }
+    }
+
+    await promotion.createVoucher({
+      endDate: voucherEndDate,
+      value: voucherValue
+    }, {transaction: dbTr});
+
+    await promotion.setTargetgroup(targetgroup, {transaction: dbTr});
+  });
+
+  ctx.body = {'ok': 'ok'};
+  ctx.session.messages = {'promotionCreated': 'Promotion is created!'};
+});
+
+router.post('/admin/promotion/delete', async ctx => {
+  // Check for admin rights
+  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+    utilsEcom.onNotAuthenticatedStaff(ctx);
     return;
   }
 
-  let startDate = ctx.query.fields.startDate;
-  let endDate = ctx.query.fields.endDate;
+  if (!await utilsEcom.hasPermission(ctx, 'promotions.delete')) {
+    utilsEcom.onNoPermission(ctx,
+      "You don\'t have permission to delete a promotion",
+      {
+        level: "info",
+        message: `Staff ${ctx.session.dataValues.staffUsername} tried to delete promotion/s with id/s ${ctx.params.id} without rights`,
+        options:
+        {
+          user: ctx.session.dataValues.staffUsername,
+          isStaff: true
+        }
+      });
+    return;
+  }
 
-  assert_isValidISODate(startDate);
-  assert_isValidISODate(endDate);
+  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
-  
+  // Auto session expire
+  if (!utilsEcom.isSessionValid(staff)) {
+    utilsEcom.onSessionExpired(ctx);
+
+    return;
+  } else {
+    await staff.update({
+      lastActivity: Sequelize.fn("NOW")
+    });
+  }
+
+  let dels = await Promotion.destroy({
+    where: {
+      id: ctx.request.fields.id
+    }
+  });
+
+  console.log(ctx.request.fields.id);
+  console.log(dels);
+
+  ctx.session.messages = { 'promotionDeleted': `Selected promotion/s have been deleted!` };
+  loggerEcom.logger.log('info',
+    `Staff ${ctx.session.dataValues.staffUsername} deleted promotion/s with id/s ${ctx.request.fields.id}`,
+    { user: ctx.session.dataValues.staffUsername, isStaff: true });
+
+  ctx.redirect('/admin/promotions');
 });
 
 /* WARNING: 
@@ -5499,21 +5619,27 @@ app.use(favicon(__dirname + '/static/img/favicon.ico'));
 // Global Unhandled Error Handler
 app.on("error", (err, ctx) => {
   if (
-      ( err.errors && err.errors[0].type === "Validation error" )
-      || err.name === "SequelizeDatabaseError") {
+    (err.errors && err.errors[0] instanceof ValidationErrorItem)
+    || err.name === "SequelizeDatabaseError"
+    || err instanceof ClientException
+    || err instanceof AssertionError) {
     // On error, Koa replaces ctx.status and ctx.body based on err.status and err.message !
     err.expose = true;
 
-    if (err.errors && err.errors[0].type === "Validation error") {
+    if (err.errors && err.errors[0] instanceof ValidationErrorItem) {
       var message = err.errors[0].message;
     } else {
       var message = err.message;
-    } 
+    }
 
+<<<<<<< HEAD
     if (ctx.request.fields.isAJAX) { // no fields error
+=======
+    if (ctx.request.fields && ctx.request.fields.isAJAX) {
+>>>>>>> origin/dev
       err.status = 200;
 
-      err.message = JSON.stringify({'error': message});
+      err.message = JSON.stringify({ 'error': message });
     } else {
       // Redirect
       err.status = 302;
@@ -5522,7 +5648,8 @@ app.on("error", (err, ctx) => {
     }
 
     // Shadow reference
-    err = new ClientException(message, { ctx: ctx });
+    if (!err instanceof AssertionError)
+      err = new ClientException(message, { ctx: ctx });
   }
 
   loggerEcom.handleError(err, { ctx: ctx });

@@ -569,6 +569,7 @@ const Promotion = db.define("promotion", {
     // type: DataTypes.ENUM('pending', 'active', 'expired'), -> SEQUELIZE BUG
     type: DataTypes.SMALLINT,
     allowNull: false,
+    defaultValue: 0,
     validate: {
       notNull: {
         msg: "Promotion status should not be empty"
@@ -646,6 +647,30 @@ Voucher.belongsTo(Promotion);
 
 Promotion.belongsTo(TargetGroup);
 TargetGroup.hasOne(Promotion);
+
+Promotion.prototype.getTotalValue = async function() {
+  return parseFloat(await this.getTotalValueStr());
+}
+
+Promotion.prototype.getTotalValueStr = async function() {
+  return (await db.query(
+    `SELECT
+      COALESCE(
+        ROUND(
+          SUM(
+            vouchers.value
+          )
+        ), 0.00
+      ) AS total
+    FROM promotions
+    INNER JOIN vouchers ON
+      "promotionId" = promotions.id`,
+    {
+      type: 'SELECT',
+      plain: true
+    }
+  )).total;
+}
 
 Product.prototype.getPriceWithVAT = async function () {
   return parseFloat(await this.getPriceWithVATStr());

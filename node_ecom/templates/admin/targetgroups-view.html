@@ -63,7 +63,7 @@
                                   </div>
                                   <div class="col-sm-3">
                                     <select class="form-select" id="gender" name="gender" id="gender">
-                                      <option value="" selected disabled>Select gender</option>
+                                      <option value="" selected>Select gender</option>
                                       <option value="Male" <% if (filters['gender']==='Male' ) { %> selected <% } %>
                                           >Male</option>
                                       <option value="Female" <% if (filters['gender']==='Female' ) { %> selected <% } %>
@@ -74,9 +74,9 @@
                                 <div class="row">
                                   <div class="col-sm-3">
                                     <select class="form-select" id="country" name="country">
-                                      <option value="" selected disabled>Select country</option>
+                                      <option value="" selected>Select country</option>
                                       <% for (i=0;i<countries.length;i++) { %>
-                                        <option value="<%= countries[i] %>" <% if (filters['country']==='countries[i]' ) { %> selected <% } %>
+                                        <option value="<%= countries[i] %>" <% console.log( countries[i] + " " + filters['country']); if (filters['country']===countries[i] ) { %> selected <% } %>
                                           ><%=countries[i]%></option>
                                       <% } %>
                                     </select>

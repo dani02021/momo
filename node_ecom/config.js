@@ -342,7 +342,7 @@ let PRODUCT_IMPORT_TABLE_HEADERS = [
 ];
 
 let PROMOTION_STATUSES = [
-    'active', 'pending', 'expired'
+    'pending', 'active', 'expired'
 ];
 
 /**
