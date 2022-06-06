@@ -1,5 +1,5 @@
 const { AssertionError } = require("assert");
-const { assert } = require("assert/strict");
+const assert = require('assert/strict');
 const { ClientException } = require("./exceptions");
 
 /**
@@ -11,10 +11,10 @@ const { ClientException } = require("./exceptions");
 function assert_notNull(value, ctx, options = {}) {
     assert(typeof options === "object");
 
-    let valid = value === undefined || value === null || value === NaN;
+    let valid = value !== undefined & value !== null & value !== NaN;
 
     if (!valid) {
-        let message = "Value has invalid value";
+        let message = "Value is null";
 
         return onFalse(value, ctx, options, message);
     }
@@ -30,9 +30,9 @@ function assert_notNull(value, ctx, options = {}) {
  * @param {object} options 
  */
  function assert_type(value, ctx, options = {}) {
-    assert(typeof value === "object");
+    assert(typeof options === "object");
 
-    assert_notNull(options.type, ctx, {"throwError": "assert"});
+    assert(options.type !== undefined);
 
     assert(typeof options.type === "string");
 
@@ -55,8 +55,8 @@ function assert_notNull(value, ctx, options = {}) {
  * @param {object} options
  */
 function assert_isValidISODate(value, ctx, options = {}) {
-    assert_type(value, ctx, {"type": "string", "throwError": "assert"});
-    assert_type(options, ctx, {"type": "object", "throwError": "assert"});
+    assert_type(value, ctx, {"type": "string", "throwError": options.throwError});
+    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
 
     let valid = /^\d{4}-\d{2}-\d{2}$/.test(value);
 
@@ -80,10 +80,10 @@ function assert_stringLength(value, ctx, options = {}) {
     assert_type(value, ctx, {"type": "string"});
     assert_type(options, ctx, {"type": "object"});
 
-    assert_notNull(options.min, ctx, {"throwError": "assert"});
-    assert_notNull(options.max, ctx, {"throwError": "assert"});
+    assert_notNull(options.min, ctx, {"throwError": options.throwError});
+    assert_notNull(options.max, ctx, {"throwError": options.throwError});
 
-    let valid = value.length >= options.min && value.length <= options.min;
+    let valid = value.length >= options.min & value.length <= options.max;
 
     if (!valid) {
         let message = "String value is not within range";
@@ -103,12 +103,11 @@ function assert_stringLength(value, ctx, options = {}) {
  * @param {object} options 
  */
 function assert_regex(value, ctx, options = {}) {
-    assert_type(value, ctx, {"type": "string", "throwError": "assert"});
-    assert_type(options, ctx, {"type": "object", "throwError": "assert"});
+    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
 
-    assert_notNull(options.regex, ctx, {"throwError": "assert"});
+    assert_notNull(options.regex, ctx, {"throwError": options.throwError});
 
-    assert_type(options.regex, ctx, {"type": "string", "throwError": "assert"});
+    assert_type(options.regex, ctx, {"type": "string", "throwError": options.throwError});
 
     let valid = new RegExp(options.regex, options.parameters).test(value);
 
@@ -128,7 +127,7 @@ function assert_regex(value, ctx, options = {}) {
  * @param {object} options
  */
 function assert_isSafeInteger(value, ctx, options) {
-    assert_type(options, ctx, {"type": "object", "throwError": "assert"});
+    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
 
     let valid = Number.isSafeInteger(Number(value));
 
@@ -147,10 +146,10 @@ function assert_isSafeInteger(value, ctx, options) {
  * 0 is included
  * @param {*} value 
  * @param {*} ctx 
- * @param {*} options 
+ * @param {object} options 
  */
-function assert_isNonNegativeNumber(value, ctx, options) {
-    assert_type(options, ctx, {"type": "object", "throwError": "assert"});
+function assert_isNonNegativeNumber(value, ctx, options = {}) {
+    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
 
     let valid = Number(value) >= 0;
 
@@ -168,10 +167,10 @@ function assert_isNonNegativeNumber(value, ctx, options) {
  * Converted by Number constructor.
  * @param {*} value 
  * @param {*} ctx 
- * @param {*} options 
+ * @param {object} options 
  */
- function assert_isInteger(value, ctx, options) {
-    assert_type(options, ctx, {"type": "object", "throwError": "assert"});
+ function assert_isInteger(value, ctx, options = {}) {
+    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
 
     let valid = Number(value) % 1 === 0;
 
@@ -184,6 +183,27 @@ function assert_isNonNegativeNumber(value, ctx, options) {
     return true;
 }
 
+/**
+ * Checks if element is included in the array - case insensitive.
+ * array is defined in options.array.
+ * @param {*} value 
+ * @param {*} ctx 
+ * @param {object} options 
+ */
+function assert_isElementInArrayCaseInsensitive(value, ctx, options = {}) {
+    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
+
+    let valid = options.array.find(element => {
+        return element.toUpperCase() == value.toUpperCase()
+    });
+
+    if (!valid) {
+        let message = "Element not found in the array";
+
+        return onFalse(value, ctx, options, message);
+    }
+}
+
 // Utility class
 
 /**
@@ -194,10 +214,9 @@ function assert_isNonNegativeNumber(value, ctx, options) {
  * @param {string} message 
  */
 function onFalse(value, ctx, options = {}, message) {
-    assert_type(value, ctx, {"type": "object"});
-    assert_type(value, ctx, {"type": "string"});
+    assert(typeof options === "object");
 
-    message = message || options.message;
+    message = options.message || message;
 
     if (options.throwError) {
         switch (options.throwError) {
@@ -221,4 +240,5 @@ module.exports = {
     assert_isSafeInteger,
     assert_isNonNegativeNumber,
     assert_isInteger,
+    assert_isElementInArrayCaseInsensitive
 };

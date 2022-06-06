@@ -7,31 +7,19 @@
         </strong>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
-      <% } if(i=='targetgroupCreated' ) { %>
+    <% } if(i=='promotionCreated' ) { %>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-          <strong>Order is created!</strong>
+          <strong><%= session.dataValues.messages[i] %></strong>
           <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-        <% } if(i=='targetgroupDeleted' ) { %>
+    <% } if(i=='promotionDeleted' ) { %>
           <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            <strong>
-              <%= session.dataValues.messages[i] %>
-            </strong>
+            <strong><%= session.dataValues.messages[i] %></strong>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
-          <% } if(i=='targetgroupEdited' ) { %>
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-              <strong>Order is edited!</strong>
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            <% } if(i=='targetgroupNotEnoughQty' ) { %>
-              <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <strong>Some of the product/s does not have enough quantity/ies!</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-              <% } %>
-                <% } %>
-                  <% } %>
+    <% } %>
+  <% } %>
+<% } %>
                     <style>
                       .ui-autocomplete-loading {
                         background: white url("/img/ui-anim_basic_16x16.gif") right center no-repeat;
@@ -47,9 +35,9 @@
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="col-sm-4">
                                     <select name="status" id="status" class="form-select">
-                                      <option value="Select status:" selected disabled>Select target group:</option>
+                                      <option value="" selected>Select status:</option>
                                       <% for(i=0;i<statuses.length;i++) { %>
-                                        <option value="<%= statuses[i] %>" <% if (statuses[i]==filters['status']) { %>
+                                        <option value="<%= i %>" <% if (i == filters['status']) { %>
                                           selected <% } %>><%= statuses[i] %>
                                         </option>
                                         <% } %>
@@ -68,7 +56,7 @@
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="d-grid gap-2">
                                     <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
-                                    <a href="/admin/promotions/promotions" class="btn btn-primary text-uppercase">Clear
+                                    <a href="/admin/promotions" class="btn btn-primary text-uppercase">Clear
                                       filters</a>
                                   </div>
                                 </div>
@@ -106,17 +94,27 @@
                                     </td>
                                     <td>
                                       <b>
+                                        <%= statuses[promotions[i].status] %>
+                                      </b>
+                                    </td>
+                                    <td>
+                                      <b>
                                         <%= promotions[i].name %>
                                       </b>
                                     </td>
                                     <td>
                                       <b>
-                                        <%= await promotions[i].username %>
+                                        <%= promotions[i].startDate + " - " + promotions[i].endDate %>
                                       </b>
                                     </td>
                                     <td style="text-align: right;">
                                       <b>
-                                        <%= (await promotions[i].getUsers()).length %>
+                                        <%= await promotions[i].getTotalValueStr() %>
+                                      </b>
+                                    </td>
+                                    <td>
+                                      <b>
+                                        <%= (await promotions[i].getTargetgroup()).name %>
                                       </b>
                                     </td>
                                     <td style="text-align: right;">
@@ -312,7 +310,8 @@
                         $.ajax({
                           type: "POST",
                           url: "/admin/promotion/add",
-                          data: $("#add-promotion-form").serialize()
+                          data: $("#add-promotion-form").serialize(),
+                          dataType: "json"
                         }).done(function (data) {
                           if (data.error) {
                             document.getElementById("err").innerHTML = data.error;

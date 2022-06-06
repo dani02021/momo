@@ -61,7 +61,7 @@
                                   </div>
                                   <div class="col-sm-3">
                                     <select class="form-select" id="gender" name="gender" id="gender">
-                                      <option value="" selected disabled>Select gender</option>
+                                      <option value="-1" selected>Select gender</option>
                                       <option value="Male" <% if (filters['gender']==='Male' ) { %> selected <% } %>
                                           >Male</option>
                                       <option value="Female" <% if (filters['gender']==='Female' ) { %> selected <% } %>
@@ -72,7 +72,7 @@
                                 <div class="row">
                                   <div class="col-sm-3">
                                     <select class="form-select" id="country" name="country">
-                                      <option value="" selected disabled>Select country</option>
+                                      <option value="-1" selected>Select country</option>
                                       <% for (i=0;i<countries.length;i++) { %>
                                         <option value="<%= countries[i] %>" <% if (filters['country']===countries[i] ) { %> selected <% } %>
                                           ><%=countries[i]%></option>
@@ -80,14 +80,9 @@
                                     </select>
                                   </div>
                                   <div class="col-sm-3">
-                                    <input id="birthAfter" name="birthAfter" class="form-universal"
-                                      data-bs-toggle="tooltip" data-bs-placement="top" title="From birthday"
-                                      type="datetime-local" value="<%= filters['birthAfter'] %>"><br>
-                                  </div>
-                                  <div class="col-sm-3">
-                                    <input id="birthBefore" name="birthBefore" class="form-universal"
-                                      data-bs-toggle="tooltip" data-bs-placement="top" title="To birthday"
-                                      type="datetime-local" value="<%= filters['birthBefore'] %>">
+                                    <input id="birthday" name="birthday" class="form-universal"
+                                      data-bs-toggle="tooltip" data-bs-placement="top" title="Birthday MM/DD format"
+                                      value="<%= filters['birthday'] %>" pattern="^\d{2}/\d{2}$"><br>
                                   </div>
                                 </div>
                                 <div class="row" style="margin-bottom: 12px;">
@@ -143,22 +138,22 @@
                                         </b></td>
                                       <% if (users[i].emailConfirmed) { %>
                                         <td><b>Yes</b></td>
-                                        <% } else { %>
-                                          <td><b>No</b></td>
-                                          <% } %>
-                                            <td><b>
-                                                <%= users[i].gender %>
-                                              </b></td>
-                                            <td><b>
-                                                <%= users[i].birthday %>
-                                              </b></td>
-                                            <% if (users[i].lastLogin) { %>
-                                              <td><b>
-                                                  <%= users[i].lastLogin.toLocaleString('en-GB') %>
-                                                </b></td>
-                                              <% } else { %>
-                                                <td><b></b></td>
-                                                <% } %>
+                                      <% } else { %>
+                                        <td><b>No</b></td>
+                                      <% } %>
+                                      <td><b>
+                                        <%= users[i].gender %>
+                                      </b></td>
+                                      <td><b>
+                                        <%= users[i].birthday %>
+                                      </b></td>
+                                      <% if (users[i].lastLogin) { %>
+                                        <td><b>
+                                          <%= users[i].lastLogin.toLocaleString('en-GB') %>
+                                        </b></td>
+                                      <% } else { %>
+                                        <td><b></b></td>
+                                      <% } %>
                                     </tr>
                                     <% } %>
                                 </tbody>
@@ -247,8 +242,7 @@
                               <li id="add-targetgroup-firstName-li" hidden>First name:</li>
                               <li id="add-targetgroup-lastName-li" hidden>Last name:</li>
                               <li id="add-targetgroup-gender-li" hidden>Gender:</li>
-                              <li id="add-targetgroup-birthAfter-li" hidden>Birthday from:</li>
-                              <li id="add-targetgroup-birthBefore-li" hidden>Birthday to:</li>
+                              <li id="add-targetgroup-birthday-li" hidden>Birthday (MM/DD):</li>
                               <li id="add-targetgroup-country-li" hidden>Country:</li>
                             </ul>
                             <hr>
@@ -280,8 +274,7 @@
                         let firstNameli = document.getElementById('add-targetgroup-firstName-li');
                         let lastNameli = document.getElementById('add-targetgroup-lastName-li');
                         let genderli = document.getElementById('add-targetgroup-gender-li');
-                        let birthAfterli = document.getElementById('add-targetgroup-birthAfter-li');
-                        let birthBeforeli = document.getElementById('add-targetgroup-birthBefore-li');
+                        let birthdayli = document.getElementById('add-targetgroup-birthday-li');
                         let countryli = document.getElementById('add-targetgroup-country-li');
 
                         if (document.getElementById('userID').value !== '') {
@@ -312,17 +305,10 @@
                           atleastOneFilter = true;
                         }
 
-                        if (document.getElementById('birthAfter').value !== '') {
-                          birthAfterli.innerHTML = "Birth from: " + new Date(document.getElementById('birthAfter').value).toLocaleString('en-GB');
+                        if (document.getElementById('birthday').value !== '') {
+                          birthdayli.innerHTML = "Birthday (MM/DD): " + document.getElementById('birthday').value;
 
-                          birthAfterli.hidden = null;
-                          atleastOneFilter = true;
-                        }
-
-                        if (document.getElementById('birthBefore').value !== '') {
-                          birthBeforeli.innerHTML = "Birth to: " + new Date(document.getElementById('birthBefore').value).toLocaleString('en-GB');
-
-                          birthBeforeli.hidden = null;
+                          birthdayli.hidden = null;
                           atleastOneFilter = true;
                         }
 
