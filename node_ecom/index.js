@@ -5479,14 +5479,9 @@ router.post('/admin/promotion/add', async ctx => {
 
   let voucherValue = ctx.request.fields.voucherValue;
 
-  assert_isInteger(voucherValue, ctx, {
-    throwError: 'client',
-    message: 'Voucher price must be whole number'
-  });
-
   assert_isNonNegativeNumber(voucherValue, ctx, {
     throwError: 'client',
-    message: 'Voucher price must be a non-negative integer'
+    message: 'Voucher price must be a non-negative number'
   });
 
   assert_isValidISODate(startDate, ctx, { throwError: "client" });
@@ -5521,10 +5516,16 @@ router.post('/admin/promotion/add', async ctx => {
       }
     }
 
-    await promotion.createVoucher({
+    let voucher = await promotion.createVoucher({
       endDate: voucherEndDate,
       value: voucherValue
     }, {transaction: dbTr});
+
+    let targetUsers = await targetgroup.getUsers();
+
+    for(i = 0; i < targetUsers.length; i++) {
+      await voucher.addUser(targetUsers[i], {transaction: dbTr});
+    }
 
     await promotion.setTargetgroup(targetgroup, {transaction: dbTr});
   });
