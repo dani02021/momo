@@ -1156,39 +1156,47 @@ module.exports = {
 
   // Create the permissions
 
-  /*
-  Permission.create({name: 'orders.create'});
-  Permission.create({name: 'orders.read'});
-  Permission.create({name: 'orders.update'});
-  Permission.create({name: 'orders.delete'});
-  Permission.create({name: 'products.create'});
-  Permission.create({name: 'products.read'});
-  Permission.create({name: 'products.update'});
-  Permission.create({name: 'products.delete'});
-  Permission.create({name: 'categories.create'});
-  Permission.create({name: 'categories.delete'});
-  Permission.create({name: 'accounts.create'});
-  Permission.create({name: 'accounts.read'});
-  Permission.create({name: 'accounts.update'});
-  Permission.create({name: 'accounts.delete'});
-  Permission.create({name: 'roles.create'});
-  Permission.create({name: 'roles.read'});
-  Permission.create({name: 'roles.update'});
-  Permission.create({name: 'roles.delete'});
-  Permission.create({name: 'staff.create'});
-  Permission.create({name: 'staff.read'});
-  Permission.create({name: 'staff.update'});
-  Permission.create({name: 'staff.delete'});
-  Permission.create({name: 'report.read'});
-  Permission.create({name: 'audit.read'});
-  Permission.create({name: 'settings.email'});
-  Permission.create({name: 'settings.other'});
-  Permission.create({name: 'targetgroups.read'});
-  Permission.create({name: 'targetgroups.create'});
-  Permission.create({name: 'targetgroups.view'});
-  Permission.create({name: 'targetgroups.delete'});
-  Permission.create({name: 'promotions.read'});
-  */
+  let permissions = [
+    'orders.create',
+    'orders.read',
+    'orders.update',
+    'orders.delete',
+    'products.create',
+    'products.read',
+    'products.update',
+    'products.delete',
+    'categories.create',
+    'categories.delete',
+    'account.create',
+    'account.read',
+    'account.update',
+    'account.delete',
+    'roles.create',
+    'roles.read',
+    'roles.update',
+    'roles.delete',
+    'staff.create',
+    'staff.read',
+    'staff.update',
+    'staff.delete',
+    'reports.read',
+    'audit.read',
+    'settings.email',
+    'settings.other',
+    'targetgroups.create',
+    'targetgroups.read',
+    'targetgroups.update',
+    'targetgroups.view',
+    'targetgroups.delete',
+    'promotions.create',
+    'promotions.read',
+    'promotions.update',
+    'promotions.delete',
+  ];
+
+  for (let i = 0; i < permissions.length; i++) {
+    Permission.findOrCreate({ where: { name: permissions[i]} });
+  }
 
   // Create associations
 

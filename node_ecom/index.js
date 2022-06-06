@@ -29,7 +29,7 @@ const Op = Sequelize.Op;
 const models = require("./models.js");
 const { parse, resolve } = require('path');
 const { bind } = require('koa-route');
-const { assert_isValidISODate, assert_notNull, assert_stringLength, assert_regex, assert_isSafeInteger } = require('./asserts.js');
+const { assert_isValidISODate, assert_notNull, assert_stringLength, assert_regex, assert_isSafeInteger, assert_isNonNegativeNumber, assert_isInteger } = require('./asserts.js');
 const Category = models.category();
 const Product = models.product();
 const User = models.user();
@@ -5440,16 +5440,13 @@ router.post('/admin/promotion/add', async ctx => {
 
   let targetgroupId = ctx.query.fields.targetgroup;
 
-  assert_isSafeInteger(targetgroupId, ctx, {
-    message: 'Target group id must be a number!'
-  })
-  // Check if targetgroup is valid id
-  if (!Number.isSafeInteger(Number(targetgroup)) ||
-    Math.sign(Number(targetgroup)) < 0) {
-    ctx.body = { 'error': 'Target group id must be a non-negative number!' };
+  assert_isInteger(targetgroupId, ctx, {
+    message: 'Target group id must be whole number is required'
+  });
 
-    return;
-  }
+  assert_isNonNegativeNumber(targetgroupId, ctx, {
+    message: 'Target group id must be a non-negative integer'
+  });
 
   let targetgroup = await TargetGroup.findOne({ where: { id: targetgroupId } });
 
@@ -5465,7 +5462,7 @@ router.post('/admin/promotion/add', async ctx => {
   assert_isValidISODate(startDate);
   assert_isValidISODate(endDate);
 
-  // todo: check startDate and endDate is valid and are > 1970 and endDate > startDate
+  
 });
 
 /* WARNING: 
