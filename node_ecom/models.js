@@ -632,6 +632,7 @@ const Voucher = db.define("voucher", {
 const UserVoucher = db.define("user_voucher", {
   used: {
     type: DataTypes.BOOLEAN,
+    defaultValue: false,
     allowNull: false
   }
 }, {
@@ -654,17 +655,17 @@ Promotion.prototype.getTotalValue = async function() {
 
 Promotion.prototype.getTotalValueStr = async function() {
   return (await db.query(
-    `SELECT
-      COALESCE(
-        ROUND(
-          SUM(
-            vouchers.value
-          )
-        ), 0.00
-      ) AS total
+    `SELECT 
+      COUNT("userId") * vouchers.value AS total 
     FROM promotions
+    INNER JOIN targetgroups ON
+      "targetgroupId" = targetgroups.id
+    INNER JOIN targetgroup_users ON
+      targetgroup_users."targetgroupId" = targetgroups.id
     INNER JOIN vouchers ON
-      "promotionId" = promotions.id`,
+      "promotionId" = promotions.id
+    WHERE "promotionId" = ${this.id}
+    GROUP BY vouchers.value`,
     {
       type: 'SELECT',
       plain: true
