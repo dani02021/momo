@@ -131,11 +131,11 @@
                     </thead>
                     <tbody>
                         <% for(i = 0; i < orders.length; i++) { %>
-                        <% if (orders[i].status != 0) { console.log(users); %>
+                        <% if (orders[i].status != 0) { %>
                         <tr>
                             <td><%= orders[i].orderedAt %></td>
                             <th scope="row"><b>#<%= orders[i].id %></b></th>
-                            <td class="tm-product-name"><%= users[i].username %></td>
+                            <td class="tm-product-name"><%= (await orders[i].getUsers())[0].username %></td>
                             <td><%= orderitems[i].length %></td>
                             <td>
                                 <% if (orders[i].status == 1) { %>

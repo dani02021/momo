@@ -202,6 +202,68 @@ function assert_isElementInArrayCaseInsensitive(value, ctx, options = {}) {
 
         return onFalse(value, ctx, options, message);
     }
+
+    return true;
+}
+
+/**
+ * Checks if date is after options.max.
+ * value and options.max are Date objects
+ * Same date is included
+ * @param {object} value 
+ * @param {*} ctx 
+ * @param {object} options 
+ */
+function assert_isDateAfter(value, ctx, options = {}) {
+    assert_type(value, ctx, {"type": "object", "throwError": options.throwError});
+
+    assert(value instanceof Date);
+
+    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
+
+    assert_type(options.max, ctx, {"type": "object", "throwError": options.throwError});
+
+    assert(options.max instanceof Date);
+
+    let valid = (+value) - (+options.max) >= 0;
+
+    if (!valid) {
+        let message = `Value date is before specified`;
+
+        return onFalse(value, ctx, options, message);
+    }
+
+    return true;
+}
+
+/**
+ * Checks if date is before options.min.
+ * value and options.min are Date objects
+ * Same date is included
+ * @param {object} value 
+ * @param {*} ctx 
+ * @param {object} options 
+ */
+ function assert_isDateBefore(value, ctx, options = {}) {
+    assert_type(value, ctx, {"type": "object", "throwError": options.throwError});
+
+    assert(value instanceof Date);
+
+    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
+
+    assert_type(options.min, ctx, {"type": "object", "throwError": options.throwError});
+
+    assert(options.min instanceof Date);
+
+    let valid = (+value) - (+options.min) >= 0;
+
+    if (!valid) {
+        let message = `Value date is after specified`;
+
+        return onFalse(value, ctx, options, message);
+    }
+
+    return true;
 }
 
 // Utility class
@@ -240,5 +302,7 @@ module.exports = {
     assert_isSafeInteger,
     assert_isNonNegativeNumber,
     assert_isInteger,
-    assert_isElementInArrayCaseInsensitive
+    assert_isElementInArrayCaseInsensitive,
+    assert_isDateBefore,
+    assert_isDateAfter
 };

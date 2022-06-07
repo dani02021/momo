@@ -29,7 +29,7 @@ const Op = Sequelize.Op;
 const models = require("./models.js");
 const { parse, resolve } = require('path');
 const { bind } = require('koa-route');
-const { assert_isValidISODate, assert_notNull, assert_stringLength, assert_regex, assert_isSafeInteger, assert_isNonNegativeNumber, assert_isInteger, assert_isElementInArrayCaseInsensitive } = require('./asserts.js');
+const { assert_isValidISODate, assert_notNull, assert_stringLength, assert_regex, assert_isSafeInteger, assert_isNonNegativeNumber, assert_isInteger, assert_isElementInArrayCaseInsensitive, assert_isDateAfter } = require('./asserts.js');
 const { AssertionError } = require('assert');
 const Category = models.category();
 const Product = models.product();
@@ -1528,8 +1528,6 @@ async function adminPromotions(ctx) {
     bind: bindParams
   });
 
-  console.log(promotions);
-
   await ctx.render("/admin/promotions", {
     layout: "/admin/base",
     session: ctx.session,
@@ -1612,7 +1610,7 @@ router.post("/register", async ctx => {
     let token = utilsEcom.generateEmailVerfToken();
 
     try {
-      await User.create({
+      await User.upsert({
         username: ctx.request.fields.username,
         email: ctx.request.fields.email,
         password: ctx.request.fields.password1,
@@ -1623,6 +1621,7 @@ router.post("/register", async ctx => {
         gender: ctx.request.fields.gender,
         birthday: ctx.request.fields.birthday,
         verificationToken: token,
+        deletedAt: null
       });
     } catch (e) {
       if (e instanceof ValidationError) {
@@ -1864,12 +1863,6 @@ router.get('/admin', async ctx => {
       orderitems.push(await orders[i].getOrderitems());
     }
 
-    let users = []
-
-    for (i = 0; i < orders.length; i++) {
-      users.push((await orders[i].getUsers())[0]);
-    }
-
     await ctx.render('/admin/index', {
       layout: "/admin/base",
       selected: 'dashboard',
@@ -1877,7 +1870,6 @@ router.get('/admin', async ctx => {
       user: await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } }),
       orders: orders,
       orderitems: orderitems,
-      users: users,
       statusDisplay: configEcom.STATUS_DISPLAY
     });
 
@@ -5487,6 +5479,18 @@ router.post('/admin/promotion/add', async ctx => {
   assert_isValidISODate(startDate, ctx, { throwError: "client" });
   assert_isValidISODate(endDate, ctx, { throwError: "client" });
 
+  assert_isDateAfter(new Date(endDate), ctx, {
+    throwError: "client",
+    message: "End date of promotion cannot be before start date",
+    max: new Date(startDate)
+  });
+
+  assert_isDateAfter(new Date(voucherEndDate), ctx, {
+    throwError: "client",
+    message: "End date of voucher cannot be before end date of promotion",
+    max: new Date(endDate)
+  });
+
   await db.transaction(async (dbTr) => {
     let [promotion, created] = await Promotion.findOrCreate({
       where: {
@@ -5574,9 +5578,6 @@ router.post('/admin/promotion/delete', async ctx => {
       id: ctx.request.fields.id
     }
   });
-
-  console.log(ctx.request.fields.id);
-  console.log(dels);
 
   ctx.session.messages = { 'promotionDeleted': `Selected promotion/s have been deleted!` };
   loggerEcom.logger.log('info',

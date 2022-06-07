@@ -50,7 +50,7 @@ const EmailTransport = nodemailer.createTransport({
 EmailTransport.verify(function (error, success) {
     if (error) {
         loggerEcom.handleError(error);
-        logger.logger.log('alert',
+        loggerEcom.logger.log('alert',
             `Email transport cannot establish connection!
         ${error.message}`);
     }
@@ -712,9 +712,9 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
 
     if (sort) {
         if (sort == "sales") {
-            text += ` ORDER BY (sum IS NULL), sum DESC`;
-        } else text += ` ORDER BY "createdAt" DESC`;
-    } else text += ` ORDER BY "createdAt" DESC`;
+            text += ` ORDER BY (sum IS NULL), sum DESC\n`;
+        } else text += ` ORDER BY "createdAt" DESC\n`;
+    } else text += ` ORDER BY "createdAt" DESC\n`;
 
     if (offset > 0) {
         text += ` OFFSET ${offset}\n`;
@@ -972,6 +972,7 @@ function isSessionValid(staff) {
     if (!staff.lastActivity)
         return true;
     
+    console.log(configEcom.SETTINGS["backoffice_expire"] == 0);
     if (configEcom.SETTINGS["backoffice_expire"] == 0)
         return true;
 
@@ -1236,6 +1237,8 @@ function onSessionExpired(ctx, message = "Session expired!", redirectLoc = "/adm
 {
     assert(typeof redirectLoc === "string");
     assert(typeof message === "string");
+
+    console.log("SESSION EXPIRED");
 
     if (ctx.request.fields && ctx.request.fields.isAJAX)
         ctx.body = {'error': message};

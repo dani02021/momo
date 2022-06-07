@@ -109,7 +109,7 @@
                                     </td>
                                     <td style="text-align: right;">
                                       <b>
-                                        <%= await promotions[i].getTotalValueStr() %>
+                                        <%= (await promotions[i].getVoucher()).value %>
                                       </b>
                                     </td>
                                     <td>
@@ -330,10 +330,10 @@
 
                       function changeMinOfEndDate(elem) {
                         document.getElementById('endDate').min = document.getElementById('startDate').value;
-                        document.getElementById('voucherEndDate').min = document.getElementById('startDate').value;
                       }
 
                       function changeMaxOfStartDate(elem) {
                         document.getElementById('startDate').max = document.getElementById('endDate').value;
+                        document.getElementById('voucherEndDate').min = document.getElementById('endDate').value;
                       }
                     </script>

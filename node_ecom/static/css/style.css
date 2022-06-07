@@ -1775,19 +1775,22 @@ h2 {
 }
 
 .checkout .checkout-summary,
-.checkout .checkout-payment {
+.checkout .checkout-payment,
+.checkout .checkout-coupons {
     position: relative;
     width: 100%;
 }
 
 .checkout .checkout-summary h1,
-.checkout .checkout-payment h1 {
+.checkout .checkout-payment h1,
+.checkout .checkout-coupons h1 {
     font-size: 25px;
     margin-bottom: 20px;
 }
 
 .checkout .checkout-summary,
-.checkout .checkout-payment .payment-methods {
+.checkout .checkout-payment .payment-methods,
+.checkout .checkout-coupons {
     padding: 30px;
     background: #f3f6ff;
     margin-bottom: 30px;

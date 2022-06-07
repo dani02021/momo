@@ -77,7 +77,7 @@
                                       <option value="" selected>Select country</option>
                                       <% for (i=0;i<countries.length;i++) { %>
                                         <option value="<%= countries[i] %>" <% console.log( countries[i] + " " + filters['country']); if (filters['country']===countries[i] ) { %> selected <% } %>
-                                          ><%=countries[i]%></option>
+                                          ><%= countries[i] %></option>
                                       <% } %>
                                     </select>
                                   </div>
