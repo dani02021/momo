@@ -342,7 +342,8 @@
                         $.ajax({
                           type: "POST",
                           url: "/admin/promotions/targetgroup/add",
-                          data: $("#filters-form").serialize()
+                          data: $("#filters-form").serialize(),
+                          accepts: "application/json"
                         }).done(function (data, textStatus, jqXHR) {
                           console.log(jqXHR);
                           if (data.error) {
