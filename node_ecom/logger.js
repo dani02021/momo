@@ -87,16 +87,6 @@ async function handleError(err, options) {
 
     let stackerr = stacktrace.parse(err);
 
-    if (err instanceof ClientException) {
-        // Options attribute should exist !
-        assert(typeof err.options === "object");
-        assert(typeof err.options.ctx === "object");
-
-        // Don't log in file
-
-        return;
-    }
-
     if (stackerr.length == 0) {
         logger.error(
             `User: ${username}, \

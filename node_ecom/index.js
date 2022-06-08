@@ -1461,10 +1461,21 @@ async function adminPromotions(ctx) {
     filters['targetName'] = '';
   }
   if (ctx.query.status) {
-    // TODO: Check if status is valid
-    filters['status'] = ctx.query.status;
-    filtersToReturn['status'] = ctx.query.status;
-    bindParams.status = ctx.query.status;
+    let statusInt = Number(ctx.query.status);
+
+    assert_isNonNegativeNumber(statusInt, ctx, {
+      message: "Promotion has invalid status",
+      throwError: "client"
+    });
+
+    if (statusInt >= configEcom.PROMOTION_STATUSES.length)
+      throw new ClientException("Promotion status does not exists", {ctx: ctx});
+    
+    statusInt = ~~statusInt;
+
+    filters['status'] = statusInt;
+    filtersToReturn['status'] = statusInt;
+    bindParams.status = statusInt;
   } else {
     filters['status'] = '';
   }
@@ -4431,6 +4442,8 @@ router.get('/checkout', async ctx => {
 
   let cartQty = await utilsEcom.getCartQuantity(ctx);
 
+  let vouchers = await user.getVouchers();
+
   await ctx.render('checkout', {
     session: ctx.session,
     selected: 'checkout',
@@ -4438,6 +4451,7 @@ router.get('/checkout', async ctx => {
     user: user,
     items: orderitems,
     products: products,
+    vouchers: vouchers,
     totals: totals,
     subTotal: subTotal,
     grandTotal: grandTotal,
@@ -5624,7 +5638,12 @@ app.on("error", (err, ctx) => {
       var message = err.message;
     }
 
-    if (ctx.request.fields && ctx.request.fields.isAJAX) {
+    console.log(-10);
+    console.log(ctx.request.header.accept);
+
+    if (
+        (ctx.request.fields && ctx.request.fields.isAJAX) // Legacy
+        || ctx.request.header.accept == "application/json") {
       err.status = 200;
 
       err.message = JSON.stringify({ 'error': message });
@@ -5635,9 +5654,8 @@ app.on("error", (err, ctx) => {
       err.message = ctx.body;
     }
 
-    // Shadow reference
     if (!err instanceof AssertionError)
-      err = new ClientException(message, { ctx: ctx });
+      return;
   }
 
   loggerEcom.handleError(err, { ctx: ctx });

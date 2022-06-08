@@ -57,6 +57,29 @@
                                         $<%= grandTotal %>
                                     </span></h2>
                     </div>
+                    <div class="checkout-coupons">
+                        <h1>Vouchers</h1>
+                        <% for (i=0; i<vouchers.length; i++) { %>
+                            <div class="media position-relative"
+                                style="background-color: #9999; border: solid #999999;"
+                                data-id="<%= vouchers[i].id %>">
+                                <div class="media-body checkout-body">
+                                    <h5 class="mt-0"><%= (await vouchers[i].getPromotion()).name %></h5>
+                                    <p>Price: <%= vouchers[i].value %> USD</p>
+                                    <a href="#" class="stretched-link" onclick="return toggleCoupon(this);"></a>
+                                </div>
+                            </div>
+                            <br>
+                        <% } %>
+                        <div class="media position-relative"
+                            style="background-color: #9999; border: solid #999999;">
+                            <div class="media-body checkout-body">
+                              <h5 class="mt-0">Coupon Females only</h5>
+                              <p>Price: 10 USD</p>
+                              <a href="#" class="stretched-link"></a>
+                            </div>
+                        </div>
+                    </div>
                     <div class="checkout-payment">
                         <div class="payment-methods">
                             <h1>Payment Methods</h1>
@@ -89,6 +112,8 @@
     <script
         src="https://www.paypal.com/sdk/js?client-id=AcUxHET3nbJ-rUnzZPhIJ7MKIEzb0a_8k6fh9MnDI74xUfWlF5xi9n17ra2aKGtbaMiwq98410rjt03F&currency=USD"></script>
     <script>
+        let vouchers = [];
+
         // Render the PayPal button into #paypal-button-container
         paypal.Buttons({
 
