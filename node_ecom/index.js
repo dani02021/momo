@@ -1818,12 +1818,12 @@ router.post("/login", async ctx => {
 });
 
 router.get('/logout', async ctx => {
-  if (ctx.session.username) {
+  if (ctx.session.dataValues.username) {
     ctx.session.messages = { 'logout': 'Log-out successful!' };
 
     loggerEcom.logger.log('info',
-      `User ${ctx.session.username} logged out!`,
-      { user: ctx.session.username });
+      `User ${ctx.session.dataValues.username} logged out!`,
+      { user: ctx.session.dataValues.username });
 
     ctx.session.username = null;
   }
@@ -5319,7 +5319,7 @@ router.post('/admin/promotions/targetgroup/add', async ctx => {
     await targetGroup.setUsers(targetGroupUsers, { transaction: dbTr });
 
     loggerEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.staffUsername} created new target group #${ctx.request.fields.id}`,
+      `Staff ${ctx.session.dataValues.staffUsername} created new target group ${targetGroup.name}`,
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
 
     ctx.session.messages = { 'targetGroupOK': 'Target group created!' };
@@ -5419,18 +5419,6 @@ router.post('/admin/promotion/add', async ctx => {
 
   let name = ctx.request.fields.name;
 
-  assert_notNull(name, ctx, {
-    message: 'Promotion name is required',
-    throwError: 'client'
-  });
-
-  assert_stringLength(name, ctx, {
-    message: 'Promotion name must be within range [3-100]',
-    min: 3,
-    max: 100,
-    throwError: 'client'
-  });
-
   name = name.trim();
 
   assert_regex(name, ctx, {
@@ -5463,17 +5451,11 @@ router.post('/admin/promotion/add', async ctx => {
   let endDate = ctx.request.fields.endDate;
 
   let voucherEndDate = ctx.request.fields.voucherEndDate;
+  let voucherValue = ctx.request.fields.voucherValue;
 
   assert_isValidISODate(voucherEndDate, ctx, {
     throwError: 'client',
     message: 'Voucher date is not valid'
-  });
-
-  let voucherValue = ctx.request.fields.voucherValue;
-
-  assert_isNonNegativeNumber(voucherValue, ctx, {
-    throwError: 'client',
-    message: 'Voucher price must be a non-negative number'
   });
 
   assert_isValidISODate(startDate, ctx, { throwError: "client" });
@@ -5490,6 +5472,14 @@ router.post('/admin/promotion/add', async ctx => {
     message: "End date of voucher cannot be before end date of promotion",
     max: new Date(endDate)
   });
+
+  assert_isDateAfter(new Date(startDate), ctx, {
+    throwError: "client",
+    message: "Start date of promotion cannot be before today",
+    max: new Date().toLocaleDateString('en-GB')
+  });
+
+  // TODO: Test isDateAfter + send email immediately
 
   await db.transaction(async (dbTr) => {
     let [promotion, created] = await Promotion.findOrCreate({

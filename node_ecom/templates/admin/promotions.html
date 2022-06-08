@@ -240,7 +240,7 @@
                                 <div class="col-md-5 mx-auto">
                                   <label>Start date:</label>
                                   <div class="ui-widget">
-                                    <input style="height: 30px; width: 100%;" type="date" name="startDate" id="startDate" onchange="changeMinOfEndDate(this);">
+                                    <input style="height: 30px; width: 100%;" type="date" name="startDate" id="startDate" onchange="changeMinOfEndDate(this);" min="<%= new Date().toLocaleDateString('fr-CA') %>">
                                   </div>
                                 </div>
                                 <div class="col-md-5 mx-auto">
@@ -262,7 +262,7 @@
                                 <div class="col-md-5 mx-auto">
                                   <label>Voucher End date:</label>
                                   <div class="ui-widget">
-                                    <input style="height: 30px; width: 100%;" type="date" name="voucherEndDate" id="voucherEndDate" min="<%= new Date().toLocaleDateString('fr-CA') %>">
+                                    <input style="height: 30px; width: 100%;" type="date" name="voucherEndDate" id="voucherEndDate" min="<%= new Date().toLocaleDateString('fr-CA') %>" onchange="onVoucherEnd(this);">
                                   </div>
                                 </div>
                               </div>
@@ -335,5 +335,9 @@
                       function changeMaxOfStartDate(elem) {
                         document.getElementById('startDate').max = document.getElementById('endDate').value;
                         document.getElementById('voucherEndDate').min = document.getElementById('endDate').value;
+                      }
+
+                      function onVoucherEnd(elem) {
+                        document.getElementById('endDate').max = document.getElementById('voucherEndDate').value;
                       }
                     </script>
