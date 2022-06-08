@@ -255,7 +255,7 @@ function assert_isDateAfter(value, ctx, options = {}) {
 
     assert(options.min instanceof Date);
 
-    let valid = (+value) - (+options.min) >= 0;
+    let valid = (+value) - (+options.min) <= 0;
 
     if (!valid) {
         let message = `Value date is after specified`;

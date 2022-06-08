@@ -972,7 +972,6 @@ function isSessionValid(staff) {
     if (!staff.lastActivity)
         return true;
     
-    console.log(configEcom.SETTINGS["backoffice_expire"] == 0);
     if (configEcom.SETTINGS["backoffice_expire"] == 0)
         return true;
 
@@ -1237,8 +1236,6 @@ function onSessionExpired(ctx, message = "Session expired!", redirectLoc = "/adm
 {
     assert(typeof redirectLoc === "string");
     assert(typeof message === "string");
-
-    console.log("SESSION EXPIRED");
 
     if (ctx.request.fields && ctx.request.fields.isAJAX)
         ctx.body = {'error': message};

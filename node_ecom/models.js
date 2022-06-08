@@ -561,7 +561,11 @@ const Promotion = db.define("promotion", {
     },
     validate: {
       notNull: {
-        msg: "Promotion name should not be empty"
+        msg: "Promotion's name is required"
+      },
+      len: {
+        args: [3,100],
+        msg: "Promotion's name must be within range [3,100]"
       }
     }
   },
@@ -622,6 +626,10 @@ const Voucher = db.define("voucher", {
     validate: {
       notNull: {
         msg: "Voucher value should not be empty"
+      },
+      min: {
+        args: 0,
+        msg: "Voucher's price must be a non-negative number"
       }
     }
   }
@@ -631,6 +639,11 @@ const Voucher = db.define("voucher", {
 
 const UserVoucher = db.define("user_voucher", {
   used: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false
+  },
+  activated: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
     allowNull: false
