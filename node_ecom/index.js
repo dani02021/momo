@@ -5655,4 +5655,7 @@ app.on("error", (err, ctx) => {
 
 // app.listen(3210);
 
+// Hack the system, set custom TZ for testing
+process.env.TZ = 'America/Argentina/Buenos_Aires';
+
 app.listen(process.env.PORT);
