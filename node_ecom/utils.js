@@ -736,7 +736,7 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
 }
 
 function escapeCSVParam(param) {
-    assert(typeof(param) === "string");
+    // assert(typeof(param) === "string"); may be number or smtg
 
     let escapedParam = param.replace(/"/g, `""`);
 

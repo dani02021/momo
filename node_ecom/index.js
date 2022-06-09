@@ -1678,7 +1678,7 @@ router.get('/verify_account/:token', async ctx => {
 
   loggerEcom.logger.log('info',
     `User ${user.username} validated their e-mail!`,
-    { user: user.username });
+    { user: user.username, isStaff: false });
 
   ctx.redirect('/');
 });
@@ -1811,7 +1811,7 @@ router.post("/login", async ctx => {
 
     loggerEcom.logger.log('info',
       `User ${ctx.request.fields.username} tried to log in with invalid password!`,
-      { user: ctx.request.fields.username });
+      { user: ctx.request.fields.username, isStaff: false });
   }
 
   ctx.redirect('/');
@@ -1823,7 +1823,7 @@ router.get('/logout', async ctx => {
 
     loggerEcom.logger.log('info',
       `User ${ctx.session.dataValues.username} logged out!`,
-      { user: ctx.session.dataValues.username });
+      { user: ctx.session.dataValues.username, isStaff: false });
 
     ctx.session.username = null;
   }
