@@ -311,7 +311,10 @@
                           type: "POST",
                           url: "/admin/promotion/add",
                           data: $("#add-promotion-form").serialize(),
-                          dataType: "json"
+                          dataType: "json",
+                          headers: {
+                            Accept: "application/json"
+                          },
                         }).done(function (data) {
                           if (data.error) {
                             document.getElementById("err").innerHTML = data.error;

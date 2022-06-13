@@ -396,6 +396,9 @@
         type: "POST",
         url: "/admin/products/add",
         dataType: "json",
+        headers: {
+          Accept: "application/json"
+        },
         data: $("#add-product-form").serialize()
       }).done(function(data) {
         if (data.error)  {
