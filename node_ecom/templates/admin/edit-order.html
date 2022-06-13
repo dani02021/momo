@@ -169,7 +169,7 @@
 
   var cache1 = {};
   $("#orderitem-product").autocomplete({
-    source: "/api/products/get",
+    source: "/api/v0/products/get",
     minLength: 2,
     source: function (request, response) {
       var term = request.term;
@@ -178,7 +178,7 @@
         return;
       }
 
-      $.getJSON("/api/products/get", request, function (data, status, xhr) {
+      $.getJSON("/api/v0/products/get", request, function (data, status, xhr) {
         cache1[term] = data;
         response(data);
       });

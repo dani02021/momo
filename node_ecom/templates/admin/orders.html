@@ -392,7 +392,7 @@
                       $(function () {
                         var cache = {};
                         $("input[name='user']").autocomplete({
-                          source: "/api/accounts/get",
+                          source: "/api/v0/accounts/get",
                           minLength: 3,
                           source: function (request, response) {
                             var term = request.term;
@@ -401,7 +401,7 @@
                               return;
                             }
 
-                            $.getJSON("/api/accounts/get", request, function (data, status, xhr) {
+                            $.getJSON("/api/v0/accounts/get", request, function (data, status, xhr) {
                               cache[term] = data;
                               response(data);
                             });
@@ -410,7 +410,7 @@
 
                         var cache1 = {};
                         $("#orderitem-select").autocomplete({
-                          source: "/api/products/get",
+                          source: "/api/v0/products/get",
                           minLength: 2,
                           source: function (request, response) {
                             var term = request.term;
@@ -419,7 +419,7 @@
                               return;
                             }
 
-                            $.getJSON("/api/products/get", request, function (data, status, xhr) {
+                            $.getJSON("/api/v0/products/get", request, function (data, status, xhr) {
                               cache1[term] = data;
                               response(data);
                             });

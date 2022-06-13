@@ -117,7 +117,7 @@
           </button>
         </div>
         <div class="d-grid gap-2">
-          <form id="xlsxImportForm" action="/admin/api/products/import/xlsx" method="post" enctype="multipart/form-data">
+          <form id="xlsxImportForm" action="/admin/api/v0/products/import/xlsx" method="post" enctype="multipart/form-data">
             <input type="file" accept=".xlsx,.xls" name="xlsxFile" id="xlsxImportFile" onchange="toAJAXImport(this);" hidden>
             <button type="button" class="btn btn-primary text-uppercase" style="width: 100%;" onclick="document.getElementById('xlsxImportFile').click();">Import products from XLSX</button>
           </form>
@@ -243,7 +243,6 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="add-product-form" action="/admin/products/add/" enctype="multipart/form-data" method="post">
-        <input type="hidden" name="isAJAX" value="ajax">
         <div class="modal-body" style="padding-right: 48px;">
           <div class="row">
             <div class="col-md-5 mx-auto">
@@ -408,7 +407,7 @@
   }
 
   function toAJAXImport(elem) {
-    evtSource = new SSE(`/admin/api/products/import/xlsx`,
+    evtSource = new SSE(`/admin/api/v0/products/import/xlsx`,
                       {payload: new FormData($("#xlsxImportForm")[0])});
     
     elem.value = null;

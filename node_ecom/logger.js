@@ -5,6 +5,7 @@ const WinstonTransport = require('winston-transport');
 const models = require("./models.js");
 const configEcom = require("./config.js");
 const { ClientException } = require("./exceptions.js");
+const { ValidationErrorItem } = require("sequelize");
 
 const Log = models.log();
 
@@ -75,6 +76,13 @@ async function handleError(err, options) {
     assert(err instanceof Error);
     assert(typeof options === "object");
 
+    if ((err.errors && err.errors[0] instanceof ValidationErrorItem)
+        || err.name === "SequelizeDatabaseError" || err instanceof ClientException) {
+            // Don't log the error
+
+            return;
+    }
+
     let username;
     let staffUsername;
     let session;
@@ -114,6 +122,8 @@ async function handleError(err, options) {
             }
         );
     }
+
+    console.log("ERRRRR");
 
     console.log(err);
 }
