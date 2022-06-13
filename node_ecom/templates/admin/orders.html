@@ -114,19 +114,18 @@
                                                   <% } %>
                                                     <%= statuses[orders[i].status] %>
                                       </td>
-                                      <td data-id="<%= orders[i].id %>"><b>#<%= orders[i].id %></b></td>
+                                      <td data-id="<%= orders[i].id %>"><b>#<%= orders[i].dataValues.id %></b></td>
                                       <td><b>
-                                          <%= (await orders[i].getUsers())[0].firstName + " " + (await
-                                            orders[i].getUsers())[0].lastName %>
+                                          <%= orders[i].dataValues.firstName + " " + orders[i].dataValues.lastName %>
                                         </b></td>
                                       <td><b>
-                                          <%= (await orders[i].getUsers())[0].username %>
+                                          <%= orders[i].dataValues.username %>
                                         </b></td>
                                       <td><b>
-                                          <%= (await orders[i].getUsers())[0].country %>
+                                          <%= orders[i].dataValues.country %>
                                         </b></td>
                                       <td><b>
-                                          <%= (await orders[i].getUsers())[0].address %>
+                                          <%= orders[i].dataValues.address %>
                                         </b></td>
                                       <td style="text-align: right;"><b>$<%= await orders[i].getTotalStr() %></b></td>
                                       <td style="text-align: right;"><b>$<%= await orders[i].getVATSumStr() %></b></td>
@@ -134,7 +133,7 @@
                                       </td>
                                       <td>
                                         <!--
-                                          <a href="/admin/orders/edit/<%= orders[i].id %>" class="tm-order-edit-link">
+                                          <a href="/admin/orders/edit/<%= orders[i].dataValues.id %>" class="tm-order-edit-link">
                                           <i class="far fa-edit tm-order-edit-icon"></i>
                                           </a>
                                         -->

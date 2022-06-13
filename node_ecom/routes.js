@@ -822,7 +822,7 @@ module.exports = {
 
     const orderitem = await OrderItem.findOne({
       where: {
-        productId: ctx.params.id
+        productId: ctx.query.id
       },
       include: [{
         model: Order,
@@ -832,7 +832,7 @@ module.exports = {
         }
       }],
       defaults: {
-        productId: ctx.params.id,
+        productId: ctx.query.id,
         quantity: ctx.query.quantity,
       }
     });
@@ -1115,6 +1115,7 @@ module.exports = {
       selected: 'checkout',
       cartQty: cartQty,
       user: user,
+      vouchers: [],
       items: orderitems,
       products: products,
       totals: totals,
@@ -1873,7 +1874,7 @@ module.exports = {
       email: ctx.request.fields.email
     }
 
-    const staff = await Staff.findOne({ where: { id: ctx.request.fields.id } });
+    const staff = await Staff.findOne({ where: { id: ctx.params.id } });
 
     staff.update(updateParams);
 
@@ -1889,11 +1890,11 @@ module.exports = {
       await staff.addRole(role);
     }
 
-    ctx.session.messages = { 'staffEdited': `Staff with id ${ctx.request.fields.id} was edited!` };
+    ctx.session.messages = { 'staffEdited': `Staff with id ${ctx.params.id} was edited!` };
     loggerEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.staffUsername} updated staff #${ctx.request.fields.id}`,
+      `Staff ${ctx.session.dataValues.staffUsername} updated staff #${ctx.params.id}`,
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
-    ctx.redirect('/admin/staff/edit/' + ctx.request.fields.id);
+    ctx.redirect('/admin/staff/edit/' + ctx.params.id);
   },
 
   adminCategoriesAdd: async (ctx) => {
@@ -2031,7 +2032,7 @@ module.exports = {
   },
 
   adminRolesEdit: async (ctx) => {
-    const role = await Role.findOne({ where: { id: ctx.request.fields.id } });
+    const role = await Role.findOne({ where: { id: ctx.params.id } });
     const permissions = await role.getPermissions();
 
     await ctx.render('admin/edit-role', {
@@ -2397,27 +2398,43 @@ module.exports = {
       offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
-    const result = await Order.findAndCountAll({
-      where: {
-        status: { [Op.gte]: 1 },
-      },
-      limit: limit,
-      offset: offset,
-      include: User,
-      order: [
-        ['orderedAt', 'DESC']
-      ]
+    const result = await db.query(
+      `SELECT orders.id, orders.status, orders."orderedAt",
+              users.username, users."firstName", users."lastName",
+              users.address, users.email, users."emailConfirmed",
+              users."lastLogin", users.gender, users.birthday
+      FROM orders
+      INNER JOIN user_orders on orders.id = user_orders."orderId"
+      INNER JOIN users on user_orders."userId" = users.id
+      WHERE status IN (${filters.status})
+          AND "orderedAt" BETWEEN '${filters.ordAfter}'
+          AND '${filters.ordBefore}'
+          AND position(upper($1) in upper(users.username)) > 0
+          AND orders."deletedAt" is NULL
+          AND users."deletedAt" is NULL
+      ORDER BY "orderedAt" DESC
+      LIMIT ${limit} OFFSET ${offset}`, {
+      type: 'SELECT',
+      model: Order,
+      mapToModel: true,
+      plain: false,
+      bind: [filters.user]
+    });
+  
+    const count = await db.query(`SELECT COUNT(*) FROM orders`, {
+      type: 'SELECT',
+      plain: true
     });
 
     await ctx.render("/admin/orders", {
       layout: "/admin/base",
       session: ctx.session,
       selected: "orders",
-      orders: result.rows,
+      orders: result,
       statuses: configEcom.STATUS_DISPLAY,
       filters: filtersToReturn,
       page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS["elements_per_page"]))
+      pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS["elements_per_page"]))
     });
 
     // Clear the messages
