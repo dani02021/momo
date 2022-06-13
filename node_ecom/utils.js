@@ -322,14 +322,13 @@ async function isAuthenticatedStaff(ctx) {
 
 /**
  * 
- * @param {*} ctx 
+ * @param {object} staff 
  * @param {string} permission 
  * @return true if the staff has the permission
  */
-async function hasPermission(ctx, permission) {
+async function hasPermission(staff, permission) {
+    assert(typeof staff === "object")
     assert(typeof permission === "string");
-
-    const staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername }, include: Role });
 
     if (staff == null) {
         return false;
@@ -370,8 +369,7 @@ async function getCartQuantity(ctx) {
         if (order)
             return (await order.getOrderitems()).length;
         else return 0;
-    }
-    else {
+    } else {
         if (ctx.cookies.get("products"))
             return Object.keys(JSON.parse(ctx.cookies.get("products"))).length;
 

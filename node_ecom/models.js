@@ -565,7 +565,7 @@ const Promotion = db.define("promotion", {
       },
       len: {
         args: [3,100],
-        msg: "Promotion's name must be within range [3,100]"
+        msg: "Promotion's name must be within range [3 - 100]"
       }
     }
   },
@@ -628,7 +628,7 @@ const Voucher = db.define("voucher", {
         msg: "Voucher value should not be empty"
       },
       min: {
-        args: 0,
+        args: 0.01,
         msg: "Voucher's price must be a non-negative number"
       }
     }

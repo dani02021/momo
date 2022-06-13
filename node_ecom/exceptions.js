@@ -7,11 +7,10 @@ class NotEnoughQuantityException extends Error {
 }
 
 class ClientException extends Error {
-    constructor(message, options) {
+    constructor(message) {
         super(message);
         this.name = "ClientException";
         this.code = "CLIENT_EXCEPTION";
-        this.options = options;
     }
 }
 

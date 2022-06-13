@@ -42,7 +42,6 @@
                               <form id="filters-form" action="/admin/promotions/targetgroup/add" method="get"
                                 onsubmit="checkTargetgroupsFilter(this);">
                                 <input type="hidden" name="name" id="targetName">
-                                <input type="hidden" name="isAJAX" id="targetIsAJAX" value="ajax">
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="col-sm-3">
                                     <input id="userID" name="userID" class="form-select" type="number"
@@ -343,9 +342,15 @@
                           type: "POST",
                           url: "/admin/promotions/targetgroup/add",
                           data: $("#filters-form").serialize(),
+<<<<<<< HEAD
                           accepts: "application/json"
+=======
+                          dataType: "json",
+                          headers: {
+                            Accept: "application/json"
+                          },
+>>>>>>> origin/dev
                         }).done(function (data, textStatus, jqXHR) {
-                          console.log(jqXHR);
                           if (data.error) {
                             document.getElementById("err").innerHTML = data.error;
                           } else if (data.ok) {

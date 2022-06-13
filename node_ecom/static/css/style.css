@@ -1796,6 +1796,18 @@ h2 {
     margin-bottom: 30px;
 }
 
+.checkout .checkout-coupons .media:hover {
+    background-color: #d5d5d5 !important;
+}
+
+.checkout .checkout-coupons .checkout-body {
+    margin: 10px;
+}
+
+.checkout .checkout-coupons .coupon-selected {
+    border: solid #fffe4b9e !important;
+}
+
 .checkout .checkout-summary p.sub-total,
 .checkout .checkout-summary p.ship-cost {
     padding-top: 15px;

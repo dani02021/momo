@@ -283,10 +283,10 @@ function onFalse(value, ctx, options = {}, message) {
     if (options.throwError) {
         switch (options.throwError) {
             case "client":
-                throw new ClientException(options.message, { ctx: ctx });
+                throw new ClientException(message, { ctx: ctx }); // TODO: FIX ERROR
             case "assert":
                 throw new AssertionError({ message: message });
-            default: throw new Error(options.message);
+            default: throw new Error(message);
         }
     }
 

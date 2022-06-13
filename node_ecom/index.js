@@ -14,884 +14,266 @@ const assert = require('assert/strict');
 const ExcelJS = require('exceljs');
 const favicon = require('koa-favicon');
 const { PassThrough } = require("stream");
-const bodyClean = require('koa-body-clean');
-const fetch = require('node-fetch');
 const { imageHash } = require('image-hash');
 const { ClientException, NotEnoughQuantityException } = require('./exceptions.js');
 var mv = require('mv');
 
-const fs = require('fs');
-const db = require("./db.js");
-
 const { Sequelize, ValidationError, ValidationErrorItem } = require("sequelize");
-const Op = Sequelize.Op;
 
 const models = require("./models.js");
 const { parse, resolve } = require('path');
 const { bind } = require('koa-route');
 const { assert_isValidISODate, assert_notNull, assert_stringLength, assert_regex, assert_isSafeInteger, assert_isNonNegativeNumber, assert_isInteger, assert_isElementInArrayCaseInsensitive, assert_isDateAfter } = require('./asserts.js');
 const { AssertionError } = require('assert');
-const Category = models.category();
-const Product = models.product();
-const User = models.user();
 const Staff = models.staff();
-const Session = models.session();
-const Role = models.role();
-const Permission = models.permission();
-const Order = models.order();
-const OrderItem = models.orderitem();
-const Transaction = models.transaction();
-const PayPalTransaction = models.paypaltransacion();
-const CODTransaction = models.codtransaction();
-const Log = models.log();
-const Settings = models.settings();
-const TargetGroup = models.targetgroups();
-const TargetGroupFilters = models.targetgroupfilters();
-const Promotion = models.promotions();
-const Voucher = models.vouchers();
 
 const app = new Koa();
 const router = new KoaRouter();
 
+const routes = require("./routes.js");
+
 app.keys = [process.env.COOKIE_SECRET];
 
-// Router functions
-async function getIndex(ctx) {
-  let categories, products;
+// Link dispatch table
+let linksTable = {
+  get: {
+    "/": { func: routes.index },
+    "/products/:page?": { func: routes.products },
+    "/my-account/orders/:page?": { func: routes.myAccount, requireUser: true },
+    "/register": { func: routes.register },
+    "/verify_account/:token": { func: routes.verifyAccount },
+    "/logout": { func: routes.logout },
+    "/product-detail/:id": { func: routes.productDetail },
+    "/cart": { func: routes.cart },
+    "/addToCart": { func: routes.addToCart },
+    "/removeFromCart": { func: routes.removeFromCart },
+    "/checkout": { func: routes.checkout },
 
-  await Category.findAll().then((categoriesv) => categories = categoriesv);
+    "/admin": { func: routes.admin, requireStaff: true, requireSession: true },
+    "/admin/login": { func: routes.adminLogin },
+    "/admin/logout": { func: routes.adminLogout },
+    "/admin/products/:page?": { func: routes.adminProducts, permission: "products.read", requireStaff: true, requireSession: true },
+    "/admin/products/edit": { func: routes.adminProductsEdit, permission: "products.update", requireStaff: true, requireSession: true },
+    "/admin/accounts/:page?": { func: routes.adminAccounts, permission: "accounts.read", requireStaff: true, requireSession: true },
+    "/admin/staff/:page?": { func: routes.adminStaff, permission: "staff.read", requireStaff: true, requireSession: true },
+    "/admin/staff/edit/:id": { func: routes.adminStaffEdit, permission: "staff.update", requireStaff: true, requireSession: true },
+    "/admin/roles/:page?": { func: routes.adminRoles, permission: "roles.read", requireStaff: true, requireSession: true },
+    "/admin/roles/edit/:id": { func: routes.adminRolesEdit, permission: "roles.update", requireStaff: true, requireSession: true },
+    "/admin/orders/:page?": { func: routes.adminOrders, permission: "orders.read", requireStaff: true, requireSession: true },
+//  "/admin/orders/edit": { func: routes.adminOrdersEdit, permission: "orders.update", requireStaff: true, requireSession: true },
+    "/admin/report/:page?": { func: routes.adminReport, permission: "report.read", requireStaff: true, requireSession: true },
+    "/admin/export/report/pdf": { func: routes.adminExportReportPdf, permission: "report.export", requireStaff: true, requireSession: true },
+    "/admin/export/report/excel": { func: routes.adminExportReportExcel, permission: "report.export", requireStaff: true, requireSession: true },
+    "/admin/export/report/csv": { func: routes.adminExportReportCsv, permission: "report.export", requireStaff: true, requireSession: true },
+    "/admin/audit/:page?": { func: routes.adminAudit, permission: "audit.read", requireStaff: true, requireSession: true },
+    "/admin/settings/email": { func: routes.adminSettingsEmail, permission: "settings.email", requireStaff: true, requireSession: true },
+    "/admin/settings/other": { func: routes.adminSettingsOther, permission: "settings.other", requireStaff: true, requireSession: true },
+    "/admin/promotions/targetgroups/:page?": { func: routes.adminPromotionTargetGroups, permission: "targetgroups.read", requireStaff: true, requireSession: true },
+    "/admin/promotions/targetgroup/add/:page?": { func: routes.adminPromotionTargetGroupsAdd, permission: "targetgroups.create", requireStaff: true, requireSession: true },
+    "/admin/promotions/targetgroup/view/:page?": { func: routes.adminPromotionTargetGroupsView, permission: "targetgroups.view", requireStaff: true, requireSession: true },
+    "/admin/promotions/:page?": { func: routes.adminPromotions, permission: "promotions.read", requireStaff: true, requireSession: true },
 
-  await Product.findAll({
-    where: {
-      hide: false
-    }, order: [
-      ['createdAt', 'DESC']
-    ],
-    limit: 10
+    "/api/v0/permissions/get": { func: routes.apiPermissions, requireStaff: true, requireSession: true },
+    "/api/v0/accounts/get": { func: routes.apiAccounts, requireStaff: true, requireSession: true },
+    "/api/v0/products/get": { func: routes.apiProducts, requireStaff: true, requireSession: true },
+  },
+  post: {
+    "/register": { func: routes.registerPost },
+    "/login": { func: routes.login },
+    "/captureOrder": { func: routes.captureOrder },
+
+    "/admin/login": { func: routes.adminLoginPost },
+    "/admin/products/add": { func: routes.adminProductsAdd, permission: "products.create", requireStaff: true, requireSession: true },
+    "/admin/products/edit/:id": { func: routes.adminProductsEditPost, permission: "products.update", requireStaff: true, requireSession: true },
+    "/admin/products/delete": { func: routes.adminProductsDelete, permission: "products.delete", requireStaff: true, requireSession: true },
+    "/admin/accounts/add": { func: routes.adminAccountsAdd, permission: "accounts.create", requireStaff: true, requireSession: true },
+    "/admin/accounts/delete": { func: routes.adminAccountsDelete, permission: "accounts.delete", requireStaff: true, requireSession: true },
+    "/admin/staff/add": { func: routes.adminStaffAdd, permission: "staff.create", requireStaff: true, requireSession: true },
+    "/admin/staff/edit/:id": { func: routes.adminStaffEditPost, permission: "staff.update", requireStaff: true, requireSession: true },
+    "/admin/staff/delete": { func: routes.adminStaffDelete, permission: "staff.delete", requireStaff: true, requireSession: true },
+    "/admin/categories/add": { func: routes.adminCategoriesAdd, permission: "categories.create", requireStaff: true, requireSession: true },
+    "/admin/categories/delete": { func: routes.adminCategoriesDelete, permission: "categories.delete", requireStaff: true, requireSession: true },
+    "/admin/roles/add": { func: routes.adminRolesAdd, permission: "roles.create", requireStaff: true, requireSession: true },
+    "/admin/roles/edit/:id": { func: routes.adminRolesEditPost, permission: "roles.update", requireStaff: true, requireSession: true },
+    "/admin/roles/delete": { func: routes.adminRolesDelete, permission: "roles.delete", requireStaff: true, requireSession: true },
+    "/admin/orders/add": { func: routes.adminOrdersAdd, permission: "orders.create", requireStaff: true, requireSession: true },
+//  "/admin/orders/edit": { func: routes.adminOrdersEditPost, permission: "orders.update", requireStaff: true, requireSession: true },
+    "/admin/orders/delete": { func: routes.adminOrdersDelete, permission: "orders.delete", requireStaff: true, requireSession: true },
+    "/admin/settings/email": { func: routes.adminSettingsEmailPost, permission: "settings.email", requireStaff: true, requireSession: true },
+    "/admin/settings/other": { func: routes.adminSettingsOtherPost, permission: "settings.other", requireStaff: true, requireSession: true },
+    "/admin/promotions/targetgroup/add": { func: routes.adminPromotionTargetGroupsAddPost, permission: "targetgroups.create", requireStaff: true, requireSession: true },
+    "/admin/promotions/targetgroup/delete": { func: routes.adminPromotionsTargetgroupsDelete, permission: "targetgroups.delete", requireStaff: true, requireSession: true },
+    "/admin/promotion/add": { func: routes.adminPromotionsAdd, permission: "promotions.create", requireStaff: true, requireSession: true },
+    "/admin/promotion/delete": { func: routes.adminPromotionsDelete, permission: "promotions.delete", requireStaff: true, requireSession: true },
+
+    "/admin/api/v0/products/import/xlsx": { func: routes.adminApiProductsImportXLSX, permission: "products.import", requireStaff: true, requireSession: true },
   }
-  ).then((productsv) => { products = productsv });
-
-  let cartQty = await utilsEcom.getCartQuantity(ctx);
-
-  await ctx.render('index', {
-    selected: 'home',
-    cartQty: cartQty,
-    categories: categories,
-    products: products,
-    session: ctx.session,
-  });
-
-  // Remove the message
-  ctx.session.messages = null;
 }
 
-async function getProducts(ctx) {
-  // Get filters
-  let filters = {}, filtersToReturn = {};
-
-  if (Number.isSafeInteger(Number(ctx.query.cat))) {
-    filters['cat'] = ctx.query.cat;
-    filtersToReturn['Category'] = ctx.query.cat;
-  } else {
-    filters['cat'] = '';
+// Import paths to router
+// Gift from Angel
+for (let method in linksTable) {
+  switch (method) {
+    case "get":
+      for (let key in linksTable[method])
+        if (linksTable[method][key].func) // DELETE WHEN EVERY FUNCTION IS OK
+          router.get(key, linksTable[method][key].func);
+      break;
+    case "post":
+      for (let key in linksTable[method])
+        if (linksTable[method][key].func)
+          router.post(key, linksTable[method][key].func);
   }
-  if (Number.isSafeInteger(Number(ctx.query.minval)) && Math.sign(Number(ctx.query.minval)) >= 0) {
-    filters['minval'] = ctx.query.minval
-    filtersToReturn['Min price'] = ctx.query.minval
-  }
-  else {
-    filters['minval'] = 0
-  }
-  if (Number.isSafeInteger(Number(ctx.query.maxval)) && Math.sign(Number(ctx.query.maxval)) >= 0) {
-    filters['maxval'] = ctx.query.maxval
-    filtersToReturn['Max price'] = ctx.query.maxval
-  }
-  else {
-    filters['maxval'] = 99999
-  }
-  if (ctx.query.search) {
-    filters['search'] = ctx.query.search
-    filtersToReturn['Search'] = ctx.query.search
-  }
-  else {
-    filters['search'] = ''
-  }
-
-  let page = 1;
-  let categories = await Category.findAll();
-
-  if (ctx.params.page) {
-    page = parseInt(ctx.params.page)
-  }
-
-  let limit = configEcom.SETTINGS["elements_per_page"];
-  let offset = 0;
-
-  if (ctx.params.page) {
-    offset = (parseInt(ctx.params.page) - 1) * limit;
-  }
-
-  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval, ctx.query.sort, true);
-
-  let cartQty = await utilsEcom.getCartQuantity(ctx);
-
-  await ctx.render('product-list', {
-    selected: 'products',
-    session: ctx.session,
-    cartQty: cartQty,
-    categories: categories,
-    products: await products,
-    filters: filtersToReturn,
-    page: page,
-    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.SETTINGS["elements_per_page"]))
-  });
-
-  // Clear the messages
-  ctx.session.messages = null;
 }
 
-async function getMyAccount(ctx) {
-  if (!await utilsEcom.isAuthenticatedUser(ctx)) {
-    utilsEcom.onNotAuthenticatedUser(ctx);
-    return;
-  }
+// WARNING: HTTP/1 -> MAX 6 SSE for the browser!
+// So if user try to upload 7 files silmuntaniously,
+// the browser will reject it!
 
-  let cartQty = await utilsEcom.getCartQuantity(ctx);
+/* WARNING: 
+   The session can be null at any request
+   I don't fking know why, but check for empty session
+   on each request
+*/
 
-  let page = 1;
+app.use(session({
+  store: utilsEcom.configPostgreSessions(),
+  key: process.env.COOKIE_SECRET,
+  maxAge: configEcom.SESSION_MAX_AGE,
+  renew: true
+}, app));
 
-  if (ctx.params.page) {
-    page = parseInt(ctx.params.page)
-  }
+app.use(serve('./static'));
 
-  let limit = configEcom.SETTINGS["elements_per_page"];
-  let offset = 0;
+app.use(KoaBodyParser());
+// app.use(bodyClean());
 
-  if (ctx.params.page) {
-    offset = (parseInt(ctx.params.page) - 1) * limit;
-  }
+render(app, {
+  root: path.join(__dirname, "templates"),
+  layout: "base",
+  viewExt: "html",
+  debug: false,
+  cache: true,
+  async: true,
+});
 
-  let result = await Order.findAndCountAll({
-    where: {
-      status: { [Op.gte]: 1 },
-    },
-    limit: limit,
-    offset: offset,
-    include: [{
-      model: User,
-      required: true,
-      where: {
-        'username': ctx.session.dataValues.username
+// Load Dispatch Table checks
+app.use(async (ctx, next) => {
+  let dispatchTableRoute;
+  let path = router.opts.routerPath || ctx.routerPath || ctx.path;
+
+  let routerMatch = router.match(path, ctx.method);
+  let routerLayers = routerMatch.pathAndMethod;
+
+  if (routerLayers.length) {
+    let routerMostSpecificLayer = routerLayers[routerLayers.length - 1];
+
+    if (routerMostSpecificLayer) {
+      let routerPath = routerMostSpecificLayer.path;
+
+      switch (ctx.method) {
+        case "GET":
+          dispatchTableRoute = linksTable.get[routerPath];
+          break;
+        case "POST":
+          dispatchTableRoute = linksTable.post[routerPath];
+          break;
       }
-    }],
-    order: [
-      ['orderedAt', 'DESC']
-    ]
-  });
 
-  let currency = await utilsEcom.getCurrency();
-
-  await ctx.render('my-account', {
-    selected: 'my-account',
-    session: ctx.session,
-    cartQty: cartQty,
-    orders: result.rows,
-    currency: currency,
-    page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS["elements_per_page"])),
-    statuses: configEcom.STATUS_DISPLAY
-  });
-
-  // Clear old messages
-  ctx.session.messages = null;
-}
-
-async function getAdminProducts(ctx) {
-  // Check for admin rights
-  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
-    utilsEcom.onNotAuthenticatedStaff(ctx);
-    return;
-  }
-
-  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
-
-  if (!await utilsEcom.hasPermission(ctx, "products.read")) {
-    utilsEcom.onNoPermission(ctx,
-      "You don\'t have permission to see products",
-      {
-        level: "info",
-        message: `Staff ${ctx.session.dataValues.staffUsername} tried to see products without rights`,
-        options:
-        {
-          user: ctx.session.dataValues.staffUsername,
-          isStaff: true
+      if (dispatchTableRoute) {
+        // Require user
+        if (dispatchTableRoute.requireUser) {
+          if (!await utilsEcom.isAuthenticatedUser(ctx)) {
+            utilsEcom.onNotAuthenticatedUser(ctx);
+            return;
+          }
         }
-      });
-    return;
-  }
 
-  // Auto session expire
-  if (!utilsEcom.isSessionValid(staff)) {
-    utilsEcom.onSessionExpired(ctx);
-
-    return;
-  } else {
-    await staff.update({
-      lastActivity: Sequelize.fn("NOW")
-    });
-  }
-
-  // Get filters
-  let filters = {}, filtersToReturn = {};
-
-  if (Number.isSafeInteger(Number(ctx.query.category))) {
-    filters['category'] = ctx.query.category;
-    filtersToReturn['category'] = ctx.query.category;
-  }
-  if (Number.isSafeInteger(Number(ctx.query.minprice)) && Math.sign(ctx.query.minprice) >= 0) {
-    filters['minprice'] = ctx.query.minprice;
-    filtersToReturn['minprice'] = ctx.query.minprice;
-  }
-  else {
-    filters['minprice'] = 0;
-  }
-  if (Number.isSafeInteger(Number(ctx.query.maxprice)) && Math.sign(ctx.query.maxprice) >= 0) {
-    filters['maxprice'] = ctx.query.maxprice;
-    filtersToReturn['maxprice'] = ctx.query.maxprice;
-  }
-  else {
-    filters['maxprice'] = 99999;
-  }
-  if (ctx.query.name) {
-    filters['name'] = ctx.query.name;
-    filtersToReturn['name'] = ctx.query.name;
-  }
-  else {
-    filters['name'] = '';
-  }
-
-  const categories = await Category.findAll();
-
-  // Paginator
-  let page = 1;
-
-  let limit = configEcom.SETTINGS["elements_per_page"];
-  let offset = 0;
-  if (ctx.params.page) {
-    page = parseInt(ctx.params.page);
-    offset = (parseInt(ctx.params.page) - 1) * limit;
-  }
-
-  let categoriesNames = {};
-
-  for (let i = 0; i < categories.length; i++) {
-    categoriesNames[categories[i].id] = categories[i].name;
-  }
-
-  let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.name, filters.category, filters.minprice, filters.maxprice, null, false);
-
-  let cartQty = await utilsEcom.getCartQuantity(ctx);
-
-  await ctx.render('/admin/products', {
-    layout: '/admin/base',
-    selected: 'products',
-    session: ctx.session,
-    cartQty: cartQty,
-    products: await products,
-    categories: categories,
-    categoriesNames: categoriesNames, // Find better way
-    filters: filtersToReturn,
-    page: page,
-    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.SETTINGS["elements_per_page"]))
-  });
-
-  // Clear old messages
-  ctx.session.messages = null;
-}
-
-async function getAdminAccounts(ctx) {
-  // Check for admin rights
-  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
-    utilsEcom.onNotAuthenticatedStaff(ctx);
-    return;
-  }
-
-  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
-
-  if (!await utilsEcom.hasPermission(ctx, 'accounts.read')) {
-    utilsEcom.onNoPermission(ctx,
-      "You don\'t have permission to see accounts",
-      {
-        level: "info",
-        message: `Staff ${ctx.session.dataValues.staffUsername} tried to see accounts without rights`,
-        options:
-        {
-          user: ctx.session.dataValues.staffUsername,
-          isStaff: true
+        // Require staff
+        if (dispatchTableRoute.requireStaff) {
+          if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
+            utilsEcom.onNotAuthenticatedStaff(ctx);
+            return;
+          }
         }
-      });
-    return;
-  }
 
-  // Auto session expire
-  if (!utilsEcom.isSessionValid(staff)) {
-    utilsEcom.onSessionExpired(ctx);
+        if (dispatchTableRoute.requireSession || dispatchTableRoute.permission)
+          var staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
-    return;
-  } else {
-    await staff.update({
-      lastActivity: Sequelize.fn("NOW")
-    });
-  }
+        // Require session
+        if (dispatchTableRoute.requireSession) {
+          if (!utilsEcom.isSessionValid(staff)) {
+            utilsEcom.onSessionExpired(ctx);
 
-  // Get filters
-  let filters = {}, filtersToReturn = {};
+            return;
+          } else {
+            await staff.update({
+              lastActivity: Sequelize.fn("NOW")
+            });
+          }
+        }
 
-  if (ctx.query.user) {
-    filters['user'] = ctx.query.user;
-    filtersToReturn['user'] = ctx.query.user;
-  } else {
-    filters['user'] = '';
-  }
-  if (ctx.query.email) {
-    filters['email'] = ctx.query.email;
-    filtersToReturn['email'] = ctx.query.email;
-  } else {
-    filters['email'] = '';
-  }
-  if (ctx.query.country) {
-    if (assert_isElementInArrayCaseInsensitive(ctx.query.country, ctx, { array: configEcom.COUNTRY_LIST })) {
-      filters['country'] = ctx.query.country;
-      filtersToReturn['country'] = ctx.query.country;
+        // Require permission
+        if (dispatchTableRoute.permission) {
+          if (!await utilsEcom.hasPermission(staff, dispatchTableRoute.permission)) {
+            utilsEcom.onNoPermission(ctx,
+              "You don\'t have permission to see products",
+              {
+                level: "info",
+                message: `Staff ${ctx.session.dataValues.staffUsername} tried to see products without rights`,
+                options:
+                {
+                  user: ctx.session.dataValues.staffUsername,
+                  isStaff: true
+                }
+              });
+            return;
+          }
+        }
+
+        console.log(dispatchTableRoute);
+      }
     }
+  }
+
+  return await next();
+});
+
+app.use(router.routes()).use(router.allowedMethods());
+
+app.use(favicon(__dirname + '/static/img/favicon.ico'));
+
+// Global Unhandled Error Handler
+app.on("error", (err, ctx) => {
+  // On error, Koa replaces ctx.status and ctx.body based on err.status and err.message !
+  err.expose = true;
+
+  if (err.errors && err.errors[0] instanceof ValidationErrorItem) {
+    var message = err.errors[0].message;
   } else {
-    filters['country'] = '';
+    var message = err.message;
   }
 
-  let page = 1;
+  if (ctx.request.header.accept.includes("application/json")) {
+    err.status = 200;
 
-  if (ctx.params.page) {
-    page = parseInt(ctx.params.page)
-  }
-
-  let limit = configEcom.SETTINGS["elements_per_page"];
-  let offset = 0;
-
-  if (ctx.params.page) {
-    offset = (parseInt(ctx.params.page) - 1) * limit;
-  }
-
-  let result = await db.query(`SELECT * FROM users 
-    WHERE position(upper($1) in upper(username)) > 0
-    AND position(upper($2) in upper(email)) > 0
-    AND position(upper($3) in upper(country)) > 0
-    AND "deletedAt" is NULL
-    ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`, {
-    type: 'SELECT',
-    plain: false,
-    model: User,
-    mapToModel: true,
-    bind: [filters.user, filters.email, filters.country]
-  }).catch(err => utilsEcom.handleError(err));
-
-  let count = await db.query(`SELECT COUNT(*) FROM users
-    WHERE position(upper($1) in upper(username)) > 0
-    AND position(upper($2) in upper(email)) > 0
-    AND position(upper($3) in upper(country)) > 0
-    AND "deletedAt" is NULL`, {
-    type: 'SELECT',
-    plain: true,
-    bind: [filters.user, filters.email, filters.country]
-  }).catch(err => utilsEcom.handleError(err));
-
-  await ctx.render('admin/accounts', {
-    layout: 'admin/base',
-    selected: 'accounts',
-    session: ctx.session,
-    users: result,
-    filters: filtersToReturn,
-    page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS["elements_per_page"]))
-  });
-
-  // Clear the messages
-  ctx.session.messages = null;
-}
-
-async function getAdminStaffs(ctx) {
-  // Check for admin rights
-  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
-    utilsEcom.onNotAuthenticatedStaff(ctx);
-    return;
-  }
-
-  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
-
-  if (!await utilsEcom.hasPermission(ctx, 'staff.read')) {
-    utilsEcom.onNoPermission(ctx,
-      "You don\'t have permission to see staff",
-      {
-        level: "info",
-        message: `Staff ${ctx.session.dataValues.staffUsername} tried to see staffs without rights`,
-        options:
-        {
-          user: ctx.session.dataValues.staffUsername,
-          isStaff: true
-        }
-      });
-    return;
-  }
-
-  // Auto session expire
-  if (!utilsEcom.isSessionValid(staff)) {
-    utilsEcom.onSessionExpired(ctx);
-
-    return;
+    err.message = JSON.stringify({ 'error': message });
   } else {
-    await staff.update({
-      lastActivity: Sequelize.fn("NOW")
-    });
+    // Redirect
+    err.status = 302;
+
+    // TODO: If ctx.path also throw error it will be infinity redirect !
+    err.headers = { 'Location': ctx.path };
+
+    ctx.session.messages = { 'clientError': message };
   }
 
-  // Get filters
-  let filters = {}, filtersToReturn = {};
+  loggerEcom.handleError(err, { ctx: ctx });
+});
 
-  if (ctx.query.user) {
-    filters['user'] = ctx.query.user;
-    filtersToReturn['user'] = ctx.query.user;
-  } else {
-    filters['user'] = '';
-  }
-  if (ctx.query.email) {
-    filters['email'] = ctx.query.email;
-    filtersToReturn['email'] = ctx.query.email;
-  } else {
-    filters['email'] = '';
-  }
+// app.listen(3210);
 
-  let page = 1;
-
-  if (ctx.params.page) {
-    page = parseInt(ctx.params.page)
-  }
-
-  let limit = configEcom.SETTINGS["elements_per_page"];
-  let offset = 0;
-
-  if (ctx.params.page) {
-    offset = (parseInt(ctx.params.page) - 1) * limit;
-  }
-
-  const result = await db.query(`SELECT * FROM staffs WHERE
-    position(upper($1) in upper(username)) > 0 AND
-    position(upper($2) in upper(email)) > 0 AND
-    "deletedAt" is NULL ORDER BY "createdAt" DESC
-    LIMIT ${limit} OFFSET ${offset}`, {
-    type: 'SELECT',
-    plain: false,
-    model: Staff,
-    mapToModel: true,
-    bind: [filters.user, filters.email]
-  }).catch(err => utilsEcom.handleError(err));
-
-  const count = await db.query(`SELECT COUNT(*) FROM staffs WHERE
-    position(upper($1) in upper(username)) > 0 AND
-    position(upper($2) in upper(email)) > 0 AND
-    "deletedAt" is NULL`, {
-    type: 'SELECT',
-    plain: true,
-    bind: [filters.user, filters.email]
-  }).catch(err => utilsEcom.handleError(err));
-
-  await ctx.render('admin/staff', {
-    layout: 'admin/base',
-    selected: 'staff',
-    session: ctx.session,
-    staff: result,
-    filters: filtersToReturn,
-    page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS["elements_per_page"]))
-  });
-
-  // Clear the messages
-  ctx.session.messages = null;
-}
-
-async function getAdminRoles(ctx) {
-  // Check for admin rights
-  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
-    utilsEcom.onNotAuthenticatedStaff(ctx);
-    return;
-  }
-
-  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
-
-  if (!await utilsEcom.hasPermission(ctx, 'roles.read')) {
-    utilsEcom.onNoPermission(ctx,
-      "You don\'t have permission to see roles",
-      {
-        level: "info",
-        message: `Staff ${ctx.session.dataValues.staffUsername} tried to see roles without rights`,
-        options:
-        {
-          user: ctx.session.dataValues.staffUsername,
-          isStaff: true
-        }
-      });
-    return;
-  }
-
-  // Auto session expire
-  if (!utilsEcom.isSessionValid(staff)) {
-    utilsEcom.onSessionExpired(ctx);
-
-    return;
-  } else {
-    await staff.update({
-      lastActivity: Sequelize.fn("NOW")
-    });
-  }
-
-  let page = 1;
-
-  if (ctx.params.page) {
-    page = parseInt(ctx.params.page)
-  }
-
-  let limit = configEcom.SETTINGS["elements_per_page"];
-  let offset = 0;
-
-  if (ctx.params.page) {
-    offset = (parseInt(ctx.params.page) - 1) * limit;
-  }
-
-  const result = await Role.findAndCountAll({
-    limit: limit,
-    offset: offset,
-    order: [
-      ['createdAt', 'DESC']
-    ]
-  });
-
-  await ctx.render('admin/roles', {
-    layout: 'admin/base',
-    selected: 'roles',
-    session: ctx.session,
-    roles: result.rows,
-    page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS["elements_per_page"]))
-  });
-
-  // Clear the messages
-  ctx.session.messages = null;
-}
-
-async function getAdminOrders(ctx) {
-  // Check for admin rights
-  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
-    utilsEcom.onNotAuthenticatedStaff(ctx);
-    return;
-  }
-
-  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
-
-  if (!await utilsEcom.hasPermission(ctx, 'orders.read')) {
-    utilsEcom.onNoPermission(ctx,
-      "You don\'t have permission to see orders",
-      {
-        level: "info",
-        message: `Staff ${ctx.session.dataValues.staffUsername} tried to see orders without rights`,
-        options:
-        {
-          user: ctx.session.dataValues.staffUsername,
-          isStaff: true
-        }
-      });
-    return;
-  }
-
-  // Auto session expire
-  if (!utilsEcom.isSessionValid(staff)) {
-    utilsEcom.onSessionExpired(ctx);
-
-    return;
-  } else {
-    await staff.update({
-      lastActivity: Sequelize.fn("NOW")
-    });
-  }
-
-  // Get filters
-  let filters = {}, filtersToReturn = {};
-
-  if (ctx.query.user) {
-    filters['user'] = ctx.query.user;
-    filtersToReturn['user'] = ctx.query.user;
-  } else {
-    filters['user'] = '';
-  }
-  if (ctx.query.status) {
-    filters['status'] = ctx.query.status;
-    filtersToReturn['status'] = configEcom.STATUS_DISPLAY[ctx.query.status];
-  } else {
-    let stat = [];
-
-    for (i = 1; i < configEcom.STATUS_DISPLAY.length; i++)
-      stat.push(i);
-
-    filters['status'] = stat;
-  }
-  if (ctx.query.ordBefore) {
-    filters['ordBefore'] = ctx.query.ordBefore;
-    filtersToReturn['ordBefore'] = ctx.query.ordBefore;
-  } else {
-    filters['ordBefore'] = new Date().toISOString();
-  }
-  if (ctx.query.ordAfter) {
-    filters['ordAfter'] = ctx.query.ordAfter;
-    filtersToReturn['ordAfter'] = ctx.query.ordAfter;
-  } else {
-    filters['ordAfter'] = new Date(0).toISOString();
-  }
-
-  let page = 1;
-
-  if (ctx.params.page) {
-    page = parseInt(ctx.params.page)
-  }
-
-  let limit = configEcom.SETTINGS["elements_per_page"];
-  let offset = 0;
-
-  if (ctx.params.page) {
-    offset = (parseInt(ctx.params.page) - 1) * limit;
-  }
-
-  const result = await Order.findAndCountAll({
-    where: {
-      status: { [Op.gte]: 1 },
-    },
-    limit: limit,
-    offset: offset,
-    include: User,
-    order: [
-      ['orderedAt', 'DESC']
-    ]
-  });
-
-  await ctx.render("/admin/orders", {
-    layout: "/admin/base",
-    session: ctx.session,
-    selected: "orders",
-    orders: result.rows,
-    statuses: configEcom.STATUS_DISPLAY,
-    filters: filtersToReturn,
-    page: page,
-    pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS["elements_per_page"]))
-  });
-
-  // Clear the messages
-  ctx.session.messages = null;
-}
-
-async function getAdminReport(ctx) {
-  // Check for admin rights
-  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
-    utilsEcom.onNotAuthenticatedStaff(ctx);
-    return;
-  }
-
-  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
-
-  if (!await utilsEcom.hasPermission(ctx, 'report.read')) {
-    utilsEcom.onNoPermission(ctx,
-      "You don\'t have permission to see reports",
-      {
-        level: "info",
-        message: `Staff ${ctx.session.dataValues.staffUsername} tried to see report without rights`,
-        options:
-        {
-          user: ctx.session.dataValues.staffUsername,
-          isStaff: true
-        }
-      });
-    return;
-  }
-
-  // Auto session expire
-  if (!utilsEcom.isSessionValid(staff)) {
-    utilsEcom.onSessionExpired(ctx);
-
-    return;
-  } else {
-    await staff.update({
-      lastActivity: Sequelize.fn("NOW")
-    });
-  }
-
-  // Get filters
-  let filters = {}, filtersToReturn = {};
-
-  if (ctx.query.timegroup) {
-    filters['timegroup'] = ctx.query.timegroup
-    filtersToReturn['timegroup'] = ctx.query.timegroup
-  } else {
-    filtersToReturn['timegroup'] = '2';
-  }
-  if (ctx.query.ordBefore) {
-    filters['ordBefore'] = ctx.query.ordBefore;
-    filtersToReturn['ordBefore'] = ctx.query.ordBefore;
-  } else {
-    filters['ordBefore'] = new Date().toISOString();
-  }
-  if (ctx.query.ordAfter) {
-    filters['ordAfter'] = ctx.query.ordAfter;
-    filtersToReturn['ordAfter'] = ctx.query.ordAfter;
-  } else {
-    filters['ordAfter'] = new Date(0).toISOString();
-  }
-
-  let page = 1;
-
-  if (ctx.params.page) {
-    page = parseInt(ctx.params.page)
-  }
-
-  let limit = configEcom.SETTINGS["elements_per_page"];
-  let offset = 0;
-
-  if (ctx.params.page) {
-    offset = (parseInt(ctx.params.page) - 1) * limit;
-  }
-
-  let time = 'month';
-
-  switch (filters.timegroup) {
-    case '0':
-      time = 'day';
-      break;
-    case '1':
-      time = 'week';
-      break;
-    case '2':
-      time = 'month';
-      break;
-    case '3':
-      time = 'year';
-      break;
-  }
-
-  const [reportRes, count] = await utilsEcom.getReportResponce(filters, limit, offset, time);
-
-  loggerEcom.logger.log('info',
-    `Staff ${ctx.session.dataValues.staffUsername} generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} `,
-    { user: ctx.session.dataValues.staffUsername, isStaff: true });
-
-  await ctx.render('/admin/report', {
-    layout: '/admin/base',
-    selected: 'report',
-    session: ctx.session,
-    report: await reportRes,
-    filters: filtersToReturn,
-    page: page,
-    pages: utilsEcom.givePages(page, Math.ceil((await count)[0].count / configEcom.SETTINGS["elements_per_page"])),
-  });
-}
-
-async function getAdminAudit(ctx) {
-  // Check for admin rights
-  if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
-    utilsEcom.onNotAuthenticatedStaff(ctx);
-    return;
-  }
-
-  let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
-
-  if (!await utilsEcom.hasPermission(ctx, 'audit.read')) {
-    utilsEcom.onNoPermission(ctx,
-      "You don\'t have permission to see audit",
-      {
-        level: "info",
-        message: `Staff ${ctx.session.dataValues.staffUsername} tried to see audit without rights`,
-        options:
-        {
-          user: ctx.session.dataValues.staffUsername,
-          isStaff: true
-        }
-      });
-    return;
-  }
-
-  // Auto session expire
-  if (!utilsEcom.isSessionValid(staff)) {
-    utilsEcom.onSessionExpired(ctx);
-
-    return;
-  } else {
-    await staff.update({
-      lastActivity: Sequelize.fn("NOW")
-    });
-  }
-
-  // Get filters
-  let filters = {}, filtersToReturn = {};
-
-  if (ctx.query.user) {
-    filters['user'] = ctx.query.user;
-    filtersToReturn['user'] = ctx.query.user;
-  } else {
-    filters['user'] = '';
-  }
-  if (ctx.query.level) {
-    filters['level'] = ctx.query.level;
-    filtersToReturn['level'] = ctx.query.level;
-  } else {
-    filters['level'] = '';
-  }
-  if (ctx.query.ordBefore) {
-    filters['ordBefore'] = ctx.query.ordBefore;
-    filtersToReturn['ordBefore'] = ctx.query.ordBefore;
-  } else {
-    filters['ordBefore'] = new Date().toISOString();
-  }
-  if (ctx.query.ordAfter) {
-    filters['ordAfter'] = ctx.query.ordAfter;
-    filtersToReturn['ordAfter'] = ctx.query.ordAfter;
-  } else {
-    filters['ordAfter'] = new Date(0).toISOString();
-  }
-  if (ctx.query.longmsg == 1) {
-    filters['longmsg'] = true;
-    filtersToReturn['longmsg'] = true;
-  } else if (ctx.query.longmsg === '0') {
-    filters['longmsg'] = false;
-    filtersToReturn['longmsg'] = false;
-  }
-  if (ctx.query.datetrunc) {
-    filters['datetrunc'] = ctx.query.datetrunc;
-    filtersToReturn['datetrunc'] = ctx.query.datetrunc;
-  } else {
-    filters['datetrunc'] = '-1';
-    filtersToReturn['datetrunc'] = '-1';
-  }
-
-  let time;
-
-  switch (filters.datetrunc) {
-    case '0':
-      time = 'day';
-      break;
-    case '1':
-      time = 'week';
-      break;
-    case '2':
-      time = 'month';
-      break;
-    case '3':
-      time = 'year';
-      break;
-  }
-
+<<<<<<< HEAD
   let page = 1;
 
   if (ctx.params.page) {
@@ -5644,5 +5026,9 @@ app.on("error", (err, ctx) => {
 });
 
 // app.listen(3210);
+=======
+// Hack the system, set custom TZ for testing
+process.env.TZ = 'America/Argentina/Buenos_Aires';
+>>>>>>> origin/dev
 
 app.listen(process.env.PORT);
