@@ -9,7 +9,7 @@ const DEFAULT_SSE_PING = 1000 * 60 * 1 // 1 minute
 
 const DEFAULT_PRODUCTS_PER_PAGE = 12;
 
-const DEFAULT_SESSION_BACK_OFFICE_EXPIRE = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_SESSION_BACK_OFFICE_EXPIRE_MINUTES = 5;
 
 const DEFAULT_MAX_IMAGE_SIZE = 10 * 1000 * 1000; // 10 MB
 
@@ -29,6 +29,8 @@ const DEFAULT_PAYMENT_EMAIL_TEMPLATE = Object.freeze({
     email_payment_table_h1: 'price',
     email_payment_table_h2: 'quantity',
     email_payment_table_h3: 'subtotal',
+	email_payment_table_h4: 'vat',
+	email_payment_table_h5: 'grandtotal',
     email_payment_lower: 'Благодаря за вашата поръчка'
 });
 
@@ -40,13 +42,15 @@ const DEFAULT_ORDER_EMAIL_TEMPLATE = Object.freeze({
     email_order_table_h1: 'price',
     email_order_table_h2: 'quantity',
     email_order_table_h3: 'subtotal',
+	email_order_table_h4: 'vat',
+	email_order_table_h5: 'grandtotal',
     email_order_lower: 'Благодаря за вашата поръчка'
 });
 
 const SETTINGS = {
     // Default settings
     elements_per_page: DEFAULT_PRODUCTS_PER_PAGE,
-    backoffice_expire: DEFAULT_SESSION_BACK_OFFICE_EXPIRE,
+    backoffice_expire: DEFAULT_SESSION_BACK_OFFICE_EXPIRE_MINUTES,
     currency: DEFAULT_CURRENCY,
     vat: DEFAULT_VAT,
     sender_email_parent: DEFAULT_EMAIL_SENDER,
@@ -400,7 +404,7 @@ module.exports = {
     DEFAULT_EMAIL_SENDER,
     DEFAULT_ORDER_EMAIL_TEMPLATE,
     DEFAULT_PAYMENT_EMAIL_TEMPLATE,
-    DEFAULT_SESSION_BACK_OFFICE_EXPIRE,
+    DEFAULT_SESSION_BACK_OFFICE_EXPIRE_MINUTES,
     SETTINGS,
     STATUS_DISPLAY,
     LOG_LEVELS,

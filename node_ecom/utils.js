@@ -600,7 +600,10 @@ async function getReportResponce(filters, limit, offset, time) {
         date_trunc($1, orders."orderedAt")      AS "startDate", 
         SUM(orderitems.quantity)                AS products, 
         COUNT(distinct orders.id)               AS orders, 
-        SUM(price * orderitems.quantity)        AS subtotal,
+        COALESCE( SUM( ROUND(
+            price *
+            orderitems.quantity
+            , 2)), 0.00)                        AS subtotal,
         COALESCE( SUM( ROUND(
             price *
             orderitems.quantity *
@@ -734,7 +737,7 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
 }
 
 function escapeCSVParam(param) {
-    // assert(typeof(param) === "string"); may be number or smtg
+    param = param || ""; // Can be undefined or null
 
     let escapedParam = param.replace(/"/g, `""`);
 
@@ -749,17 +752,25 @@ async function saveReportCsv(reportRes, filters, time, currency) {
 
     var dataToWrite = escapeCSVParam(`From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`);
 
-    dataToWrite += "\nStart Date, Orders, Products, Total Price, Currency\n";
+    dataToWrite += "\nStart Date, Orders, Products, Sub Price, VAT, Grand Total, Currency\n";
 
     for (i = 0; i < reportRes.length; i++) {
-        dataToWrite += escapeCSVParam(reportRes[i].dataValues.startDate.toISOString()) + "," +
-            escapeCSVParam(reportRes[i].dataValues.orders) + "," + escapeCSVParam(reportRes[i].dataValues.products) + "," +
-            escapeCSVParam(reportRes[i].dataValues.total) + "," + currency + "\n";
+        dataToWrite +=
+            escapeCSVParam(reportRes[i].dataValues.startDate.toISOString()) + "," +
+            escapeCSVParam(reportRes[i].dataValues.orders) + "," +
+            escapeCSVParam(reportRes[i].dataValues.products) + "," +
+            escapeCSVParam(reportRes[i].dataValues.subtotal) + "," +
+            escapeCSVParam(reportRes[i].dataValues.vatsum) + "," +
+            escapeCSVParam(reportRes[i].dataValues.grandtotal) + "," +
+            currency + "\n";
     }
 
-    // Total
-    let absTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.total), 0).toFixed(2);
-    dataToWrite += ",,," + escapeCSVParam(absTotal) + "," + currency;
+    // Totals
+    let absTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.subtotal), 0).toFixed(2);
+    let absVATTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.vatsum), 0).toFixed(2);
+    let absGrandTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.grandtotal), 0).toFixed(2);
+    
+    dataToWrite += ",,," + escapeCSVParam(absTotal) + "," + escapeCSVParam(absVATTotal) + "," + escapeCSVParam(absGrandTotal) + "," + currency;
 
     return createTempFile('excelReport.csv', dataToWrite);
 }
@@ -778,13 +789,18 @@ async function saveReportPdf(reportRes, filters, time, currency) {
         rows.push([reportRes[i].dataValues.startDate.toLocaleDateString('en-GB'),
         reportRes[i].dataValues.orders,
         reportRes[i].dataValues.products,
-        reportRes[i].dataValues.total,
-            " " + currency]);
+        reportRes[i].dataValues.subtotal,
+        reportRes[i].dataValues.vatsum,
+        reportRes[i].dataValues.grandtotal,
+        " " + currency]);
     }
 
     // Total
-    let absTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.total), 0).toFixed(2);
-    rows.push(["", "", "", absTotal, " " + currency]);
+    let absTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.subtotal), 0).toFixed(2);
+    let absVATTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.vatsum), 0).toFixed(2);
+    let absGrandTotal = reportRes.reduce((partialSum, a) => parseFloat(partialSum) + parseFloat(a.dataValues.grandtotal), 0).toFixed(2);
+
+    rows.push(["", "", "", absTotal, absVATTotal, absGrandTotal, " " + currency]);
 
     let subtitle = `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`
 
@@ -806,7 +822,15 @@ async function saveReportPdf(reportRes, filters, time, currency) {
             align: "right"
         },
         {
-            label: "Total Price",
+            label: "Sub Total",
+            align: "right"
+        },
+        {
+            label: "VAT",
+            align: "right"
+        },
+        {
+            label: "Grand Total",
             align: "right"
         },
         {
@@ -832,14 +856,16 @@ async function saveReportExcel(reportRes, filters, time, currency) {
     const workbook = new excelJS.Workbook();
     const worksheet = workbook.addWorksheet("Report Orders");
 
-    worksheet.getRow(2).values = ['Start Date', 'Orders', 'Products', 'Total Price', 'Currency'];
+    worksheet.getRow(2).values = ['Start Date', 'Orders', 'Products', 'Sub Total', 'VAT', 'Grand Total', 'Currency'];
 
     // Column for data in excel. key must match data key
     worksheet.columns = [
         { header: "Start Date", key: "startDate", width: 10 },
         { header: "Orders", key: "orders", width: 10 },
         { header: "Products", key: "products", width: 10 },
-        { header: "Total Price", key: "total", width: 10 },
+        { header: "Sub Total", key: "subtotal", width: 10 },
+        { header: "VAT", key: "vatsum", width: 10 },
+        { header: "Grand Total", key: "grandtotal", width: 10 },
         { header: "Currency", key: "currency", width: 10 },
     ];
 
@@ -848,7 +874,9 @@ async function saveReportExcel(reportRes, filters, time, currency) {
             report.dataValues.startDate.toLocaleDateString('en-GB'),
             parseInt(report.dataValues.orders),
             parseInt(report.dataValues.products),
-            parseFloat(report.dataValues.total),
+            parseFloat(report.dataValues.subtotal),
+            parseFloat(report.dataValues.vatsum),
+            parseFloat(report.dataValues.grandtotal),
             currency];
 
         worksheet.addRow(data);
@@ -862,12 +890,24 @@ async function saveReportExcel(reportRes, filters, time, currency) {
             reportRes.reduce(
                 (partialSum, a) =>
                     parseFloat(partialSum) +
-                    parseFloat(a.dataValues.total), 0)
+                    parseFloat(a.dataValues.subtotal), 0)
+                .toFixed(2)),
+        parseFloat(
+            reportRes.reduce(
+                (partialSum, a) =>
+                    parseFloat(partialSum) +
+                    parseFloat(a.dataValues.vatsum), 0)
+                .toFixed(2)),
+        parseFloat(
+            reportRes.reduce(
+                (partialSum, a) =>
+                    parseFloat(partialSum) +
+                    parseFloat(a.dataValues.grandtotal), 0)
                 .toFixed(2)),
         currency]);
 
     // TITLE
-    worksheet.mergeCells('A1', 'E1');
+    worksheet.mergeCells('A1', 'G1');
     worksheet.getCell('A1').value =
         `From ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time}`;
 
@@ -973,7 +1013,7 @@ function isSessionValid(staff) {
     if (configEcom.SETTINGS["backoffice_expire"] == 0)
         return true;
 
-    return new Date() - new Date(staff.lastActivity) < configEcom.SETTINGS["backoffice_expire"];
+    return new Date() - new Date(staff.lastActivity) < configEcom.SETTINGS["backoffice_expire"] * 60 * 1000;
 }
 
 // Other

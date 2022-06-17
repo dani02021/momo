@@ -85,7 +85,7 @@
                 <option value="name">Prod. Name</option>
                 <option value="quantity">Quantity</option>
                 <option value="price">Prod. Price</option>
-                <option value="subtotal">Subtotal</option>
+                <option value="subtotal">Sub total</option>
               </select>
             </div>
             <div class="col d-flex justify-content-center">
@@ -94,7 +94,7 @@
                 <option value="name">Prod. Name</option>
                 <option value="quantity">Quantity</option>
                 <option value="price">Prod. Price</option>
-                <option value="subtotal">Subtotal</option>
+                <option value="subtotal">Sub total</option>
               </select>
             </div>
             <div class="col d-flex justify-content-center">
@@ -103,7 +103,7 @@
                 <option value="name">Prod. Name</option>
                 <option value="quantity">Quantity</option>
                 <option value="price">Prod. Price</option>
-                <option value="subtotal">Subtotal</option>
+                <option value="subtotal">Sub total</option>
               </select>
             </div>
             <div class="col d-flex justify-content-center">
@@ -112,7 +112,7 @@
                 <option value="name">Prod. Name</option>
                 <option value="quantity">Quantity</option>
                 <option value="price">Prod. Price</option>
-                <option value="subtotal">Subtotal</option>
+                <option value="subtotal">Sub total</option>
               </select>
             </div>
           </div>
@@ -222,7 +222,7 @@
                 <option value="name">Prod. Name</option>
                 <option value="quantity">Quantity</option>
                 <option value="price">Prod. Price</option>
-                <option value="subtotal">Subtotal</option>
+                <option value="subtotal">Total</option>
               </select>
             </div>
             <div class="col d-flex justify-content-center">
@@ -231,7 +231,7 @@
                 <option value="name">Prod. Name</option>
                 <option value="quantity">Quantity</option>
                 <option value="price">Prod. Price</option>
-                <option value="subtotal">Subtotal</option>
+                <option value="subtotal">Total</option>
               </select>
             </div>
             <div class="col d-flex justify-content-center">
@@ -240,7 +240,7 @@
                 <option value="name">Prod. Name</option>
                 <option value="quantity">Quantity</option>
                 <option value="price">Prod. Price</option>
-                <option value="subtotal">Subtotal</option>
+                <option value="subtotal">Total</option>
               </select>
             </div>
             <div class="col d-flex justify-content-center">
@@ -249,7 +249,7 @@
                 <option value="name">Prod. Name</option>
                 <option value="quantity">Quantity</option>
                 <option value="price">Prod. Price</option>
-                <option value="subtotal">Subtotal</option>
+                <option value="subtotal">Total</option>
               </select>
             </div>
           </div>
@@ -372,7 +372,12 @@
 
   let selects = document.getElementById("table1").getElementsByTagName("select");
 
-  let values = "<%= settings.email_payment_table %>".split(",");
+  values = [
+    "<%= settings.email_payment_table_h0 %>",
+    "<%= settings.email_payment_table_h1 %>",
+    "<%= settings.email_payment_table_h2 %>",
+    "<%= settings.email_payment_table_h3 %>",
+  ];
 
   if (values.length == selects.length) {
     for (i = 0; i < values.length; i++) {
@@ -382,7 +387,12 @@
 
   selects = document.getElementById("table2").getElementsByTagName("select");
 
-  values = "<%= settings.email_order_table %>".split(",");
+  values = [
+    "<%= settings.email_order_table_h0 %>",
+    "<%= settings.email_order_table_h1 %>",
+    "<%= settings.email_order_table_h2 %>",
+    "<%= settings.email_order_table_h3 %>",
+  ];
 
   if (values.length == selects.length) {
     for (i = 0; i < values.length; i++) {
