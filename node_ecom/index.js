@@ -23,7 +23,7 @@ const { Sequelize, ValidationError, ValidationErrorItem } = require("sequelize")
 const models = require("./models.js");
 const { parse, resolve } = require('path');
 const { bind } = require('koa-route');
-const { assert_isValidISODate, assert_notNull, assert_stringLength, assert_regex, assert_isSafeInteger, assert_isNonNegativeNumber, assert_isInteger, assert_isElementInArrayCaseInsensitive, assert_isDateAfter } = require('./asserts.js');
+const { assert_isValidISODate, assert_notNull, assert_stringLength, assert_regex, assert_isSafeInteger, assert_isNonNegativeNumber, assert_isInteger, assert_isElementInArrayCaseInsensitive, assert_isDateAfter, assert_hasPermission } = require('./asserts.js');
 const { AssertionError } = require('assert');
 const Staff = models.staff();
 
@@ -52,26 +52,83 @@ let linksTable = {
     "/admin": { func: routes.admin, requireStaff: true, requireSession: true },
     "/admin/login": { func: routes.adminLogin },
     "/admin/logout": { func: routes.adminLogout },
-    "/admin/products/:page?": { func: routes.adminProducts, requirePermission: "products.read", requireStaff: true, requireSession: true },
-    "/admin/products/edit/:id": { func: routes.adminProductsEdit, requirePermission: "products.update", requireStaff: true, requireSession: true },
-    "/admin/accounts/:page?": { func: routes.adminAccounts, requirePermission: "accounts.read", requireStaff: true, requireSession: true },
-    "/admin/staff/:page?": { func: routes.adminStaff, requirePermission: "staff.read", requireStaff: true, requireSession: true },
-    "/admin/staff/edit/:id": { func: routes.adminStaffEdit, requirePermission: "staff.update", requireStaff: true, requireSession: true },
-    "/admin/roles/:page?": { func: routes.adminRoles, requirePermission: "roles.read", requireStaff: true, requireSession: true },
-    "/admin/roles/edit/:id": { func: routes.adminRolesEdit, requirePermission: "roles.update", requireStaff: true, requireSession: true },
-    "/admin/orders/:page?": { func: routes.adminOrders, requirePermission: "orders.read", requireStaff: true, requireSession: true },
+    "/admin/products/:page?": { func: routes.adminProducts, requirePermission: {
+      arg: "products.read",
+      loggerMsg: "Tried to create a product without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/products/edit/:id": { func: routes.adminProductsEdit, requirePermission: {
+      arg: "products.update",
+      loggerMsg: "Tried to update a product without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/accounts/:page?": { func: routes.adminAccounts, requirePermission: {
+      arg: "accounts.read",
+      loggerMsg: "Tried to view accounts without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/staff/:page?": { func: routes.adminStaff, requirePermission: {
+      arg: "staff.read",
+      loggerMsg: "Tried to view staff without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/staff/edit/:id": { func: routes.adminStaffEdit, requirePermission: {
+      arg: "staff.update",
+      loggerMsg: "Tried to update staff without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/roles/:page?": { func: routes.adminRoles, requirePermission: {
+      arg: "roles.read",
+      loggerMsg: "Tried to view roles without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/roles/edit/:id": { func: routes.adminRolesEdit, requirePermission: {
+      arg: "roles.update",
+      loggerMsg: "Tried to update roles without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/orders/:page?": { func: routes.adminOrders, requirePermission: {
+      arg: "orders.read",
+      loggerMsg: "Tried to view orders without a permission"
+    }, requireStaff: true, requireSession: true },
     //  "/admin/orders/edit": { func: routes.adminOrdersEdit, requirePermission: "orders.update", requireStaff: true, requireSession: true },
-    "/admin/report/:page?": { func: routes.adminReport, requirePermission: "report.read", requireStaff: true, requireSession: true },
-    "/admin/export/report/pdf": { func: routes.adminExportReportPdf, requirePermission: "report.export", requireStaff: true, requireSession: true },
-    "/admin/export/report/excel": { func: routes.adminExportReportExcel, requirePermission: "report.export", requireStaff: true, requireSession: true },
-    "/admin/export/report/csv": { func: routes.adminExportReportCsv, requirePermission: "report.export", requireStaff: true, requireSession: true },
-    "/admin/audit/:page?": { func: routes.adminAudit, requirePermission: "audit.read", requireStaff: true, requireSession: true },
-    "/admin/settings/email": { func: routes.adminSettingsEmail, requirePermission: "settings.email", requireStaff: true, requireSession: true },
-    "/admin/settings/other": { func: routes.adminSettingsOther, requirePermission: "settings.other", requireStaff: true, requireSession: true },
-    "/admin/promotions/targetgroups/:page?": { func: routes.adminPromotionTargetGroups, requirePermission: "targetgroups.read", requireStaff: true, requireSession: true },
-    "/admin/promotions/targetgroup/add/:page?": { func: routes.adminPromotionTargetGroupsAdd, requirePermission: "targetgroups.create", requireStaff: true, requireSession: true },
-    "/admin/promotions/targetgroup/view/:page?": { func: routes.adminPromotionTargetGroupsView, requirePermission: "targetgroups.view", requireStaff: true, requireSession: true },
-    "/admin/promotions/:page?": { func: routes.adminPromotions, requirePermission: "promotions.read", requireStaff: true, requireSession: true },
+    "/admin/report/:page?": { func: routes.adminReport, requirePermission: {
+      arg: "report.read",
+      loggerMsg: "Tried to view report without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/export/report/pdf": { func: routes.adminExportReportPdf, requirePermission: {
+      arg: "report.export",
+      loggerMsg: "Tried to export report via pdf without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/export/report/excel": { func: routes.adminExportReportExcel, requirePermission: {
+      arg: "report.export",
+      loggerMsg: "Tried to export report via xlsx without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/export/report/csv": { func: routes.adminExportReportCsv, requirePermission: {
+      arg: "report.export",
+      loggerMsg: "Tried to export report via csv without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/audit/:page?": { func: routes.adminAudit, requirePermission: {
+      arg: "audit.read",
+      loggerMsg: "Tried to view audit without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/settings/email": { func: routes.adminSettingsEmail, requirePermission: {
+      arg: "settings.email",
+      loggerMsg: "Tried to view email settings without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/settings/other": { func: routes.adminSettingsOther, requirePermission: {
+      arg: "settings.other",
+      loggerMsg: "Tried to view settings without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/promotions/targetgroups/:page?": { func: routes.adminPromotionTargetGroups, requirePermission: {
+      arg: "targetgroups.read",
+      loggerMsg: "Tried to view target groups without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/promotions/targetgroup/add/:page?": { func: routes.adminPromotionTargetGroupsAdd, requirePermission: {
+      arg: "targetgroups.create",
+      loggerMsg: "Tried to create a target group without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/promotions/targetgroup/view/:id": { func: routes.adminPromotionTargetGroupsView, requirePermission: {
+      arg: "targetgroups.view",
+      loggerMsg: "Tried to view a target group without a permission"
+    }, requireStaff: true, requireSession: true },
+    "/admin/promotions/:page?": { func: routes.adminPromotions, requirePermission: {
+      arg: "promotions.read",
+      loggerMsg: "Tried to view promotions without a permission"
+    }, requireStaff: true, requireSession: true },
 
     "/api/v0/permissions/get": { func: routes.apiPermissions, requireStaff: true, requireSession: true },
     "/api/v0/accounts/get": { func: routes.apiAccounts, requireStaff: true, requireSession: true },
@@ -81,7 +138,6 @@ let linksTable = {
     "/register": { func: routes.registerPost },
     "/login": { func: routes.login },
     "/captureOrder": { func: routes.captureOrder },
-
     "/admin/login": { func: routes.adminLoginPost },
     "/admin/products/add": { func: routes.adminProductsAdd, requirePermission: {
       arg: "products.create",
@@ -280,20 +336,13 @@ app.use(async (ctx, next) => {
         // Require permission
         if (dispatchTableRoute.requirePermission) {
           let permissionObj = dispatchTableRoute.requirePermission;
-          if (!await utilsEcom.hasPermission(staff, permissionObj.permission)) {
-            utilsEcom.onNoPermission(ctx,
-              permissionObj.clientMsg,
-              {
-                level: "info",
-                message: `Staff ${ctx.session.dataValues.staffUsername} tried to see products without rights`,
-                options:
-                {
-                  user: ctx.session.dataValues.staffUsername,
-                  isStaff: true
-                }
-              });
-            return;
-          }
+
+          await assert_hasPermission(staff, ctx, {
+            throwError: "client",
+            permission: permissionObj.arg,
+            message: `You don't have permission for this action!`,
+            loggerMessage: permissionObj.loggerMsg
+          });
         }
       }
     }
@@ -325,7 +374,7 @@ app.on("error", (err, ctx) => {
     // Redirect
     err.status = 302;
 
-    // TODO: If ctx.path also throw error it will be infinity redirect !
+    // TODO: If ctx.path also throw error it will infinity be redirecting !
     err.headers = { 'Location': ctx.path };
 
     ctx.session.messages = { 'clientError': message };

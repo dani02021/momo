@@ -320,39 +320,6 @@ async function isAuthenticatedStaff(ctx) {
     return false;
 }
 
-/**
- * 
- * @param {object} staff 
- * @param {string} permission 
- * @return true if the staff has the permission
- */
-async function hasPermission(staff, permission) {
-    assert(typeof staff === "object")
-    assert(typeof permission === "string");
-
-    if (staff == null) {
-        return false;
-    } else {
-        /*
-            This code reads from db only once, looping thru it doesn't
-            send new requests to the db!
-        */
-        const roles = await staff.getRoles();
-
-        for (let role in roles) {
-            const permissions = await roles[role].getPermissions();
-
-            for (let perm in permissions) {
-                if (permissions[perm].name == permission) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-}
-
 async function getCartQuantity(ctx) {
     if (await isAuthenticatedUser(ctx)) {
         let order = await Order.findOne({
@@ -1215,27 +1182,6 @@ async function generateLogs(x = 100) {
 /**
  * 
  * @param {import('koa').Context} ctx 
- * @param {string} message 
- * @param {object} logOptions 
- */
-function onNoPermission(ctx, message, logOptions, redirectLoc = "/admin")
-{
-    if (ctx.request.fields && ctx.request.fields.isAJAX)
-        ctx.body = {'error': message};
-    else {
-        ctx.session.messages = { "noPermission": message };
-        ctx.redirect(redirectLoc);
-    }
-
-    if (logOptions)
-        loggerEcom.logger.log(logOptions.level,
-            logOptions.message,
-            logOptions.options);
-}
-
-/**
- * 
- * @param {import('koa').Context} ctx 
  * @param {string} redirectLoc 
  */
 function onNotAuthenticatedStaff(ctx, message = "You are not logged in as staff!", redirectLoc = "/admin/login") 
@@ -1346,7 +1292,6 @@ module.exports = {
     isSessionValid,
     isAuthenticatedStaff,
     isAuthenticatedUser,
-    hasPermission,
     captureOrder,
     validateStatus,
     getCartQuantity,
@@ -1365,7 +1310,6 @@ module.exports = {
     combineTwoObjects,
     getCurrency,
     getAge,
-    onNoPermission,
     onNotAuthenticatedStaff,
     onNotAuthenticatedUser,
     onSessionExpired,

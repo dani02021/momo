@@ -1,6 +1,7 @@
 const { AssertionError } = require("assert");
 const assert = require('assert/strict');
 const { ClientException } = require("./exceptions");
+const loggerEcom = require("./logger");
 
 /**
  * Checks if value is null, NaN or undefined
@@ -29,7 +30,7 @@ function assert_notNull(value, ctx, options = {}) {
  * @param {*} ctx 
  * @param {object} options 
  */
- function assert_type(value, ctx, options = {}) {
+function assert_type(value, ctx, options = {}) {
     assert(typeof options === "object");
 
     assert(options.type !== undefined);
@@ -55,8 +56,8 @@ function assert_notNull(value, ctx, options = {}) {
  * @param {object} options
  */
 function assert_isValidISODate(value, ctx, options = {}) {
-    assert_type(value, ctx, {"type": "string", "throwError": options.throwError});
-    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
+    assert_type(value, ctx, { "type": "string", "throwError": options.throwError });
+    assert_type(options, ctx, { "type": "object", "throwError": options.throwError });
 
     let valid = /^\d{4}-\d{2}-\d{2}$/.test(value);
 
@@ -77,11 +78,11 @@ function assert_isValidISODate(value, ctx, options = {}) {
  * @param {object} options 
  */
 function assert_stringLength(value, ctx, options = {}) {
-    assert_type(value, ctx, {"type": "string"});
-    assert_type(options, ctx, {"type": "object"});
+    assert_type(value, ctx, { "type": "string" });
+    assert_type(options, ctx, { "type": "object" });
 
-    assert_notNull(options.min, ctx, {"throwError": options.throwError});
-    assert_notNull(options.max, ctx, {"throwError": options.throwError});
+    assert_notNull(options.min, ctx, { "throwError": options.throwError });
+    assert_notNull(options.max, ctx, { "throwError": options.throwError });
 
     let valid = value.length >= options.min & value.length <= options.max;
 
@@ -103,11 +104,11 @@ function assert_stringLength(value, ctx, options = {}) {
  * @param {object} options 
  */
 function assert_regex(value, ctx, options = {}) {
-    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
+    assert_type(options, ctx, { "type": "object", "throwError": options.throwError });
 
-    assert_notNull(options.regex, ctx, {"throwError": options.throwError});
+    assert_notNull(options.regex, ctx, { "throwError": options.throwError });
 
-    assert_type(options.regex, ctx, {"type": "string", "throwError": options.throwError});
+    assert_type(options.regex, ctx, { "type": "string", "throwError": options.throwError });
 
     let valid = new RegExp(options.regex, options.parameters).test(value);
 
@@ -127,7 +128,7 @@ function assert_regex(value, ctx, options = {}) {
  * @param {object} options
  */
 function assert_isSafeInteger(value, ctx, options) {
-    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
+    assert_type(options, ctx, { "type": "object", "throwError": options.throwError });
 
     let valid = Number.isSafeInteger(Number(value));
 
@@ -149,7 +150,7 @@ function assert_isSafeInteger(value, ctx, options) {
  * @param {object} options 
  */
 function assert_isNonNegativeNumber(value, ctx, options = {}) {
-    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
+    assert_type(options, ctx, { "type": "object", "throwError": options.throwError });
 
     let valid = Number(value) >= 0;
 
@@ -169,8 +170,8 @@ function assert_isNonNegativeNumber(value, ctx, options = {}) {
  * @param {*} ctx 
  * @param {object} options 
  */
- function assert_isInteger(value, ctx, options = {}) {
-    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
+function assert_isInteger(value, ctx, options = {}) {
+    assert_type(options, ctx, { "type": "object", "throwError": options.throwError });
 
     let valid = Number(value) % 1 === 0;
 
@@ -191,7 +192,7 @@ function assert_isNonNegativeNumber(value, ctx, options = {}) {
  * @param {object} options 
  */
 function assert_isElementInArrayCaseInsensitive(value, ctx, options = {}) {
-    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
+    assert_type(options, ctx, { "type": "object", "throwError": options.throwError });
 
     let valid = options.array.find(element => {
         return element.toUpperCase() == value.toUpperCase()
@@ -215,13 +216,13 @@ function assert_isElementInArrayCaseInsensitive(value, ctx, options = {}) {
  * @param {object} options 
  */
 function assert_isDateAfter(value, ctx, options = {}) {
-    assert_type(value, ctx, {"type": "object", "throwError": options.throwError});
+    assert_type(value, ctx, { "type": "object", "throwError": options.throwError });
 
     assert(value instanceof Date);
 
-    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
+    assert_type(options, ctx, { "type": "object", "throwError": options.throwError });
 
-    assert_type(options.max, ctx, {"type": "object", "throwError": options.throwError});
+    assert_type(options.max, ctx, { "type": "object", "throwError": options.throwError });
 
     assert(options.max instanceof Date);
 
@@ -244,14 +245,14 @@ function assert_isDateAfter(value, ctx, options = {}) {
  * @param {*} ctx 
  * @param {object} options 
  */
- function assert_isDateBefore(value, ctx, options = {}) {
-    assert_type(value, ctx, {"type": "object", "throwError": options.throwError});
+function assert_isDateBefore(value, ctx, options = {}) {
+    assert_type(value, ctx, { "type": "object", "throwError": options.throwError });
 
     assert(value instanceof Date);
 
-    assert_type(options, ctx, {"type": "object", "throwError": options.throwError});
+    assert_type(options, ctx, { "type": "object", "throwError": options.throwError });
 
-    assert_type(options.min, ctx, {"type": "object", "throwError": options.throwError});
+    assert_type(options.min, ctx, { "type": "object", "throwError": options.throwError });
 
     assert(options.min instanceof Date);
 
@@ -259,6 +260,55 @@ function assert_isDateAfter(value, ctx, options = {}) {
 
     if (!valid) {
         let message = `Value date is after specified`;
+
+        return onFalse(value, ctx, options, message);
+    }
+
+    return true;
+}
+
+/**
+ * Checks if staff has permission to perform action.
+ * Uses options.permission
+ * @param {object} value 
+ * @param {*} ctx 
+ * @param {object} options 
+ */
+async function assert_hasPermission(value, ctx, options = {}) {
+    assert_type(value, ctx, { "type": "object", "throwError": options.throwError });
+    assert_type(options, ctx, { "type": "object", "throwError": options.throwError });
+
+    assert_type(options.permission, ctx, { "type": "string", "throwError": options.throwError });
+
+    let valid = false;
+
+    /*
+    This code reads from db only once, looping thru it doesn't
+    send new requests to the db!
+    */
+    const roles = await value.getRoles();
+
+    outer:
+    for (let role in roles) {
+        const permissions = await roles[role].getPermissions();
+
+        for (let perm in permissions) {
+            if (permissions[perm].name === options.permission) {
+                valid = true;
+                break outer;
+            }
+        }
+    }
+
+    if (!valid) {
+        let message = `Staff has no permission to perform action`;
+
+        // Log the no permission action
+        loggerEcom.logger.log('info', options.loggerMessage, {
+                user: ctx.session.dataValues.staffUsername,
+                isStaff: true
+            }
+        );
 
         return onFalse(value, ctx, options, message);
     }
@@ -283,7 +333,7 @@ function onFalse(value, ctx, options = {}, message) {
     if (options.throwError) {
         switch (options.throwError) {
             case "client":
-                throw new ClientException(message, { ctx: ctx }); // TODO: FIX ERROR
+                throw new ClientException(message, { ctx: ctx });
             case "assert":
                 throw new AssertionError({ message: message });
             default: throw new Error(message);
@@ -304,5 +354,6 @@ module.exports = {
     assert_isInteger,
     assert_isElementInArrayCaseInsensitive,
     assert_isDateBefore,
-    assert_isDateAfter
+    assert_isDateAfter,
+    assert_hasPermission
 };

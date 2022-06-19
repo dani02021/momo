@@ -1235,7 +1235,9 @@ module.exports = {
   ];
 
   for (let i = 0; i < permissions.length; i++) {
-    Permission.findOrCreate({ where: { name: permissions[i]} });
+    Permission.findOrCreate({ where: { name: permissions[i]} }).then((perm) => {
+      Role.findOne({where: {name: 'Admin'}}).then(role => { role.addPermission(perm[0]); });
+    });
   }
 
   // Create associations

@@ -362,9 +362,9 @@ module.exports = {
       }
 
       // Transfer cookies to db
-      if (ctx.cookies.get("products")) {
+      if (ctx.cookies.get('products')) {
         try {
-          var cookieProducts = JSON.parse(ctx.cookies.get("products"));
+          var cookieProducts = JSON.parse(ctx.cookies.get('products'));
         } catch (e) {
           var cookieProducts = {};
         }
@@ -3203,32 +3203,6 @@ module.exports = {
 
     let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
-    if (!await utilsEcom.hasPermission(staff, "targetgroups.read")) {
-      utilsEcom.onNoPermission(ctx,
-        "You don\'t have permission to see target groups",
-        {
-          level: "info",
-          message: `Staff ${ctx.session.dataValues.staffUsername} tried to see target groups without rights`,
-          options:
-          {
-            user: ctx.session.dataValues.staffUsername,
-            isStaff: true
-          }
-        });
-      return;
-    }
-
-    // Auto session expire
-    if (!utilsEcom.isSessionValid(staff)) {
-      utilsEcom.onSessionExpired(ctx);
-
-      return;
-    } else {
-      await staff.update({
-        lastActivity: Sequelize.fn("NOW")
-      });
-    }
-
     // Get filters
     let filters = {}, filtersToReturn = {};
     let bindParams = [];
@@ -3575,8 +3549,8 @@ module.exports = {
 
   adminPromotionTargetGroupsView: async (ctx) => {
     // Check if targetgroupID is number
-    if (!Number.isSafeInteger(parseInt(ctx.request.fields.targetgroupid))
-      || Math.sign(Number(ctx.request.fields.targetgroupid)) < 0) {
+    if (!Number.isSafeInteger(parseInt(ctx.request.params.id))
+      || Math.sign(Number(ctx.request.params.id)) < 0) {
       ctx.session.messages = { 'targetgroupError': 'Target group ID must be a non-negative number' };
 
       ctx.redirect('/admin/promotions/targetgroups');
@@ -3655,7 +3629,7 @@ module.exports = {
 
     let targetgroup = await TargetGroup.findOne({
       where: {
-        id: ctx.request.fields.targetgroupid
+        id: ctx.request.params.id
       }
     });
 
@@ -3668,7 +3642,7 @@ module.exports = {
 
     let targetgroupfilters = await TargetGroupFilters.findAll({
       where: {
-        targetgroupId: ctx.request.fields.targetgroupid
+        targetgroupId: ctx.request.params.id
       }
     });
 
@@ -3718,32 +3692,6 @@ module.exports = {
     }
 
     let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
-
-    if (!await utilsEcom.hasPermission(staff, "promotions.read")) {
-      utilsEcom.onNoPermission(ctx,
-        "You don\'t have permission to see promotions",
-        {
-          level: "info",
-          message: `Staff ${ctx.session.dataValues.staffUsername} tried to see promotions without rights`,
-          options:
-          {
-            user: ctx.session.dataValues.staffUsername,
-            isStaff: true
-          }
-        });
-      return;
-    }
-
-    // Auto session expire
-    if (!utilsEcom.isSessionValid(staff)) {
-      utilsEcom.onSessionExpired(ctx);
-
-      return;
-    } else {
-      await staff.update({
-        lastActivity: Sequelize.fn("NOW")
-      });
-    }
 
     let filters = {};
     let filtersToReturn = {};

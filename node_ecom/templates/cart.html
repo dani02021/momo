@@ -75,6 +75,30 @@
                                     <p>Sub Total (Without VAT)<span id="subtotal">$<%= subTotal %></span></p>
                                     <p>VAT<span id="vatsum">$<%= orderVATSum %></span></p>
                                     <h2>Grand Total<span id="grandtotal">$<%= grandTotal %></span></h2>
+                                    <br>
+                                    <div class="checkout-coupons">
+                                        <h1>Vouchers</h1>
+                                        <% for (i=0; i<vouchers.length; i++) { %>
+                                            <div class="media position-relative"
+                                                style="background-color: #9999; border: solid #999999;"
+                                                data-id="<%= vouchers[i].id %>">
+                                                <div class="media-body checkout-body">
+                                                    <h5 class="mt-0"><%= (await vouchers[i].getPromotion()).name %></h5>
+                                                    <p>Price: <%= vouchers[i].value %> USD</p>
+                                                    <a href="#" class="stretched-link" onclick="return toggleCoupon(this);"></a>
+                                                </div>
+                                            </div>
+                                            <br>
+                                        <% } %>
+                                        <div class="media position-relative"
+                                            style="background-color: #9999; border: solid #999999;">
+                                            <div class="media-body checkout-body">
+                                              <h5 class="mt-0">Coupon Females only</h5>
+                                              <p>Price: 10 USD</p>
+                                              <a href="#" class="stretched-link"></a>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="cart-btn">
                                     <% if (session.dataValues.username) { %>
