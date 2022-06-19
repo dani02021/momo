@@ -6,8 +6,14 @@ const models = require("./models.js");
 
 const fs = require('fs');
 const db = require("./db.js");
+const ExcelJS = require('exceljs');
+const favicon = require('koa-favicon');
+const { imageHash } = require('image-hash');
+const { ClientException, NotEnoughQuantityException } = require('./exceptions.js');
+const mv = require('mv');
 
 const { Sequelize, ValidationError, ValidationErrorItem } = require("sequelize");
+const { PassThrough } = require('stream');
 const Op = Sequelize.Op;
 
 const Category = models.category();
@@ -822,7 +828,7 @@ module.exports = {
 
     const orderitem = await OrderItem.findOne({
       where: {
-        productId: ctx.params.id
+        productId: ctx.query.id
       },
       include: [{
         model: Order,
@@ -832,7 +838,7 @@ module.exports = {
         }
       }],
       defaults: {
-        productId: ctx.params.id,
+        productId: ctx.query.id,
         quantity: ctx.query.quantity,
       }
     });
@@ -1115,6 +1121,7 @@ module.exports = {
       selected: 'checkout',
       cartQty: cartQty,
       user: user,
+      vouchers: [],
       items: orderitems,
       products: products,
       totals: totals,
@@ -1168,7 +1175,7 @@ module.exports = {
           configEcom.SETTINGS.email_order_table_h0,
           configEcom.SETTINGS.email_order_table_h1,
           configEcom.SETTINGS.email_order_table_h2,
-          configEcom.SETTINGS.email_order_table_h3
+          configEcom.SETTINGS.email_order_table_h3,
         ],
         { color: configEcom.SETTINGS.email_order_table_border_color, borderweight: configEcom.SETTINGS.email_order_table_border_weight })) +
       utilsEcom.parseEmailPlaceholders(configEcom.SETTINGS.email_order_lower, user, order));
@@ -1355,9 +1362,9 @@ module.exports = {
 
     let limit = configEcom.SETTINGS["elements_per_page"];
     let offset = 0;
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page);
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page);
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     let categoriesNames = {};
@@ -1602,16 +1609,12 @@ module.exports = {
     }
 
     let page = 1;
-
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
-    }
-
     let limit = configEcom.SETTINGS["elements_per_page"];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page);
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     let result = await db.query(`SELECT * FROM users 
@@ -1740,16 +1743,12 @@ module.exports = {
     }
 
     let page = 1;
-
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
-    }
-
     let limit = configEcom.SETTINGS["elements_per_page"];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page);
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     const result = await db.query(`SELECT * FROM staffs WHERE
@@ -1873,7 +1872,7 @@ module.exports = {
       email: ctx.request.fields.email
     }
 
-    const staff = await Staff.findOne({ where: { id: ctx.request.fields.id } });
+    const staff = await Staff.findOne({ where: { id: ctx.params.id } });
 
     staff.update(updateParams);
 
@@ -1889,11 +1888,11 @@ module.exports = {
       await staff.addRole(role);
     }
 
-    ctx.session.messages = { 'staffEdited': `Staff with id ${ctx.request.fields.id} was edited!` };
+    ctx.session.messages = { 'staffEdited': `Staff with id ${ctx.params.id} was edited!` };
     loggerEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.staffUsername} updated staff #${ctx.request.fields.id}`,
+      `Staff ${ctx.session.dataValues.staffUsername} updated staff #${ctx.params.id}`,
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
-    ctx.redirect('/admin/staff/edit/' + ctx.request.fields.id);
+    ctx.redirect('/admin/staff/edit/' + ctx.params.id);
   },
 
   adminCategoriesAdd: async (ctx) => {
@@ -1933,16 +1932,12 @@ module.exports = {
 
   adminRoles: async (ctx) => {
     let page = 1;
-
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
-    }
-
     let limit = configEcom.SETTINGS["elements_per_page"];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page);
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     const result = await Role.findAndCountAll({
@@ -2031,7 +2026,7 @@ module.exports = {
   },
 
   adminRolesEdit: async (ctx) => {
-    const role = await Role.findOne({ where: { id: ctx.request.fields.id } });
+    const role = await Role.findOne({ where: { id: ctx.params.id } });
     const permissions = await role.getPermissions();
 
     await ctx.render('admin/edit-role', {
@@ -2385,39 +2380,51 @@ module.exports = {
     }
 
     let page = 1;
-
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
-    }
-
     let limit = configEcom.SETTINGS["elements_per_page"];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page);
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
-    const result = await Order.findAndCountAll({
-      where: {
-        status: { [Op.gte]: 1 },
-      },
-      limit: limit,
-      offset: offset,
-      include: User,
-      order: [
-        ['orderedAt', 'DESC']
-      ]
+    const result = await db.query(
+      `SELECT orders.id, orders.status, orders."orderedAt",
+              users.username, users."firstName", users."lastName",
+              users.address, users.email, users."emailConfirmed",
+              users."lastLogin", users.gender, users.birthday
+      FROM orders
+      INNER JOIN user_orders on orders.id = user_orders."orderId"
+      INNER JOIN users on user_orders."userId" = users.id
+      WHERE status IN (${filters.status})
+          AND "orderedAt" BETWEEN '${filters.ordAfter}'
+          AND '${filters.ordBefore}'
+          AND position(upper($1) in upper(users.username)) > 0
+          AND orders."deletedAt" is NULL
+          AND users."deletedAt" is NULL
+      ORDER BY "orderedAt" DESC
+      LIMIT ${limit} OFFSET ${offset}`, {
+      type: 'SELECT',
+      model: Order,
+      mapToModel: true,
+      plain: false,
+      bind: [filters.user]
+    });
+  
+    const count = await db.query(`SELECT COUNT(*) FROM orders`, {
+      type: 'SELECT',
+      plain: true
     });
 
     await ctx.render("/admin/orders", {
       layout: "/admin/base",
       session: ctx.session,
       selected: "orders",
-      orders: result.rows,
+      orders: result,
       statuses: configEcom.STATUS_DISPLAY,
       filters: filtersToReturn,
       page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS["elements_per_page"]))
+      pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS["elements_per_page"]))
     });
 
     // Clear the messages
@@ -2660,16 +2667,12 @@ module.exports = {
     }
 
     let page = 1;
-
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
-    }
-
     let limit = configEcom.SETTINGS["elements_per_page"];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page);
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     let time = 'month';
@@ -2704,6 +2707,9 @@ module.exports = {
       page: page,
       pages: utilsEcom.givePages(page, Math.ceil((await count)[0].count / configEcom.SETTINGS["elements_per_page"])),
     });
+
+    // Clear the messages
+    ctx.session.messages = {};
   },
 
   adminExportReportPdf: async (ctx) => {
@@ -2952,16 +2958,12 @@ module.exports = {
     }
 
     let page = 1;
-
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
-    }
-
     let limit = configEcom.SETTINGS["elements_per_page"];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      offset = (page - 1) * limit;
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page);
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     let query = `SELECT * FROM logs WHERE
@@ -3035,6 +3037,8 @@ module.exports = {
       "price",
       "subtotal",
       "quantity",
+      "vat",
+      "grandtotal",
     ]
 
     // Check table for empty values
@@ -3258,16 +3262,12 @@ module.exports = {
     }
 
     let page = 1;
-
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
-    }
-
     let limit = configEcom.SETTINGS["elements_per_page"];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page);
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     let query =
@@ -3318,16 +3318,12 @@ module.exports = {
 
   adminPromotionTargetGroupsAdd: async (ctx) => {
     let page = 1;
-
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
-    }
-
     let limit = configEcom.SETTINGS["elements_per_page"];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page);
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     // Get filters
@@ -3440,7 +3436,7 @@ module.exports = {
     ctx.session.messages = null;
   },
 
-  adminPromotionsTargetgroupAddPost: async (ctx) => {
+  adminPromotionTargetGroupsAddPost: async (ctx) => {
     if (!ctx.request.fields) {
       ctx.body = { 'error': 'Unexpected error occured! Please try again later' };
 
@@ -3579,8 +3575,8 @@ module.exports = {
 
   adminPromotionTargetGroupsView: async (ctx) => {
     // Check if targetgroupID is number
-    if (!Number.isSafeInteger(parseInt(ctx.request.fieldstargetgroupid))
-      || Math.sign(Number(ctx.request.fieldstargetgroupid)) < 0) {
+    if (!Number.isSafeInteger(parseInt(ctx.request.fields.targetgroupid))
+      || Math.sign(Number(ctx.request.fields.targetgroupid)) < 0) {
       ctx.session.messages = { 'targetgroupError': 'Target group ID must be a non-negative number' };
 
       ctx.redirect('/admin/promotions/targetgroups');
@@ -3649,21 +3645,17 @@ module.exports = {
     }
 
     let page = 1;
-
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
-    }
-
     let limit = configEcom.SETTINGS["elements_per_page"];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page);
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     let targetgroup = await TargetGroup.findOne({
       where: {
-        id: ctx.request.fieldstargetgroupid
+        id: ctx.request.fields.targetgroupid
       }
     });
 
@@ -3676,7 +3668,7 @@ module.exports = {
 
     let targetgroupfilters = await TargetGroupFilters.findAll({
       where: {
-        targetgroupId: ctx.request.fieldstargetgroupid
+        targetgroupId: ctx.request.fields.targetgroupid
       }
     });
 
@@ -3753,20 +3745,17 @@ module.exports = {
       });
     }
 
-    let page = 1;
     let filters = {};
     let filtersToReturn = {};
     let bindParams = {};
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
-    }
-
+    let page = 1;
     let limit = configEcom.SETTINGS["elements_per_page"];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page);
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     if (ctx.query.name) {
@@ -3933,11 +3922,15 @@ module.exports = {
       max: new Date(endDate)
     });
 
-    assert_isDateAfter(new Date(startDate), ctx, {
-      throwError: "client",
-      message: "Start date of promotion cannot be before today",
-      max: new Date(new Date().toLocaleDateString('en-ZA'))
-    });
+    /* Locale problems. User choose date based on his locale,
+     * but if server uses different locale, it is a big issue
+     * 
+     * assert_isDateAfter(new Date(startDate), ctx, {
+     *   throwError: "client",
+     *   message: "Start date of promotion cannot be before today",
+     *   max: new Date(new Date().toLocaleDateString('en-ZA'))
+     * });
+    */
 
     // TODO: Test isDateAfter + send email immediately
 

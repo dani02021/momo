@@ -212,7 +212,6 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <form id="add-promotion-form" action="/admin/promotion/add" method="post">
-                            <input type="hidden" name="isAJAX" value="ajax">
                             <div class="modal-body">
                               <div class="row">
                                 <div class="col-md-5 mx-auto">
@@ -311,7 +310,10 @@
                           type: "POST",
                           url: "/admin/promotion/add",
                           data: $("#add-promotion-form").serialize(),
-                          dataType: "json"
+                          dataType: "json",
+                          headers: {
+                            Accept: "application/json"
+                          },
                         }).done(function (data) {
                           if (data.error) {
                             document.getElementById("err").innerHTML = data.error;

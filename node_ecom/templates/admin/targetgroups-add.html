@@ -98,7 +98,6 @@
                               <table id="table1" class="table table-hover tm-table-small tm-product-table sortable">
                                 <thead>
                                   <tr>
-                                    <th scope="col">&nbsp;</th>
                                     <th scope="col" class="clickable">TIMESTAMP</th>
                                     <th scope="col" class="clickable">ACCOUNT NO.</th>
                                     <th scope="col" class="clickable">USERNAME</th>
@@ -115,7 +114,6 @@
                                 <tbody>
                                   <% for (i=0; i < users.length; i++) { %>
                                     <tr>
-                                      <th scope="row"><input type="checkbox" /></th>
                                       <td><b>
                                           <%= users[i].createdAt.toLocaleString('en-GB') %>
                                         </b></td>

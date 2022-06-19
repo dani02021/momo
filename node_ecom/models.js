@@ -4,7 +4,7 @@ const bcrypt = require("bcrypt");
 const assert = require('assert/strict');
 const configEcom = require("./config.js");
 const { validate } = require("./db.js");
-const { AssertionError } = require("assert");
+const { ClientException } = require("./exceptions.js");
 
 const Settings = db.define('settings', {
   key: {
@@ -234,10 +234,10 @@ const User = db.define("user", {
         }
 
         if (age < 18)
-          throw new AssertionError("You have to be at least 18 years old!");
+          throw new ValidationError("You have to be at least 18 years old!");
 
         if (age > 120)
-          throw new AssertionError("Invalid age!");
+          throw new ValidationError("Invalid age!");
       }
     }
   },
@@ -1218,7 +1218,8 @@ module.exports = {
     'staff.read',
     'staff.update',
     'staff.delete',
-    'reports.read',
+    'report.read',
+    'report.export',
     'audit.read',
     'settings.email',
     'settings.other',
