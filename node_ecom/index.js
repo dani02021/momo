@@ -301,11 +301,12 @@ app.use(async (ctx, next) => {
       }
 
       if (dispatchTableRoute) {
-        if (dispatchTableRoute.requireSession || dispatchTableRoute.permission)
-          var staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
-
         // Require session
-        if (dispatchTableRoute.requireSession) {
+        if (dispatchTableRoute.requireSession) { // TODO: Make as assert?
+          if (!ctx.session || !ctx.session.dataValues.staffUsername) { utilsEcom.onSessionExpired(ctx); return; }
+          
+          let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
           if (!utilsEcom.isSessionValid(staff)) {
             utilsEcom.onSessionExpired(ctx);
 
@@ -318,7 +319,7 @@ app.use(async (ctx, next) => {
         }
 
         // Require user
-        if (dispatchTableRoute.requireUser) {
+        if (dispatchTableRoute.requireUser) { // TODO: Make as assert?
           if (!await utilsEcom.isAuthenticatedUser(ctx)) {
             utilsEcom.onNotAuthenticatedUser(ctx);
             return;
@@ -326,7 +327,7 @@ app.use(async (ctx, next) => {
         }
 
         // Require staff
-        if (dispatchTableRoute.requireStaff) {
+        if (dispatchTableRoute.requireStaff) { // TODO: Make as assert?
           if (!await utilsEcom.isAuthenticatedStaff(ctx)) {
             utilsEcom.onNotAuthenticatedStaff(ctx);
             return;
@@ -335,6 +336,7 @@ app.use(async (ctx, next) => {
 
         // Require permission
         if (dispatchTableRoute.requirePermission) {
+          let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
           let permissionObj = dispatchTableRoute.requirePermission;
 
           await assert_hasPermission(staff, ctx, {
