@@ -2028,7 +2028,7 @@ module.exports = {
   },
 
   adminRolesEdit: async (ctx) => {
-    const role = await Role.findOne({ where: { id: ctx.request.fields.id } });
+    const role = await Role.findOne({ where: { id: ctx.params.id } });
     const permissions = await role.getPermissions();
 
     await ctx.render('admin/edit-role', {

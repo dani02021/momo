@@ -329,11 +329,12 @@ function onFalse(value, ctx, options = {}, message) {
     assert(typeof options === "object");
 
     message = options.message || message;
+    type = options.type || 
 
     if (options.throwError) {
         switch (options.throwError) {
             case "client":
-                throw new ClientException(message, { ctx: ctx });
+                throw new ClientException(message, { ctx: ctx, type: options.type });
             case "assert":
                 throw new AssertionError({ message: message });
             default: throw new Error(message);
