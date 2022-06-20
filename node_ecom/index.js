@@ -340,10 +340,10 @@ app.use(async (ctx, next) => {
           let permissionObj = dispatchTableRoute.requirePermission;
 
           await assert_hasPermission(staff, ctx, {
-            throwError: "client",
+            throwError: 'client',
             permission: permissionObj.arg,
             message: `You don't have permission for this action!`,
-            loggerMessage: permissionObj.loggerMsg
+            loggerMessage: permissionObj.loggerMsg,
           });
         }
       }
@@ -352,6 +352,11 @@ app.use(async (ctx, next) => {
 
   return await next();
 });
+
+// ERROR TYPES
+// 100 -> Undefined error
+// 101 -> No permission error
+// 102 -> Sequelize Validation error
 
 app.use(router.routes()).use(router.allowedMethods());
 
@@ -376,8 +381,16 @@ app.on("error", (err, ctx) => {
     // Redirect
     err.status = 302;
 
-    // TODO: If ctx.path also throw error it will infinity be redirecting !
-    err.headers = { 'Location': ctx.path };
+    console.log(err.type);
+
+    switch(err.type) {
+      case "101":
+        err.headers = { 'Location': '/admin' };  
+        break;
+      default: // TODO: If ctx.path also throw error it will infinity be redirecting !
+        err.headers = { 'Location': ctx.path };
+        break;
+    }
 
     ctx.session.messages = { 'clientError': message };
   }

@@ -300,6 +300,8 @@ async function assert_hasPermission(value, ctx, options = {}) {
         }
     }
 
+    options.type = '101';
+
     if (!valid) {
         let message = `Staff has no permission to perform action`;
 
@@ -309,6 +311,9 @@ async function assert_hasPermission(value, ctx, options = {}) {
                 isStaff: true
             }
         );
+
+        // Show the message to the user
+        ctx.session.messages = {noPermission: options.message}
 
         return onFalse(value, ctx, options, message);
     }
@@ -329,12 +334,12 @@ function onFalse(value, ctx, options = {}, message) {
     assert(typeof options === "object");
 
     message = options.message || message;
-    type = options.type || 
+    type = options.type || "500"; // Other error
 
     if (options.throwError) {
         switch (options.throwError) {
             case "client":
-                throw new ClientException(message, { ctx: ctx, type: options.type });
+                throw new ClientException(message, type);
             case "assert":
                 throw new AssertionError({ message: message });
             default: throw new Error(message);
