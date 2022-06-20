@@ -1281,7 +1281,7 @@ module.exports = {
     'targetgroups.create',
     'targetgroups.read',
     'targetgroups.update',
-    'targetgroups.view',
+    // 'targetgroups.view',
     'targetgroups.delete',
     'promotions.create',
     'promotions.read',

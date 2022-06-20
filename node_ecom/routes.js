@@ -1352,8 +1352,8 @@ module.exports = {
 
     let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page);
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page);
       offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
@@ -1600,14 +1600,14 @@ module.exports = {
 
     let page = 1;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page)
     }
 
     let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
+    if (ctx.params.page) {
       offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
@@ -1738,14 +1738,14 @@ module.exports = {
 
     let page = 1;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page)
     }
 
     let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
+    if (ctx.params.page) {
       offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
@@ -1931,15 +1931,15 @@ module.exports = {
   adminRoles: async (ctx) => {
     let page = 1;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page)
     }
 
     let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+    if (ctx.params.page) {
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     const result = await Role.findAndCountAll({
@@ -2383,14 +2383,14 @@ module.exports = {
 
     let page = 1;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page)
     }
 
     let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
+    if (ctx.params.page) {
       offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
@@ -2658,14 +2658,14 @@ module.exports = {
 
     let page = 1;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page)
     }
 
     let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
+    if (ctx.params.page) {
       offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
@@ -2919,7 +2919,7 @@ module.exports = {
     if (ctx.query.longmsg == 1) {
       filters['longmsg'] = true;
       filtersToReturn['longmsg'] = true;
-    } else if (ctx.query.longmsg === '0') {
+    } else if (ctx.query.longmsg == 0) {
       filters['longmsg'] = false;
       filtersToReturn['longmsg'] = false;
     }
@@ -2950,14 +2950,14 @@ module.exports = {
 
     let page = 1;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page)
     }
 
     let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
+    if (ctx.params.page) {
       offset = (page - 1) * limit;
     }
 
@@ -3230,14 +3230,14 @@ module.exports = {
 
     let page = 1;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page)
     }
 
     let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
+    if (ctx.params.page) {
       offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
@@ -3290,14 +3290,14 @@ module.exports = {
   adminPromotionTargetGroupsAdd: async (ctx) => {
     let page = 1;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page)
     }
 
     let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
+    if (ctx.params.page) {
       offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
@@ -3703,14 +3703,14 @@ module.exports = {
     let filtersToReturn = {};
     let bindParams = {};
 
-    if (ctx.request.fields && ctx.request.fields.page) {
-      page = parseInt(ctx.request.fields.page)
+    if (ctx.params.page) {
+      page = parseInt(ctx.params.page)
     }
 
     let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.request.fields && ctx.request.fields.page) {
+    if (ctx.params.page) {
       offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
