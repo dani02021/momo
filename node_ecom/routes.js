@@ -3437,7 +3437,7 @@ module.exports = {
     ctx.session.messages = null;
   },
 
-  adminPromotionsTargetgroupAddPost: async (ctx) => {
+  adminPromotionTargetGroupsAddPost: async (ctx) => {
     if (!ctx.request.fields) {
       ctx.body = { 'error': 'Unexpected error occured! Please try again later' };
 
@@ -3700,7 +3700,7 @@ module.exports = {
     });
   },
 
-  adminPromotionsTargetgroupsDelete: async (ctx) => {
+  adminPromotionTargetGroupsDelete: async (ctx) => {
     await TargetGroup.destroy({
       where: {
         id: ctx.request.fields.id

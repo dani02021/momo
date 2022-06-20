@@ -212,7 +212,7 @@ let linksTable = {
       arg: "targetgroups.create",
       loggerMsg: "Tried to create a targetgroup without a permission"
     }, requireStaff: true, requireSession: true },
-    "/admin/promotions/targetgroup/delete": { func: routes.adminPromotionsTargetgroupsDelete, requirePermission: {
+    "/admin/promotions/targetgroup/delete": { func: routes.adminPromotionTargetGroupsDelete, requirePermission: {
       arg: "targetgroups.delete",
       loggerMsg: "Tried to delete a targetgroup without a permission"
     }, requireStaff: true, requireSession: true },
