@@ -1,33 +1,24 @@
-const { assert_isValidISODate, assert_notNull, assert_stringLength, assert_regex, assert_isSafeInteger, assert_isNonNegativeNumber, assert_isInteger, assert_isElementInArrayCaseInsensitive, assert_isDateAfter } = require('./asserts.js');
-const utilsEcom = require("./utils.js");
-const configEcom = require("./config.js");
-const loggerEcom = require("./logger.js");
-const models = require("./models.js");
-
+const { Sequelize, ValidationError } = require('sequelize');
 const fs = require('fs');
-const db = require("./db.js");
-const ExcelJS = require('exceljs');
-const favicon = require('koa-favicon');
-const { imageHash } = require('image-hash');
-const { ClientException, NotEnoughQuantityException } = require('./exceptions.js');
-const mv = require('mv');
+const { assert_isValidISODate, assert_notNull, assert_regex, assert_isNonNegativeNumber, assert_isInteger, assert_isElementInArrayCaseInsensitive, assert_isDateAfter } = require('./asserts.js');
+const utilsEcom = require('./utils');
+const configEcom = require('./config');
+const loggerEcom = require('./logger');
+const models = require('./models');
 
-const { Sequelize, ValidationError, ValidationErrorItem } = require("sequelize");
-const { PassThrough } = require('stream');
-const Op = Sequelize.Op;
+const db = require('./db');
+
+const { Op } = Sequelize;
 
 const Category = models.category();
 const Product = models.product();
 const User = models.user();
 const Staff = models.staff();
-const Session = models.session();
 const Role = models.role();
 const Permission = models.permission();
 const Order = models.order();
 const OrderItem = models.orderitem();
 const Transaction = models.transaction();
-const PayPalTransaction = models.paypaltransacion();
-const CODTransaction = models.codtransaction();
 const Log = models.log();
 const Settings = models.settings();
 const TargetGroup = models.targetgroups();
@@ -106,7 +97,7 @@ module.exports = {
       page = parseInt(ctx.params.page)
     }
 
-    let limit = configEcom.SETTINGS["elements_per_page"];
+    let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
     if (ctx.params.page) {
@@ -125,7 +116,7 @@ module.exports = {
       products: await products,
       filters: filtersToReturn,
       page: page,
-      pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.SETTINGS["elements_per_page"]))
+      pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages
@@ -161,7 +152,7 @@ module.exports = {
       page = parseInt(ctx.params.page)
     }
 
-    let limit = configEcom.SETTINGS["elements_per_page"];
+    let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
     if (ctx.params.page) {
@@ -195,7 +186,7 @@ module.exports = {
       orders: result.rows,
       currency: currency,
       page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS["elements_per_page"])),
+      pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS['elements_per_page'])),
       statuses: configEcom.STATUS_DISPLAY
     });
 
@@ -210,7 +201,7 @@ module.exports = {
       selected: 'register',
       session: ctx.session,
       cartQty: cartQty,
-      countries: `"` + configEcom.COUNTRY_LIST.join(`","`) + `"`
+      countries: '"' + configEcom.COUNTRY_LIST.join('","') + '"'
     });
 
     // Clear the messages
@@ -279,15 +270,15 @@ module.exports = {
         return;
       }
 
-      let msg = `Here is your link: ` + utilsEcom.getHost() + `/verify_account/${token}`
+      let msg = 'Here is your link: ' + utilsEcom.getHost() + `/verify_account/${token}`
 
-      utilsEcom.sendEmail(configEcom.SETTINGS.sender_email_parent, ctx.request.fields.email, `Email Verification NodeJS`, msg);
+      utilsEcom.sendEmail(configEcom.SETTINGS.sender_email_parent, ctx.request.fields.email, 'Email Verification NodeJS', msg);
 
       let message = { 'registerSuccess': 'Please validate your e-mail!' };
       ctx.session.messages = message;
 
       ctx.body = {
-        ok: "redirect"
+        ok: 'redirect'
       };
       return;
     }
@@ -340,7 +331,7 @@ module.exports = {
 
       loggerEcom.logger.log('info',
         `Tried to log in with invalid username ${ctx.request.fields.username} as user!`);
-      ctx.redirect("/");
+      ctx.redirect('/');
 
       return;
     }
@@ -349,7 +340,7 @@ module.exports = {
       let messages = { 'loginErrorUser': 'Invalid password!' };
       ctx.session.messages = messages;
 
-      ctx.redirect("/");
+      ctx.redirect('/');
 
       return;
     }
@@ -357,7 +348,7 @@ module.exports = {
     if (user.authenticate(ctx.request.fields.password)) {
       if (!user.emailConfirmed) {
         ctx.session.messages = { 'emailNotConfirmed': 'Your email is not confirmed!' };
-        ctx.redirect("/");
+        ctx.redirect('/');
         return;
       }
 
@@ -441,7 +432,7 @@ module.exports = {
         { user: ctx.request.fields.username, isStaff: false });
 
       await user.update({
-        lastLogin: Sequelize.fn("NOW")
+        lastLogin: Sequelize.fn('NOW')
       });
     }
     else {
@@ -473,7 +464,7 @@ module.exports = {
   addToCart: async (ctx) => {
     // Invalid request
     if (!Number.isSafeInteger(Number(ctx.query.quantity)) || !Math.sign(Number(ctx.query.quantity)) > 0) {
-      ctx.session.messages = { 'otherError': `Invalid quantity of product` };
+      ctx.session.messages = { 'otherError': 'Invalid quantity of product' };
 
       if (ctx.query.cart)
         ctx.redirect('/cart');
@@ -523,8 +514,8 @@ module.exports = {
 
           let orderitems = [], totals = [], totalsVAT = [];
 
-          let curPrice = "0.00";
-          let curTotal = "0.00";
+          let curPrice = '0.00';
+          let curTotal = '0.00';
 
           for (i in cookieProducts) {
             let num = Number(i);
@@ -581,7 +572,7 @@ module.exports = {
           ).catch(err => utilsEcom.handleError(err))).total;
 
           orderVATSum = (await db.query(
-            `SELECT COALESCE($1::DECIMAL - $2::DECIMAL, 0.00) AS total`,
+            'SELECT COALESCE($1::DECIMAL - $2::DECIMAL, 0.00) AS total',
             {
               type: 'SELECT',
               plain: true,
@@ -690,7 +681,7 @@ module.exports = {
 
     // Invalid request
     if (!Number.isSafeInteger(quantity) || !Math.sign(quantity) > 0) {
-      ctx.session.messages = { 'otherError': `Invalid quantity of product` };
+      ctx.session.messages = { 'otherError': 'Invalid quantity of product' };
 
       if (ctx.query.cart)
         ctx.body = {
@@ -728,8 +719,8 @@ module.exports = {
 
         let orderitems = [], totals = [], totalsVAT = [];
 
-        let curPrice = "0.00";
-        let curTotal = "0.00";
+        let curPrice = '0.00';
+        let curTotal = '0.00';
 
         for (i in cookieProducts) {
           let num = Number(i);
@@ -786,7 +777,7 @@ module.exports = {
         ).catch(err => utilsEcom.handleError(err))).total;
 
         orderVATSum = (await db.query(
-          `SELECT COALESCE($1::DECIMAL - $2::DECIMAL, 0.00) AS total`,
+          'SELECT COALESCE($1::DECIMAL - $2::DECIMAL, 0.00) AS total',
           {
             type: 'SELECT',
             plain: true,
@@ -828,7 +819,7 @@ module.exports = {
 
     const orderitem = await OrderItem.findOne({
       where: {
-        productId: ctx.query.id
+        productId: ctx.params.id
       },
       include: [{
         model: Order,
@@ -838,7 +829,7 @@ module.exports = {
         }
       }],
       defaults: {
-        productId: ctx.query.id,
+        productId: ctx.params.id,
         quantity: ctx.query.quantity,
       }
     });
@@ -885,20 +876,20 @@ module.exports = {
       let products = [];
       let totals = [];
       let totalsVAT = [];
-      let subTotal = "0.00";
-      let grandTotal = "0.00";
-      let orderVATSum = "0.00";
+      let subTotal = '0.00';
+      let grandTotal = '0.00';
+      let orderVATSum = '0.00';
 
       let ids = [];
       let qtys = [];
 
-      if (ctx.cookies.get("products")) {
+      if (ctx.cookies.get('products')) {
         try {
-          var cookieProducts = JSON.parse(ctx.cookies.get("products"));
+          var cookieProducts = JSON.parse(ctx.cookies.get('products'));
         } catch (e) {
           var cookieProducts = {};
 
-          ctx.cookies.set("products");
+          ctx.cookies.set('products');
         }
 
         for (i in cookieProducts) {
@@ -916,10 +907,10 @@ module.exports = {
           // COOKIE NOT CORRECT !!!
 
           // Clear the cookie
-          ctx.cookies.set("products");
+          ctx.cookies.set('products');
 
-          ctx.session.messages = { "otherError": "Your cart have been cleared because of invalid cookie data!" };
-          ctx.redirect("/cart");
+          ctx.session.messages = { 'otherError': 'Your cart have been cleared because of invalid cookie data!' };
+          ctx.redirect('/cart');
           return;
         }
 
@@ -965,7 +956,7 @@ module.exports = {
           ).catch(err => utilsEcom.handleError(err))).total;
 
           orderVATSum = (await db.query(
-            `SELECT COALESCE($1::DECIMAL - $2::DECIMAL, 0.00) AS total`,
+            'SELECT COALESCE($1::DECIMAL - $2::DECIMAL, 0.00) AS total',
             {
               type: 'SELECT',
               plain: true,
@@ -1024,9 +1015,9 @@ module.exports = {
       totals.push(await orderitems[i].getTotalWithVATStr());
     }
 
-    let subTotal = "0.00";
-    let grandTotal = "0.00";
-    let orderVATSum = "0.00";
+    let subTotal = '0.00';
+    let grandTotal = '0.00';
+    let orderVATSum = '0.00';
 
     if (order) {
       subTotal = await order.getTotalStr();
@@ -1085,15 +1076,15 @@ module.exports = {
     let qty = await utilsEcom.hasEnoughQtyOfProductsOfOrder(order);
 
     if (qty !== true) {
-      ctx.session.messages = { "notEnoughQty": "There are not enough quantities of the selected product: " + qty }
-      ctx.redirect("/cart");
+      ctx.session.messages = { 'notEnoughQty': 'There are not enough quantities of the selected product: ' + qty }
+      ctx.redirect('/cart');
       return;
     }
 
     orderitems = await order.getOrderitems();
 
     if (!orderitems || orderitems.length == 0) {
-      ctx.session.messages = { "notEnoughQty": "You don't have any products in cart!" };
+      ctx.session.messages = { 'notEnoughQty': "You don't have any products in cart!" };
       ctx.redirect('/cart');
       return;
     }
@@ -1121,7 +1112,6 @@ module.exports = {
       selected: 'checkout',
       cartQty: cartQty,
       user: user,
-      vouchers: [],
       items: orderitems,
       products: products,
       totals: totals,
@@ -1175,12 +1165,12 @@ module.exports = {
           configEcom.SETTINGS.email_order_table_h0,
           configEcom.SETTINGS.email_order_table_h1,
           configEcom.SETTINGS.email_order_table_h2,
-          configEcom.SETTINGS.email_order_table_h3,
+          configEcom.SETTINGS.email_order_table_h3
         ],
         { color: configEcom.SETTINGS.email_order_table_border_color, borderweight: configEcom.SETTINGS.email_order_table_border_weight })) +
       utilsEcom.parseEmailPlaceholders(configEcom.SETTINGS.email_order_lower, user, order));
 
-    if (ctx.request.fields.type == "paypal") {
+    if (ctx.request.fields.type == 'paypal') {
       let responce = await utilsEcom.captureOrder(ctx.request.fields.orderID);
 
       await transaction.createPaypaltransacion({
@@ -1207,7 +1197,7 @@ module.exports = {
         orderitems[i].update({ price: (await orderitems[i].getProduct()).discountPrice });
       }
 
-      await order.update({ status: 5, orderedAt: Sequelize.fn("NOW") });
+      await order.update({ status: 5, orderedAt: Sequelize.fn('NOW') });
 
       await utilsEcom.removeProductQtyFromOrder(order);
 
@@ -1240,7 +1230,7 @@ module.exports = {
       }
 
       await ctx.render('/admin/index', {
-        layout: "/admin/base",
+        layout: '/admin/base',
         selected: 'dashboard',
         session: ctx.session,
         user: staff,
@@ -1251,7 +1241,7 @@ module.exports = {
 
       // Clear old messages
       ctx.session.messages = null;
-    } else ctx.redirect("/admin/login");
+    } else ctx.redirect('/admin/login');
   },
 
   adminLogin: async (ctx) => {
@@ -1278,7 +1268,7 @@ module.exports = {
 
       loggerEcom.logger.log('info',
         `Tried to log in with invalid username ${ctx.request.fields.username} as staff!`);
-      ctx.redirect("/admin");
+      ctx.redirect('/admin');
 
       return;
     }
@@ -1293,8 +1283,8 @@ module.exports = {
         { user: ctx.request.fields.username, isStaff: true });
 
       await user.update({
-        lastLogin: Sequelize.fn("NOW"),
-        lastActivity: Sequelize.fn("NOW")
+        lastLogin: Sequelize.fn('NOW'),
+        lastActivity: Sequelize.fn('NOW')
       });
     }
     else {
@@ -1360,11 +1350,11 @@ module.exports = {
     // Paginator
     let page = 1;
 
-    let limit = configEcom.SETTINGS["elements_per_page"];
+    let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page);
-      offset = (parseInt(ctx.params.page) - 1) * limit;
+    if (ctx.request.fields && ctx.request.fields.page) {
+      page = parseInt(ctx.request.fields.page);
+      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
     let categoriesNames = {};
@@ -1387,7 +1377,7 @@ module.exports = {
       categoriesNames: categoriesNames, // Find better way
       filters: filtersToReturn,
       page: page,
-      pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.SETTINGS["elements_per_page"]))
+      pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear old messages
@@ -1399,7 +1389,7 @@ module.exports = {
     let discountPrice = parseFloat(parseFloat(ctx.request.fields.discountPrice).toFixed(2));
 
     if (!price) {
-      ctx.body = { "error": "Product must have price" }
+      ctx.body = { 'error': 'Product must have price' }
       return;
     }
 
@@ -1407,7 +1397,7 @@ module.exports = {
       discountPrice = price;
 
     if (price > 9999.99 || price <= 0 || discountPrice > 9999.99 || discountPrice <= 0) {
-      ctx.body = { "error": "Product's price must be within range (0 - 9999.99]" }
+      ctx.body = { 'error': "Product's price must be within range (0 - 9999.99]" }
       return;
     }
 
@@ -1421,7 +1411,7 @@ module.exports = {
     };
 
     if (!defaultParams.categoryId) {
-      ctx.body = { "error": "Please select a category" }
+      ctx.body = { 'error': 'Please select a category' }
       return;
     }
 
@@ -1441,7 +1431,7 @@ module.exports = {
 
     if (!created) {
       if (!product.deletedAt) {
-        ctx.body = { "error": `The product with name ${ctx.request.fields.name} already exists!` };
+        ctx.body = { 'error': `The product with name ${ctx.request.fields.name} already exists!` };
         return;
       } else {
         await product.restore();
@@ -1474,7 +1464,7 @@ module.exports = {
       }
     }
     ctx.session.messages = { 'productCreated': `Product with id ${product.id} has been created!` };
-    ctx.body = { "ok": "ok" };
+    ctx.body = { 'ok': 'ok' };
 
     loggerEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} created product #${product.id}`,
@@ -1491,8 +1481,8 @@ module.exports = {
     });
 
     if (!product) {
-      ctx.session.messages = { "invalidVal": "Product with this id doesn't exist!" };
-      ctx.redirect("/admin/products");
+      ctx.session.messages = { 'invalidVal': "Product with this id doesn't exist!" };
+      ctx.redirect('/admin/products');
       return;
     }
 
@@ -1609,12 +1599,16 @@ module.exports = {
     }
 
     let page = 1;
-    let limit = configEcom.SETTINGS["elements_per_page"];
+
+    if (ctx.request.fields && ctx.request.fields.page) {
+      page = parseInt(ctx.request.fields.page)
+    }
+
+    let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page);
-      offset = (parseInt(ctx.params.page) - 1) * limit;
+    if (ctx.request.fields && ctx.request.fields.page) {
+      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
     let result = await db.query(`SELECT * FROM users 
@@ -1647,7 +1641,7 @@ module.exports = {
       users: result,
       filters: filtersToReturn,
       page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS["elements_per_page"]))
+      pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages
@@ -1683,7 +1677,7 @@ module.exports = {
       });
     } catch (e) {
       if (e instanceof ValidationError) {
-        ctx.body = { "error": e.errors.length != 0 ? e.errors[0].message : e.message };
+        ctx.body = { 'error': e.errors.length != 0 ? e.errors[0].message : e.message };
         return;
       } else {
         throw e;
@@ -1692,7 +1686,7 @@ module.exports = {
 
     if (!created) {
       if (!user.deletedAt) {
-        ctx.body = { "error": `A user with that username or email already exists!` };
+        ctx.body = { 'error': 'A user with that username or email already exists!' };
         return;
       } else {
         await user.restore();
@@ -1702,7 +1696,7 @@ module.exports = {
     }
 
     ctx.session.messages = { 'accountCreated': `User with id ${user.id} has been created!` };
-    ctx.body = { "ok": "ok" };
+    ctx.body = { 'ok': 'ok' };
 
     loggerEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} created account #${user.id}`,
@@ -1743,12 +1737,16 @@ module.exports = {
     }
 
     let page = 1;
-    let limit = configEcom.SETTINGS["elements_per_page"];
+
+    if (ctx.request.fields && ctx.request.fields.page) {
+      page = parseInt(ctx.request.fields.page)
+    }
+
+    let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page);
-      offset = (parseInt(ctx.params.page) - 1) * limit;
+    if (ctx.request.fields && ctx.request.fields.page) {
+      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
     const result = await db.query(`SELECT * FROM staffs WHERE
@@ -1779,7 +1777,7 @@ module.exports = {
       staff: result,
       filters: filtersToReturn,
       page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS["elements_per_page"]))
+      pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages
@@ -1872,7 +1870,7 @@ module.exports = {
       email: ctx.request.fields.email
     }
 
-    const staff = await Staff.findOne({ where: { id: ctx.params.id } });
+    const staff = await Staff.findOne({ where: { id: ctx.request.fields.id } });
 
     staff.update(updateParams);
 
@@ -1888,11 +1886,11 @@ module.exports = {
       await staff.addRole(role);
     }
 
-    ctx.session.messages = { 'staffEdited': `Staff with id ${ctx.params.id} was edited!` };
+    ctx.session.messages = { 'staffEdited': `Staff with id ${ctx.request.fields.id} was edited!` };
     loggerEcom.logger.log('info',
-      `Staff ${ctx.session.dataValues.staffUsername} updated staff #${ctx.params.id}`,
+      `Staff ${ctx.session.dataValues.staffUsername} updated staff #${ctx.request.fields.id}`,
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
-    ctx.redirect('/admin/staff/edit/' + ctx.params.id);
+    ctx.redirect('/admin/staff/edit/' + ctx.request.fields.id);
   },
 
   adminCategoriesAdd: async (ctx) => {
@@ -1923,7 +1921,7 @@ module.exports = {
       }
     });
 
-    ctx.session.messages = { 'categoryDeleted': `Selected categories have been deleted!` };
+    ctx.session.messages = { 'categoryDeleted': 'Selected categories have been deleted!' };
     loggerEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} deleted category/ies with id/s ${ctx.request.fields.id}`,
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
@@ -1932,12 +1930,16 @@ module.exports = {
 
   adminRoles: async (ctx) => {
     let page = 1;
-    let limit = configEcom.SETTINGS["elements_per_page"];
+
+    if (ctx.request.fields && ctx.request.fields.page) {
+      page = parseInt(ctx.request.fields.page)
+    }
+
+    let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page);
-      offset = (parseInt(ctx.params.page) - 1) * limit;
+    if (ctx.request.fields && ctx.request.fields.page) {
+      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
     const result = await Role.findAndCountAll({
@@ -1954,7 +1956,7 @@ module.exports = {
       session: ctx.session,
       roles: result.rows,
       page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS["elements_per_page"]))
+      pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages
@@ -1974,7 +1976,7 @@ module.exports = {
       });
     } catch (e) {
       if (e instanceof ValidationError) {
-        ctx.body = { "error": e.errors.length != 0 ? e.errors[0].message : e.message };
+        ctx.body = { 'error': e.errors.length != 0 ? e.errors[0].message : e.message };
         return;
       }
     }
@@ -2026,7 +2028,7 @@ module.exports = {
   },
 
   adminRolesEdit: async (ctx) => {
-    const role = await Role.findOne({ where: { id: ctx.params.id } });
+    const role = await Role.findOne({ where: { id: ctx.request.fields.id } });
     const permissions = await role.getPermissions();
 
     await ctx.render('admin/edit-role', {
@@ -2075,9 +2077,9 @@ module.exports = {
     ctx.req.socket.setKeepAlive(true);
 
     ctx.set({
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
     });
 
     const stream = new PassThrough();
@@ -2085,19 +2087,19 @@ module.exports = {
     ctx.status = 200;
     ctx.body = stream;
 
-    stream.write(`event: message\n`);
+    stream.write('event: message\n');
     stream.write(`data: ${JSON.stringify({
-      "status": "progress", "count": 0
+      'status': 'progress', 'count': 0
     })}\n\n`);
 
     let fileName = ctx.request.files[0].name;
 
     // Supported only .xlsx and .xls
-    if (!(fileName.endsWith(".xlsx") || fileName.endsWith(".xls"))) {
-      stream.write(`event: message\n`);
+    if (!(fileName.endsWith('.xlsx') || fileName.endsWith('.xls'))) {
+      stream.write('event: message\n');
       stream.write(`data: ${JSON.stringify({
-        "status": "error",
-        "msg": "File should be with extention .xlsx or .xls"
+        'status': 'error',
+        'msg': 'File should be with extention .xlsx or .xls'
       })}\n\n`);
 
       stream.end();
@@ -2121,10 +2123,10 @@ module.exports = {
 
       worksheet = workbook.getWorksheet(1);
     } catch (e) {
-      stream.write(`event: message\n`);
+      stream.write('event: message\n');
       stream.write(`data: ${JSON.stringify({
-        "status": "error",
-        "msg": "Can't open the file! Check if it is corrupted?"
+        'status': 'error',
+        'msg': "Can't open the file! Check if it is corrupted?"
       })}\n\n`);
 
       stream.end();
@@ -2154,10 +2156,10 @@ module.exports = {
             if (row.value.index == 1) {
               for (x in configEcom.PRODUCT_IMPORT_TABLE_HEADERS) {
                 if (row.value.data.getCell(parseInt(x) + 1) != configEcom.PRODUCT_IMPORT_TABLE_HEADERS[parseInt(x)]) {
-                  stream.write(`event: message\n`);
+                  stream.write('event: message\n');
                   stream.write(`data: ${JSON.stringify({
-                    "status": "error",
-                    "msg": `Column ${parseInt(x) + 1} \ on row 1 should be "${configEcom.PRODUCT_IMPORT_TABLE_HEADERS[parseInt(x)]}"`
+                    'status': 'error',
+                    'msg': `Column ${parseInt(x) + 1} \ on row 1 should be "${configEcom.PRODUCT_IMPORT_TABLE_HEADERS[parseInt(x)]}"`
                   })}\n\n`);
 
                   stream.end();
@@ -2200,7 +2202,7 @@ module.exports = {
                 if (!cat) {
                   cat = await Category.create({
                     name: utilsEcom.richToString(row.value.data.getCell(categoryIndex).value),
-                    imageCss: "fas fa-random",
+                    imageCss: 'fas fa-random',
                   }, {
                     transaction: dbTr
                   });
@@ -2240,14 +2242,14 @@ module.exports = {
                     // TODO: Check for image width/height
 
                     let imagePath = `./static/media/${Buffer.from(product.name, 'utf8').toString('hex').substring(0, 60)}-${Number.parseInt(Math.random() * 10000)}`;
-                    let image = imagePath.replace("./static/media/", "");
+                    let image = imagePath.replace('./static/media/', '');
 
                     let imageStream = fs.createWriteStream(imagePath);
 
                     await new Promise((resolve, reject) => {
                       imageRes.body.pipe(imageStream);
-                      imageRes.body.on("error", reject);
-                      imageStream.on("finish", resolve);
+                      imageRes.body.on('error', reject);
+                      imageStream.on('finish', resolve);
                     });
 
                     product.image = image;
@@ -2271,15 +2273,15 @@ module.exports = {
             row = seq.next();
 
             if (row.done) {
-              stream.write(`event: message\n`);
+              stream.write('event: message\n');
               stream.write(`data: ${JSON.stringify({
-                "status": "done",
-                "ignored": rowsIgnored, "count": rowsProcessed - rowsIgnored
+                'status': 'done',
+                'ignored': rowsIgnored, 'count': rowsProcessed - rowsIgnored
               })}\n\n`);
 
               // Bulk upsert
               await Product.bulkCreate(Array.from(products.values()), {
-                updateOnDuplicate: ["price", "discountPrice", "description", "categoryId", "quantity"],
+                updateOnDuplicate: ['price', 'discountPrice', 'description', 'categoryId', 'quantity'],
                 transaction: dbTr
               });
 
@@ -2297,16 +2299,16 @@ module.exports = {
 
           // Bulk upsert
           await Product.bulkCreate(Array.from(products.values()), {
-            updateOnDuplicate: ["price", "discountPrice", "description", "categoryId", "quantity"],
+            updateOnDuplicate: ['price', 'discountPrice', 'description', 'categoryId', 'quantity'],
             transaction: dbTr
           });
 
           products.clear();
 
-          stream.write(`event: message\n`);
+          stream.write('event: message\n');
           stream.write(`data: ${JSON.stringify({
-            "status": "progress",
-            "count": rowsProcessed / worksheet.rowCount
+            'status': 'progress',
+            'count': rowsProcessed / worksheet.rowCount
           })}\n\n`);
         }
       } catch (e) {
@@ -2317,10 +2319,10 @@ module.exports = {
         console.log(e);
 
         if (e.errors) {
-          stream.write(`event: message\n`);
+          stream.write('event: message\n');
           stream.write(`data: ${JSON.stringify({
-            "status": "error",
-            "msg": `Error on row: ${row.value.index} with message: ${e.errors[0].message}`
+            'status': 'error',
+            'msg': `Error on row: ${row.value.index} with message: ${e.errors[0].message}`
           })}\n\n`);
 
           stream.end();
@@ -2330,10 +2332,10 @@ module.exports = {
         if (!dbTr.finished)
           await dbTr.rollback();
 
-        stream.write(`event: message\n`);
+        stream.write('event: message\n');
         stream.write(`data: ${JSON.stringify({
-          "status": "error",
-          "msg": e
+          'status': 'error',
+          'msg': e
         })}\n\n`);
 
         loggerEcom.logger.log('error',
@@ -2380,51 +2382,39 @@ module.exports = {
     }
 
     let page = 1;
-    let limit = configEcom.SETTINGS["elements_per_page"];
-    let offset = 0;
 
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page);
-      offset = (parseInt(ctx.params.page) - 1) * limit;
+    if (ctx.request.fields && ctx.request.fields.page) {
+      page = parseInt(ctx.request.fields.page)
     }
 
-    const result = await db.query(
-      `SELECT orders.id, orders.status, orders."orderedAt",
-              users.username, users."firstName", users."lastName",
-              users.address, users.email, users."emailConfirmed",
-              users."lastLogin", users.gender, users.birthday
-      FROM orders
-      INNER JOIN user_orders on orders.id = user_orders."orderId"
-      INNER JOIN users on user_orders."userId" = users.id
-      WHERE status IN (${filters.status})
-          AND "orderedAt" BETWEEN '${filters.ordAfter}'
-          AND '${filters.ordBefore}'
-          AND position(upper($1) in upper(users.username)) > 0
-          AND orders."deletedAt" is NULL
-          AND users."deletedAt" is NULL
-      ORDER BY "orderedAt" DESC
-      LIMIT ${limit} OFFSET ${offset}`, {
-      type: 'SELECT',
-      model: Order,
-      mapToModel: true,
-      plain: false,
-      bind: [filters.user]
-    });
-  
-    const count = await db.query(`SELECT COUNT(*) FROM orders`, {
-      type: 'SELECT',
-      plain: true
+    let limit = configEcom.SETTINGS['elements_per_page'];
+    let offset = 0;
+
+    if (ctx.request.fields && ctx.request.fields.page) {
+      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+    }
+
+    const result = await Order.findAndCountAll({
+      where: {
+        status: { [Op.gte]: 1 },
+      },
+      limit: limit,
+      offset: offset,
+      include: User,
+      order: [
+        ['orderedAt', 'DESC']
+      ]
     });
 
-    await ctx.render("/admin/orders", {
-      layout: "/admin/base",
+    await ctx.render('/admin/orders', {
+      layout: '/admin/base',
       session: ctx.session,
-      selected: "orders",
-      orders: result,
+      selected: 'orders',
+      orders: result.rows,
       statuses: configEcom.STATUS_DISPLAY,
       filters: filtersToReturn,
       page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS["elements_per_page"]))
+      pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages
@@ -2447,7 +2437,7 @@ module.exports = {
     });
 
     if (!user) {
-      ctx.body = { "error": `User with name ${ctx.request.fields.user} does not exist!` };
+      ctx.body = { 'error': `User with name ${ctx.request.fields.user} does not exist!` };
       // ctx.session.messages = { 'invalidVal': 'User does not exists!' };
       // ctx.redirect('/admin/orders');
       return;
@@ -2456,25 +2446,25 @@ module.exports = {
     await db.transaction(async (dbTr) => {
       let order = await Order.create({
         status: ctx.request.fields.status,
-        orderedAt: Sequelize.fn("NOW"),
+        orderedAt: Sequelize.fn('NOW'),
       }, { transaction: dbTr });
 
       if (Object.keys(items).length === 0) {
-        ctx.body = { "error": `Selected items are invalid or no items are selected!` };
+        ctx.body = { 'error': 'Selected items are invalid or no items are selected!' };
         await order.destroy({ transaction: dbTr });
         return;
       }
 
       for (id in items) {
         if (!Number.isSafeInteger(Number(id)) || Math.sign(id) <= 0) {
-          ctx.body = { "error": `Invalid product!` };
+          ctx.body = { 'error': 'Invalid product!' };
           await order.destroy({ transaction: dbTr });
 
           return;
         }
 
         if (!Number.isSafeInteger(Number(items[id])) || Math.sign(items[id]) <= 0) {
-          ctx.body = { "error": `Invalid quantity of product #${id}!` };
+          ctx.body = { 'error': `Invalid quantity of product #${id}!` };
           await order.destroy({ transaction: dbTr });
 
           return;
@@ -2490,7 +2480,7 @@ module.exports = {
         }
 
         if (await utilsEcom.compareQtyAndProductQty(id, items[id]) == 0) {
-          ctx.body = { "error": `Not enough quantity of ${product.name}!` };
+          ctx.body = { 'error': `Not enough quantity of ${product.name}!` };
           await order.destroy({ transaction: dbTr });
 
           return;
@@ -2605,7 +2595,7 @@ module.exports = {
 
         await order.destroy();
 
-        ctx.redirect("/admin/orders");
+        ctx.redirect('/admin/orders');
         return;
       }
 
@@ -2667,12 +2657,16 @@ module.exports = {
     }
 
     let page = 1;
-    let limit = configEcom.SETTINGS["elements_per_page"];
+
+    if (ctx.request.fields && ctx.request.fields.page) {
+      page = parseInt(ctx.request.fields.page)
+    }
+
+    let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page);
-      offset = (parseInt(ctx.params.page) - 1) * limit;
+    if (ctx.request.fields && ctx.request.fields.page) {
+      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
     let time = 'month';
@@ -2705,11 +2699,8 @@ module.exports = {
       report: await reportRes,
       filters: filtersToReturn,
       page: page,
-      pages: utilsEcom.givePages(page, Math.ceil((await count)[0].count / configEcom.SETTINGS["elements_per_page"])),
+      pages: utilsEcom.givePages(page, Math.ceil((await count)[0].count / configEcom.SETTINGS['elements_per_page'])),
     });
-
-    // Clear the messages
-    ctx.session.messages = {};
   },
 
   adminExportReportPdf: async (ctx) => {
@@ -2770,7 +2761,7 @@ module.exports = {
 
     ctx.res.writeHead(200, {
       'Content-Type': 'application/pdf',
-      "Content-Disposition": "attachment; filename=reportExcel.pdf",
+      'Content-Disposition': 'attachment; filename=reportExcel.pdf',
     });
   },
 
@@ -2832,7 +2823,7 @@ module.exports = {
 
     ctx.res.writeHead(200, {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      "Content-Disposition": "attachment; filename=reportExcel.xlsx",
+      'Content-Disposition': 'attachment; filename=reportExcel.xlsx',
     });
   },
 
@@ -2894,7 +2885,7 @@ module.exports = {
 
     ctx.res.writeHead(200, {
       'Content-Type': 'text/csv',
-      "Content-Disposition": "attachment; filename=reportExcel.csv",
+      'Content-Disposition': 'attachment; filename=reportExcel.csv',
     });
   },
 
@@ -2958,12 +2949,16 @@ module.exports = {
     }
 
     let page = 1;
-    let limit = configEcom.SETTINGS["elements_per_page"];
+
+    if (ctx.request.fields && ctx.request.fields.page) {
+      page = parseInt(ctx.request.fields.page)
+    }
+
+    let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page);
-      offset = (parseInt(ctx.params.page) - 1) * limit;
+    if (ctx.request.fields && ctx.request.fields.page) {
+      offset = (page - 1) * limit;
     }
 
     let query = `SELECT * FROM logs WHERE
@@ -2999,15 +2994,15 @@ module.exports = {
       bind: [filters.user, filters.level, filters.ordAfter, filters.ordBefore]
     }).catch(err => utilsEcom.handleError(err));
 
-    await ctx.render("/admin/audit", {
-      layout: "/admin/base",
+    await ctx.render('/admin/audit', {
+      layout: '/admin/base',
       session: ctx.session,
-      selected: "audit",
+      selected: 'audit',
       report: result,
       filters: filtersToReturn,
       levels: utilsEcom.LOG_LEVELS,
       page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS["elements_per_page"]))
+      pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages
@@ -3033,50 +3028,48 @@ module.exports = {
     let subject = ctx.request.fields.subject;
 
     let validTableValues = [
-      "name",
-      "price",
-      "subtotal",
-      "quantity",
-      "vat",
-      "grandtotal",
+      'name',
+      'price',
+      'subtotal',
+      'quantity',
     ]
 
     // Check table for empty values
     if (table.includes('-')) {
-      ctx.session.messages = { "tableError": type == "payment" ? "Payment email template table has empty values!" : "Order email template table has empty values!" };
-      ctx.redirect("/admin/settings/email");
+      ctx.session.messages = { 'tableError': type == 'payment' ? 'Payment email template table has empty values!' : 'Order email template table has empty values!' };
+      ctx.redirect('/admin/settings/email');
 
       return;
     }
 
     // Check table for dublicates
     if ((new Set(table)).size !== table.length) {
-      ctx.session.messages = { "tableError": type == "payment" ? "Payment template table has dublicate values!" : "Order template table has dublicate values!" };
-      ctx.redirect("/admin/settings/email");
+      ctx.session.messages = { 'tableError': type == 'payment' ? 'Payment template table has dublicate values!' : 'Order template table has dublicate values!' };
+      ctx.redirect('/admin/settings/email');
 
       return;
     }
 
     // Check table for invalid values
     if (!table.every(elem => validTableValues.includes(elem))) {
-      ctx.session.messages = { "tableError": type == "payment" ? "Payment template table has invalid values!" : "Order template table has invalid values!" };
-      ctx.redirect("/admin/settings/email");
+      ctx.session.messages = { 'tableError': type == 'payment' ? 'Payment template table has invalid values!' : 'Order template table has invalid values!' };
+      ctx.redirect('/admin/settings/email');
 
       return;
     }
 
     // Check for empty subject
     if (subject == '') {
-      ctx.session.messages = { "tableError": type == "payment" ? "Payment template has empty subject!" : "Order template has empty subject!" };
-      ctx.redirect("/admin/settings/email");
+      ctx.session.messages = { 'tableError': type == 'payment' ? 'Payment template has empty subject!' : 'Order template has empty subject!' };
+      ctx.redirect('/admin/settings/email');
 
       return;
     }
 
     // Check for empty border weight or color
     if (!ctx.request.fields.borderweight || !ctx.request.fields.bordercolor) {
-      ctx.session.messages = { "invalidVal": type == "payment" ? "Payment template has invalid table settings!" : "Order template has invalid table settings!" };
-      ctx.redirect("/admin/settings/email");
+      ctx.session.messages = { 'invalidVal': type == 'payment' ? 'Payment template has invalid table settings!' : 'Order template has invalid table settings!' };
+      ctx.redirect('/admin/settings/email');
 
       return;
     }
@@ -3084,16 +3077,16 @@ module.exports = {
     // Check for range in border weight
     if (ctx.request.fields.borderweight < 1 ||
       ctx.request.fields.borderweight > 10) {
-      ctx.session.messages = { "invalidVal": type == "payment" ? "Payment template has border weight out of range [1-10]!" : "Order template has border weight out of range [1-10]!" };
-      ctx.redirect("/admin/settings/email");
+      ctx.session.messages = { 'invalidVal': type == 'payment' ? 'Payment template has border weight out of range [1-10]!' : 'Order template has border weight out of range [1-10]!' };
+      ctx.redirect('/admin/settings/email');
 
       return;
     }
 
     // Check for valid color
     if (!/^#([0-9A-F]{3}){1,2}$/i.test(ctx.request.fields.bordercolor)) {
-      ctx.session.messages = { "invalidVal": type == "payment" ? "Payment template has invalid border color!" : "Order template has invalid border color!" };
-      ctx.redirect("/admin/settings/email");
+      ctx.session.messages = { 'invalidVal': type == 'payment' ? 'Payment template has invalid border color!' : 'Order template has invalid border color!' };
+      ctx.redirect('/admin/settings/email');
 
       return;
     }
@@ -3107,40 +3100,40 @@ module.exports = {
     }
     */
 
-    if (type == "payment")
+    if (type == 'payment')
       await Settings.bulkCreate([
-        { type: 'email_payment', key: "email_payment_sender", value: "danielgudjenev@gmail.com" }, // HARD-CODED, FORNOW
-        { type: 'email_payment', key: "email_payment_subject", value: subject },
-        { type: 'email_payment', key: "email_payment_upper", value: ctx.request.fields.uppercontent },
-        { type: 'email_payment', key: "email_payment_lower", value: ctx.request.fields.lowercontent },
-        { type: 'email_payment', key: "email_payment_table_h0", value: table[0] },
-        { type: 'email_payment', key: "email_payment_table_h1", value: table[1] },
-        { type: 'email_payment', key: "email_payment_table_h2", value: table[2] },
-        { type: 'email_payment', key: "email_payment_table_h3", value: table[3] },
-        { type: 'email_payment', key: "email_payment_table_border_weight", value: ctx.request.fields.borderweight },
-        { type: 'email_payment', key: "email_payment_table_border_color", value: ctx.request.fields.bordercolor },
+        { type: 'email_payment', key: 'email_payment_sender', value: 'danielgudjenev@gmail.com' }, // HARD-CODED, FORNOW
+        { type: 'email_payment', key: 'email_payment_subject', value: subject },
+        { type: 'email_payment', key: 'email_payment_upper', value: ctx.request.fields.uppercontent },
+        { type: 'email_payment', key: 'email_payment_lower', value: ctx.request.fields.lowercontent },
+        { type: 'email_payment', key: 'email_payment_table_h0', value: table[0] },
+        { type: 'email_payment', key: 'email_payment_table_h1', value: table[1] },
+        { type: 'email_payment', key: 'email_payment_table_h2', value: table[2] },
+        { type: 'email_payment', key: 'email_payment_table_h3', value: table[3] },
+        { type: 'email_payment', key: 'email_payment_table_border_weight', value: ctx.request.fields.borderweight },
+        { type: 'email_payment', key: 'email_payment_table_border_color', value: ctx.request.fields.bordercolor },
       ], {
-        updateOnDuplicate: ["type", "key", "value"]
+        updateOnDuplicate: ['type', 'key', 'value']
       });
     else await Settings.bulkCreate([
-      { type: 'email_order', key: "email_order_sender", value: "danielgudjenev@gmail.com" }, // HARD-CODED, FORNOW
-      { type: 'email_order', key: "email_order_subject", value: subject },
-      { type: 'email_order', key: "email_order_upper", value: ctx.request.fields.uppercontent },
-      { type: 'email_order', key: "email_order_lower", value: ctx.request.fields.lowercontent },
-      { type: 'email_order', key: "email_order_table_h0", value: table[0] },
-      { type: 'email_order', key: "email_order_table_h1", value: table[1] },
-      { type: 'email_order', key: "email_order_table_h2", value: table[2] },
-      { type: 'email_order', key: "email_order_table_h3", value: table[3] },
-      { type: 'email_order', key: "email_order_table_border_weight", value: ctx.request.fields.borderweight },
-      { type: 'email_order', key: "email_order_table_border_color", value: ctx.request.fields.bordercolor },
+      { type: 'email_order', key: 'email_order_sender', value: 'danielgudjenev@gmail.com' }, // HARD-CODED, FORNOW
+      { type: 'email_order', key: 'email_order_subject', value: subject },
+      { type: 'email_order', key: 'email_order_upper', value: ctx.request.fields.uppercontent },
+      { type: 'email_order', key: 'email_order_lower', value: ctx.request.fields.lowercontent },
+      { type: 'email_order', key: 'email_order_table_h0', value: table[0] },
+      { type: 'email_order', key: 'email_order_table_h1', value: table[1] },
+      { type: 'email_order', key: 'email_order_table_h2', value: table[2] },
+      { type: 'email_order', key: 'email_order_table_h3', value: table[3] },
+      { type: 'email_order', key: 'email_order_table_border_weight', value: ctx.request.fields.borderweight },
+      { type: 'email_order', key: 'email_order_table_border_color', value: ctx.request.fields.bordercolor },
     ], {
-      updateOnDuplicate: ["type", "key", "value"]
+      updateOnDuplicate: ['type', 'key', 'value']
     });
 
     await configEcom.loadSettings(Settings.findAll());
 
-    ctx.session.messages = { "emailOk": type == "payment" ? "Payment template is set!" : "Order template is set!" };
-    ctx.redirect("/admin/settings/email");
+    ctx.session.messages = { 'emailOk': type == 'payment' ? 'Payment template is set!' : 'Order template is set!' };
+    ctx.redirect('/admin/settings/email');
   },
 
   adminSettingsOther: async (ctx) => {
@@ -3160,30 +3153,30 @@ module.exports = {
       // Validate values
       if (parseInt(ctx.request.fields.pagint) < 1 ||
         parseInt(ctx.request.fields.pagint) > 1000) {
-        ctx.session.messages = { "invalidVal": "Pagination number must be in range [1-1000]" };
+        ctx.session.messages = { 'invalidVal': 'Pagination number must be in range [1-1000]' };
 
-        ctx.redirect("/admin/settings/other");
+        ctx.redirect('/admin/settings/other');
         return;
       }
 
       await Settings.upsert({
-        type: "settings",
-        key: "elements_per_page",
+        type: 'settings',
+        key: 'elements_per_page',
         value: parseInt(ctx.request.fields.pagint)
       });
     } else if (ctx.request.fields.expire) {
       // Validate values
       if (parseInt(ctx.request.fields.expire) < 0 ||
         parseInt(ctx.request.fields.expire) > 1440) {
-        ctx.session.messages = { "invalidVal": "Back-office expire time must be between [0-1440] minutes" };
+        ctx.session.messages = { 'invalidVal': 'Back-office expire time must be between [0-1440] minutes' };
 
-        ctx.redirect("/admin/settings/other");
+        ctx.redirect('/admin/settings/other');
         return;
       }
 
       await Settings.upsert({
-        type: "settings",
-        key: "backoffice_expire",
+        type: 'settings',
+        key: 'backoffice_expire',
         value: parseInt(ctx.request.fields.expire)
       });
     }
@@ -3202,6 +3195,32 @@ module.exports = {
     }
 
     let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
+
+    if (!await utilsEcom.hasPermission(staff, 'targetgroups.read')) {
+      utilsEcom.onNoPermission(ctx,
+        "You don\'t have permission to see target groups",
+        {
+          level: 'info',
+          message: `Staff ${ctx.session.dataValues.staffUsername} tried to see target groups without rights`,
+          options:
+          {
+            user: ctx.session.dataValues.staffUsername,
+            isStaff: true
+          }
+        });
+      return;
+    }
+
+    // Auto session expire
+    if (!utilsEcom.isSessionValid(staff)) {
+      utilsEcom.onSessionExpired(ctx);
+
+      return;
+    } else {
+      await staff.update({
+        lastActivity: Sequelize.fn('NOW')
+      });
+    }
 
     // Get filters
     let filters = {}, filtersToReturn = {};
@@ -3236,12 +3255,16 @@ module.exports = {
     }
 
     let page = 1;
-    let limit = configEcom.SETTINGS["elements_per_page"];
+
+    if (ctx.request.fields && ctx.request.fields.page) {
+      page = parseInt(ctx.request.fields.page)
+    }
+
+    let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page);
-      offset = (parseInt(ctx.params.page) - 1) * limit;
+    if (ctx.request.fields && ctx.request.fields.page) {
+      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
     let query =
@@ -3250,7 +3273,7 @@ module.exports = {
         AND "createdAt" BETWEEN $1 AND $2\n`;
 
     if (filters.targetID)
-      query += `AND id = $3\n`;
+      query += 'AND id = $3\n';
 
     query += `ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
 
@@ -3260,7 +3283,7 @@ module.exports = {
         AND "createdAt" BETWEEN $1 AND $2\n`;
 
     if (filters.targetID)
-      queryC += `AND id = $3\n`;
+      queryC += 'AND id = $3\n';
 
     let targetgroups = await db.query(query, {
       type: 'SELECT',
@@ -3276,10 +3299,10 @@ module.exports = {
       bind: bindParams
     })).count;
 
-    await ctx.render("/admin/targetgroups", {
-      layout: "/admin/base",
+    await ctx.render('/admin/targetgroups', {
+      layout: '/admin/base',
       session: ctx.session,
-      selected: "more",
+      selected: 'more',
       targetgroups: targetgroups,
       filters: filtersToReturn,
       page: page,
@@ -3292,12 +3315,16 @@ module.exports = {
 
   adminPromotionTargetGroupsAdd: async (ctx) => {
     let page = 1;
-    let limit = configEcom.SETTINGS["elements_per_page"];
+
+    if (ctx.request.fields && ctx.request.fields.page) {
+      page = parseInt(ctx.request.fields.page)
+    }
+
+    let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page);
-      offset = (parseInt(ctx.params.page) - 1) * limit;
+    if (ctx.request.fields && ctx.request.fields.page) {
+      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
     // Get filters
@@ -3355,13 +3382,13 @@ module.exports = {
         AND POSITION(UPPER($country) IN UPPER("country")) > 0\n`;
 
     if (filters.userID)
-      query += `AND id = $userID\n`;
+      query += 'AND id = $userID\n';
 
     if (filters.gender)
-      query += `AND gender = $gender\n`;
+      query += 'AND gender = $gender\n';
 
     if (filters.birthday)
-      query += `AND to_char(birthday, 'MM/DD') = $birthday\n`;
+      query += 'AND to_char(birthday, \'MM/DD\') = $birthday\n';
 
     query += `ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
 
@@ -3373,13 +3400,13 @@ module.exports = {
       AND POSITION(UPPER($country) IN UPPER("country")) > 0\n`;
 
     if (filters.userID)
-      queryC += `AND id = $userID\n`;
+      queryC += 'AND id = $userID\n';
 
     if (filters.gender)
-      queryC += `AND gender = $gender\n`;
+      queryC += 'AND gender = $gender\n';
 
     if (filters.birthday)
-      queryC += `AND to_char(birthday, 'DD/MM') = $birthday\n`;
+      queryC += 'AND to_char(birthday, \'DD/MM\') = $birthday\n';
 
     let users = await db.query(query, {
       type: 'SELECT',
@@ -3395,10 +3422,10 @@ module.exports = {
       bind: bindParams
     })).count;
 
-    await ctx.render("/admin/targetgroups-add", {
-      layout: "/admin/base",
+    await ctx.render('/admin/targetgroups-add', {
+      layout: '/admin/base',
       session: ctx.session,
-      selected: "more",
+      selected: 'more',
       users: users,
       filters: filtersToReturn,
       countries: configEcom.COUNTRY_LIST,
@@ -3410,7 +3437,7 @@ module.exports = {
     ctx.session.messages = null;
   },
 
-  adminPromotionTargetGroupsAddPost: async (ctx) => {
+  adminPromotionsTargetgroupAddPost: async (ctx) => {
     if (!ctx.request.fields) {
       ctx.body = { 'error': 'Unexpected error occured! Please try again later' };
 
@@ -3473,7 +3500,7 @@ module.exports = {
 
       let filters = {};
 
-      let query = `SELECT * FROM users WHERE "deletedAt" is NULL\n`;
+      let query = 'SELECT * FROM users WHERE "deletedAt" is NULL\n';
 
       let userID = ctx.request.fields.userID;
       let firstName = ctx.request.fields.firstName;
@@ -3492,32 +3519,32 @@ module.exports = {
       }
 
       if (userID) {
-        query += `AND id = $userID\n`;
+        query += 'AND id = $userID\n';
         filters.userID = userID;
       }
 
       if (firstName) {
-        query += `AND POSITION(UPPER($firstName) IN UPPER("firstName")) > 0\n`;
+        query += 'AND POSITION(UPPER($firstName) IN UPPER("firstName")) > 0\n';
         filters.firstName = firstName;
       }
 
       if (lastName) {
-        query += `AND POSITION(UPPER($lastName) IN UPPER("lastName")) > 0\n`;
+        query += 'AND POSITION(UPPER($lastName) IN UPPER("lastName")) > 0\n';
         filters.lastName = lastName;
       }
 
       if (birthday) {
-        query += `AND to_char(birthday, 'MM/DD') = $birthday`;
+        query += 'AND to_char(birthday, \'MM/DD\') = $birthday';
         filters.birthday = birthday;
       }
 
       if (country) {
-        query += `AND POSITION(UPPER($country) IN UPPER(country)) > 0\n`;
+        query += 'AND POSITION(UPPER($country) IN UPPER(country)) > 0\n';
         filters.country = country;
       }
 
       if (gender) {
-        query += `AND gender = $gender\n`;
+        query += 'AND gender = $gender\n';
         filters.gender = gender;
       }
 
@@ -3549,8 +3576,8 @@ module.exports = {
 
   adminPromotionTargetGroupsView: async (ctx) => {
     // Check if targetgroupID is number
-    if (!Number.isSafeInteger(parseInt(ctx.request.params.id))
-      || Math.sign(Number(ctx.request.params.id)) < 0) {
+    if (!Number.isSafeInteger(parseInt(ctx.request.fieldstargetgroupid))
+      || Math.sign(Number(ctx.request.fieldstargetgroupid)) < 0) {
       ctx.session.messages = { 'targetgroupError': 'Target group ID must be a non-negative number' };
 
       ctx.redirect('/admin/promotions/targetgroups');
@@ -3619,17 +3646,21 @@ module.exports = {
     }
 
     let page = 1;
-    let limit = configEcom.SETTINGS["elements_per_page"];
+
+    if (ctx.request.fields && ctx.request.fields.page) {
+      page = parseInt(ctx.request.fields.page)
+    }
+
+    let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page);
-      offset = (parseInt(ctx.params.page) - 1) * limit;
+    if (ctx.request.fields && ctx.request.fields.page) {
+      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
     let targetgroup = await TargetGroup.findOne({
       where: {
-        id: ctx.request.params.id
+        id: ctx.request.fieldstargetgroupid
       }
     });
 
@@ -3642,7 +3673,7 @@ module.exports = {
 
     let targetgroupfilters = await TargetGroupFilters.findAll({
       where: {
-        targetgroupId: ctx.request.params.id
+        targetgroupId: ctx.request.fieldstargetgroupid
       }
     });
 
@@ -3656,7 +3687,7 @@ module.exports = {
     let targetgroupusers = await targetgroup.getUsers({ where: whereParams, limit: limit, offset: offset });
 
     await ctx.render('/admin/targetgroups-view', {
-      layout: "/admin/base",
+      layout: '/admin/base',
       selected: 'more',
       session: ctx.session,
       targetgroup: targetgroup,
@@ -3665,7 +3696,7 @@ module.exports = {
       filters: filtersToReturn,
       countries: configEcom.COUNTRY_LIST,
       page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(targetgroupusersAll.length / configEcom.SETTINGS["elements_per_page"]))
+      pages: utilsEcom.givePages(page, Math.ceil(targetgroupusersAll.length / configEcom.SETTINGS['elements_per_page']))
     });
   },
 
@@ -3676,7 +3707,7 @@ module.exports = {
       }
     });
 
-    ctx.session.messages = { 'targetgroupDeleted': `Selected target groups have been deleted!` };
+    ctx.session.messages = { 'targetgroupDeleted': 'Selected target groups have been deleted!' };
     loggerEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} deleted target group/s with id/s ${ctx.request.fields.id}`,
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
@@ -3693,17 +3724,46 @@ module.exports = {
 
     let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
+    if (!await utilsEcom.hasPermission(staff, 'promotions.read')) {
+      utilsEcom.onNoPermission(ctx,
+        "You don\'t have permission to see promotions",
+        {
+          level: 'info',
+          message: `Staff ${ctx.session.dataValues.staffUsername} tried to see promotions without rights`,
+          options:
+          {
+            user: ctx.session.dataValues.staffUsername,
+            isStaff: true
+          }
+        });
+      return;
+    }
+
+    // Auto session expire
+    if (!utilsEcom.isSessionValid(staff)) {
+      utilsEcom.onSessionExpired(ctx);
+
+      return;
+    } else {
+      await staff.update({
+        lastActivity: Sequelize.fn('NOW')
+      });
+    }
+
+    let page = 1;
     let filters = {};
     let filtersToReturn = {};
     let bindParams = {};
 
-    let page = 1;
-    let limit = configEcom.SETTINGS["elements_per_page"];
+    if (ctx.request.fields && ctx.request.fields.page) {
+      page = parseInt(ctx.request.fields.page)
+    }
+
+    let limit = configEcom.SETTINGS['elements_per_page'];
     let offset = 0;
 
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page);
-      offset = (parseInt(ctx.params.page) - 1) * limit;
+    if (ctx.request.fields && ctx.request.fields.page) {
+      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
     }
 
     if (ctx.query.name) {
@@ -3722,12 +3782,12 @@ module.exports = {
       let statusInt = Number(ctx.query.status);
 
       assert_isNonNegativeNumber(statusInt, ctx, {
-        message: "Promotion has invalid status",
-        throwError: "client"
+        message: 'Promotion has invalid status',
+        throwError: 'client'
       });
 
       if (statusInt >= configEcom.PROMOTION_STATUSES.length)
-        throw new ClientException("Promotion status does not exists");
+        throw new ClientException('Promotion status does not exists');
 
       statusInt = ~~statusInt;
 
@@ -3760,7 +3820,7 @@ module.exports = {
       AND POSITION(UPPER($name) IN UPPER(promotions."name")) > 0\n`;
 
     if (filters.status)
-      query += `AND status = $status\n`
+      query += 'AND status = $status\n'
 
     query += `ORDER BY promotions."createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
 
@@ -3773,7 +3833,7 @@ module.exports = {
       AND POSITION(UPPER($name) IN UPPER(promotions."name")) > 0\n`;
 
     if (filters.status)
-      queryC += `AND status = $status\n`;
+      queryC += 'AND status = $status\n';
 
     let promotions = await db.query(query, {
       type: 'SELECT',
@@ -3797,10 +3857,10 @@ module.exports = {
       bind: bindParams
     });
 
-    await ctx.render("/admin/promotions", {
-      layout: "/admin/base",
+    await ctx.render('/admin/promotions', {
+      layout: '/admin/base',
       session: ctx.session,
-      selected: "more",
+      selected: 'more',
       promotions: promotions,
       filters: filtersToReturn,
       statuses: configEcom.PROMOTION_STATUSES,
@@ -3819,10 +3879,10 @@ module.exports = {
     name = name.trim();
 
     assert_regex(name, ctx, {
-      regex: `^[a-z0-9"'-_ ]+$`,
-      parameters: "ig",
+      regex: '^[a-z0-9"\'-_ ]+$',
+      parameters: 'ig',
       throwError: 'client',
-      message: `Promotions name must contain only letters and numbers and [",',-,_]`
+      message: 'Promotions name must contain only letters and numbers and [",\',-,_]'
     });
 
     let targetgroupId = ctx.request.fields.targetgroup;
@@ -3855,30 +3915,26 @@ module.exports = {
       message: 'Voucher date is not valid'
     });
 
-    assert_isValidISODate(startDate, ctx, { throwError: "client" });
-    assert_isValidISODate(endDate, ctx, { throwError: "client" });
+    assert_isValidISODate(startDate, ctx, { throwError: 'client' });
+    assert_isValidISODate(endDate, ctx, { throwError: 'client' });
 
     assert_isDateAfter(new Date(endDate), ctx, {
-      throwError: "client",
-      message: "End date of promotion cannot be before start date",
+      throwError: 'client',
+      message: 'End date of promotion cannot be before start date',
       max: new Date(startDate)
     });
 
     assert_isDateAfter(new Date(voucherEndDate), ctx, {
-      throwError: "client",
-      message: "End date of voucher cannot be before end date of promotion",
+      throwError: 'client',
+      message: 'End date of voucher cannot be before end date of promotion',
       max: new Date(endDate)
     });
 
-    /* Locale problems. User choose date based on his locale,
-     * but if server uses different locale, it is a big issue
-     * 
-     * assert_isDateAfter(new Date(startDate), ctx, {
-     *   throwError: "client",
-     *   message: "Start date of promotion cannot be before today",
-     *   max: new Date(new Date().toLocaleDateString('en-ZA'))
-     * });
-    */
+    assert_isDateAfter(new Date(startDate), ctx, {
+      throwError: 'client',
+      message: 'Start date of promotion cannot be before today',
+      max: new Date(new Date().toLocaleDateString('en-ZA'))
+    });
 
     // TODO: Test isDateAfter + send email immediately
 
@@ -3936,7 +3992,7 @@ module.exports = {
       }
     });
 
-    ctx.session.messages = { 'promotionDeleted': `Selected promotion/s have been deleted!` };
+    ctx.session.messages = { 'promotionDeleted': 'Selected promotion/s have been deleted!' };
     loggerEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} deleted promotion/s with id/s ${ctx.request.fields.id}`,
       { user: ctx.session.dataValues.staffUsername, isStaff: true });
@@ -3961,7 +4017,7 @@ module.exports = {
           AND "deletedAt" is NULL
         LIMIT 10`,
         {
-          type: "SELECT",
+          type: 'SELECT',
           plain: false,
           model: Permission,
           mapToModel: true,
@@ -3988,7 +4044,7 @@ module.exports = {
           AND "deletedAt" is NULL
         LIMIT 10`,
         {
-          type: "SELECT",
+          type: 'SELECT',
           plain: false,
           model: Permission,
           mapToModel: true,
@@ -4016,7 +4072,7 @@ module.exports = {
           AND hide = false
         LIMIT 10`,
         {
-          type: "SELECT",
+          type: 'SELECT',
           plain: false,
           model: Permission,
           mapToModel: true,

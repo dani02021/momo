@@ -1,351 +1,357 @@
-const db = require("./db.js");
-const { Sequelize, Model, DataTypes, ValidationError, STRING } = require("sequelize");
-const bcrypt = require("bcrypt");
+const {
+  Sequelize, Model, DataTypes, ValidationError, STRING,
+} = require('sequelize');
+const bcrypt = require('bcrypt');
 const assert = require('assert/strict');
-const configEcom = require("./config.js");
-const { validate } = require("./db.js");
-const { ClientException } = require("./exceptions.js");
+const { AssertionError } = require('assert');
+const configEcom = require('./config');
+const db = require('./db');
 
-const Settings = db.define('settings', {
-  key: {
-    type: DataTypes.STRING,
-    primaryKey: true
-  },
-  type: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  value: {
-    type: DataTypes.STRING,
-    allowNull: true
-  }
-},
-{
-  timestamps: false,
-  paranoid: false
-});
-
-const Log = db.define("log", {
-  timestamp: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: Sequelize.fn("NOW")
-  },
-  user: {
-    type: DataTypes.STRING(50),
-    allowNull: true,
-    defaultValue: "",
-    validate: {
-      len: {
-        args: [0, 50],
-        msg: "Username must be within range [0-50]"
-      }
-    }
-  },
-  level: {
-    type: DataTypes.STRING(50),
-    allowNull: false
-  },
-  message: {
-    type: DataTypes.STRING(1024),
-    allowNull: true,
-    validate: {
-      stringTruncate() {
-        Object.keys(this._changed).forEach((element) => {
-            const temp = this.__proto__.rawAttributes[element];
-            if (temp.type.__proto__.__proto__.key == "STRING") {
-              if (this[element]) {
-                if (this[element].length > temp.type._length) {
-                  this[element] = this[element].substring(0, temp.type._length);
-                }
-              }
-            }
-        });
-      }
-    }
-  },
-  longMessage: {
-    type: DataTypes.STRING(3096),
-    allowNull: true,
-    validate: {
-      stringTruncate() {
-        Object.keys(this._changed).forEach((element) => {
-            const temp = this.__proto__.rawAttributes[element];
-            if (temp.type.__proto__.__proto__.key == "STRING") {
-              if (this[element]) {
-                if (this[element].length > temp.type._length) {
-                  this[element] = this[element].substring(0, temp.type._length);
-                }
-              }
-            }
-        });
-      }
-    }
-  },
-  isStaff: {
-    type: DataTypes.BOOLEAN,
-    allowNull: true
-  },
-},
-{
-  paranoid: true,
-  timestamps: false
-});
-
-const User = db.define("user", {
-  username: {
-    type: DataTypes.STRING(50),
-    unique: true,
-    allowNull: false,
-    validate: {
-      is: {
-        args: /^([a-zA-Z0-9]{4,14})$/i,
-        msg: "Username must contains only Latin symbols or numbers and should be of size 4-14"
-      },
-      notNull: {
-        msg: "Username cannot be null!"
-      }
-    }
-  },
-  email: {
-    type: DataTypes.STRING(100),
-    unique: {
-      msg: "This email already exists!"
+const Settings = db.define(
+  'settings',
+  {
+    key: {
+      type: DataTypes.STRING,
+      primaryKey: true,
     },
-    allowNull: false,
-    validate: {
-      isEmail: {
-        msg: "Email is not in valid format!"
-      },
-      len: {
-        args: [1, 50],
-        msg: "Email length must be within range [1-50]"
-      },
-      notNull: {
-        msg: "Email cannot be null!"
-      }
-    }
+    type: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    value: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
-  firstName: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
-    validate: {
-      notEmpty: true,
-      is: {
-        args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
-        msg: "First name should contain only latin or cyrillic symbols with length 2-50"
-      },
-      notNull: {
-        msg: "First name cannot be null!"
-      }
-    }
+  {
+    timestamps: false,
+    paranoid: false,
   },
-  lastName: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
-    validate: {
-      notEmpty: true,
-      is: {
-        args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
-        msg: "Last name should contain only latin or cyrillic symbols with length 2-50"
-      },
-      notNull: {
-        msg: "Last name cannot be null!"
-      }
-    }
-  },
-  password: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
-    set(pass) {
-      if (!pass) 
-      {
-        throw new ValidationError("Password is invalid!");
-      }
+);
 
-      if (/^(?=.*[0-9])(?=.*[a-zA-Z])(?!.*\s).{8,32}$/i.exec(pass) == null) 
-      {
-        throw new ValidationError("Password must contain a digit and a character, with size 8-32!");
-      }
-      
-      const hash = bcrypt.hashSync(pass, configEcom.DEFAULT_SALT_ROUNDS);
-      this.setDataValue('password', hash);
-    }
-  },
-  address: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    validate: {
-      len: {
-        args: [0, 200],
-        msg: "Address length must be within range [0-200]"
-      }
-    }
-  },
-  country: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    validate: {
-      notEmpty: {
-        args: true,
-        msg: "Country name cannot be empty!"
+const Log = db.define(
+  'log',
+  {
+    timestamp: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: Sequelize.fn('NOW'),
+    },
+    user: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      defaultValue: '',
+      validate: {
+        len: {
+          args: [0, 50],
+          msg: 'Username must be within range [0-50]',
+        },
       },
-      len: {
-        args: [1, 200],
-        msg: "Country name length must be within range [1-200]!"
+    },
+    level: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+    },
+    message: {
+      type: DataTypes.STRING(1024),
+      allowNull: true,
+      validate: {
+        stringTruncate() {
+          Object.keys(this._changed).forEach((element) => {
+            const temp = Object.getPrototypeOf(this).rawAttributes[element];
+            if (Object.getPrototypeOf(Object.getPrototypeOf(temp.type)).key === 'STRING') {
+              if (this[element]) {
+                if (this[element].length > temp.type._length) {
+                  this[element] = this[element].substring(0, temp.type._length);
+                }
+              }
+            }
+          });
+        },
       },
-      notNull: {
-        msg: "County cannot be null!"
-      } 
-    }
-  },
-  gender: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    validate: {
-      len: {
-        args: [1, 100],
-        msg: "Gender length must be within range [1-100]"
+    },
+    longMessage: {
+      type: DataTypes.STRING(3096),
+      allowNull: true,
+      validate: {
+        stringTruncate() {
+          Object.keys(this._changed).forEach((element) => {
+            const temp = Object.getPrototypeOf(this).rawAttributes[element];
+            if (Object.getPrototypeOf(Object.getPrototypeOf(temp.type)).key === 'STRING') {
+              if (this[element]) {
+                if (this[element].length > temp.type._length) {
+                  this[element] = this[element].substring(0, temp.type._length);
+                }
+              }
+            }
+          });
+        },
       },
-      notNull: {
-        msg: "Gender cannot be null!"
-      },
-      isIn: {
-        args: [configEcom.VALID_GENDERS],
-        msg: "Gender is not valid!"
-      }
-    }
+    },
+    isStaff: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+    },
   },
-  birthday: {
-    type: DataTypes.DATEONLY,
-    allowNull: false,
-    validate: {
-      notNull: {
-        msg: "Birthday cannot be null!"
-      },
-
-      isOldEnough(value) {
-        var today = new Date();
-        var birthDate = new Date(value);
-        var age = today.getFullYear() - birthDate.getFullYear();
-        var m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-
-        if (age < 18)
-          throw new ValidationError("You have to be at least 18 years old!");
-
-        if (age > 120)
-          throw new ValidationError("Invalid age!");
-      }
-    }
-  },
-  emailConfirmed: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  },
-  lastLogin: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  verificationToken: {
-    type: DataTypes.STRING,
-    allowNull: true
-  }
-},
   {
     paranoid: true,
-    timestamp: true
-  });
+    timestamps: false,
+  },
+);
+
+const User = db.define(
+  'user',
+  {
+    username: {
+      type: DataTypes.STRING(50),
+      unique: true,
+      allowNull: false,
+      validate: {
+        is: {
+          args: /^([a-zA-Z0-9]{4,14})$/i,
+          msg: 'Username must contains only Latin symbols or numbers and should be of size 4-14',
+        },
+        notNull: {
+          msg: 'Username cannot be null!',
+        },
+      },
+    },
+    email: {
+      type: DataTypes.STRING(100),
+      unique: {
+        msg: 'This email already exists!',
+      },
+      allowNull: false,
+      validate: {
+        isEmail: {
+          msg: 'Email is not in valid format!',
+        },
+        len: {
+          args: [1, 50],
+          msg: 'Email length must be within range [1-50]',
+        },
+        notNull: {
+          msg: 'Email cannot be null!',
+        },
+      },
+    },
+    firstName: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        is: {
+          args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
+          msg: 'First name should contain only latin or cyrillic symbols with length 2-50',
+        },
+        notNull: {
+          msg: 'First name cannot be null!',
+        },
+      },
+    },
+    lastName: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        is: {
+          args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
+          msg: 'Last name should contain only latin or cyrillic symbols with length 2-50',
+        },
+        notNull: {
+          msg: 'Last name cannot be null!',
+        },
+      },
+    },
+    password: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      set(pass) {
+        if (!pass) {
+          throw new ValidationError('Password is invalid!');
+        }
+
+        if (/^(?=.*[0-9])(?=.*[a-zA-Z])(?!.*\s).{8,32}$/i.exec(pass) == null) {
+          throw new ValidationError('Password must contain a digit and a character, with size 8-32!');
+        }
+
+        const hash = bcrypt.hashSync(pass, configEcom.DEFAULT_SALT_ROUNDS);
+        this.setDataValue('password', hash);
+      },
+    },
+    address: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        len: {
+          args: [0, 200],
+          msg: 'Address length must be within range [0-200]',
+        },
+      },
+    },
+    country: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notEmpty: {
+          args: true,
+          msg: 'Country name cannot be empty!',
+        },
+        len: {
+          args: [1, 200],
+          msg: 'Country name length must be within range [1-200]!',
+        },
+        notNull: {
+          msg: 'County cannot be null!',
+        },
+      },
+    },
+    gender: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        len: {
+          args: [1, 100],
+          msg: 'Gender length must be within range [1-100]',
+        },
+        notNull: {
+          msg: 'Gender cannot be null!',
+        },
+        isIn: {
+          args: [configEcom.VALID_GENDERS],
+          msg: 'Gender is not valid!',
+        },
+      },
+    },
+    birthday: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+      validate: {
+        notNull: {
+          msg: 'Birthday cannot be null!',
+        },
+
+        isOldEnough(value) {
+          const today = new Date();
+          const birthDate = new Date(value);
+          let age = today.getFullYear() - birthDate.getFullYear();
+          const m = today.getMonth() - birthDate.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age -= 1;
+          }
+
+          if (age < 18) { throw new AssertionError('You have to be at least 18 years old!'); }
+
+          if (age > 120) { throw new AssertionError('Invalid age!'); }
+        },
+      },
+    },
+    emailConfirmed: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    lastLogin: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    verificationToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+  },
+  {
+    paranoid: true,
+    timestamp: true,
+  },
+);
 
 // Add custom methods
 User.prototype.authenticate = function (varPass) {
   return bcrypt.compareSync(varPass, this.password);
 };
 
-const Staff = db.define("staff", {
-  username: {
-    type: DataTypes.STRING(50),
-    unique: true,
-    allowNull: false,
-    validate: {
+const Staff = db.define(
+  'staff',
+  {
+    username: {
+      type: DataTypes.STRING(50),
+      unique: true,
+      allowNull: false,
+      validate: {
+        is: {
+          args: /^([a-zA-Z0-9]{4,14})$/i,
+          msg: 'Username must contains only Latin symbols or numbers and should be of size 4-14',
+        },
+        notNull: {
+          msg: 'Username cannot be null!',
+        },
+      },
+    },
+    email: {
+      type: DataTypes.STRING(50),
+      unique: {
+        msg: 'This email already exists!',
+      },
+      allowNull: true,
+      validate: {
+        isEmail: {
+          msg: 'Email is not in valid format!',
+        },
+      },
+    },
+    firstName: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
       is: {
-        args: /^([a-zA-Z0-9]{4,14})$/i,
-        msg: "Username must contains only Latin symbols or numbers and should be of size 4-14"
+        args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
+        msg: 'First name should contain only latin or cyrillic symbols with length 2-50',
       },
       notNull: {
-        msg: "Username cannot be null!"
-      } 
-    }
-  },
-  email: {
-    type: DataTypes.STRING(50),
-    unique: {
-      msg: "This email already exists!"
+        msg: 'First name cannot be null!',
+      },
     },
-    allowNull: true,
-    validate: {
-      isEmail: {
-        msg: "Email is not in valid format!"
-      }
-    }
-  },
-  firstName: {
-    type: DataTypes.STRING(50),
-    allowNull: false,
-    is: {
-      args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
-      msg: "First name should contain only latin or cyrillic symbols with length 2-50"
+    lastName: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      is: {
+        args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
+        msg: 'Last name should contain only latin or cyrillic symbols with length 2-50',
+      },
+      notNull: {
+        msg: 'Last name cannot be null!',
+      },
     },
-    notNull: {
-      msg: "First name cannot be null!"
-    } 
-  },
-  lastName: {
-    type: DataTypes.STRING(50),
-    allowNull: false,
-    is: {
-      args: /^[a-zA-Zа-яА-Я]{2,50}$/i,
-      msg: "Last name should contain only latin or cyrillic symbols with length 2-50"
-    },
-    notNull: {
-      msg: "Last name cannot be null!"
-    } 
-  },
-  password: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
-    set(pass) {
-      if (!pass) 
-      {
-        throw new ValidationError("Password is invalid!");
-      }
+    password: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      set(pass) {
+        if (!pass) {
+          throw new ValidationError('Password is invalid!');
+        }
 
-      if (/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{7,32}$/i.exec(pass) == null) 
-      {
-        throw new ValidationError("Password must contain at least 1 digit, 1 uppercase and 1 lowercase character, with size 7-32");
-      }
-      
-      const salt = bcrypt.genSaltSync(5);
-      const hash = bcrypt.hashSync(pass, salt, 5);
-      this.setDataValue('password', hash);
-    }
+        if (/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{7,32}$/i.exec(pass) == null) {
+          throw new ValidationError('Password must contain at least 1 digit, 1 uppercase and 1 lowercase character, with size 7-32');
+        }
+
+        const salt = bcrypt.genSaltSync(5);
+        const hash = bcrypt.hashSync(pass, salt, 5);
+        this.setDataValue('password', hash);
+      },
+    },
+    lastLogin: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    lastActivity: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
-  lastLogin: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  lastActivity: {
-    type: DataTypes.DATE,
-    allowNull: true
-  }
-},
   {
     paranoid: true,
-    timestamp: true
-  }
+    timestamp: true,
+  },
 );
 
 // Add custom methods
@@ -353,44 +359,48 @@ Staff.prototype.authenticate = function (varPass) {
   return bcrypt.compareSync(varPass, this.password);
 };
 
-const Permission = db.define('permission', {
-  name: {
-    type: DataTypes.STRING(50),
-    allowNull: false,
-    unique: true,
-    validate: {
-      len: {
-        args: [1, 50],
-        msg: "Permission length must be within range [1-50]"
-      }
-    }
-  }
-},
+const Permission = db.define(
+  'permission',
+  {
+    name: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
+      validate: {
+        len: {
+          args: [1, 50],
+          msg: 'Permission length must be within range [1-50]',
+        },
+      },
+    },
+  },
   {
     paranoid: true,
-    timestamp: true
-  }
+    timestamp: true,
+  },
 );
 
-const Role = db.define("role", {
-  name: {
-    type: DataTypes.STRING(25),
-    allowNull: false,
-    unique: {
-      msg: "Role name must be unique"
+const Role = db.define(
+  'role',
+  {
+    name: {
+      type: DataTypes.STRING(25),
+      allowNull: false,
+      unique: {
+        msg: 'Role name must be unique',
+      },
+      validate: {
+        len: {
+          args: [1, 25],
+          msg: 'Role name length must be within range [1-25]',
+        },
+      },
     },
-    validate: {
-      len: {
-        args: [1,25],
-        msg: "Role name length must be within range [1-25]"
-      }
-    }
-  }
-},
+  },
   {
     paranoid: true,
-    timestamp: true
-  }
+    timestamp: true,
+  },
 );
 
 Role.belongsToMany(Permission, { through: 'role_permissions' });
@@ -399,150 +409,160 @@ Permission.belongsToMany(Role, { through: 'role_permissions' });
 Role.belongsToMany(Staff, { through: 'staff_role' });
 Staff.belongsToMany(Role, { through: 'staff_role' });
 
-const Category = db.define("category", {
-  name: {
-    type: DataTypes.STRING(50),
-    allowNull: false
-  },
-  imageCss: {
-    type: DataTypes.STRING(100),
-    allowNull: false
-  }
-},
+const Category = db.define(
+  'category',
   {
-    paranoid: true,
-    timestamp: true
-  }
-);
-
-const Product = db.define("product", {
-  name: {
-    type: DataTypes.STRING(200),
-    allowNull: false,
-    unique: {
-      msg: 'Product name must be unique!'
+    name: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
     },
-    validate: {
-      len: {
-        args: [3, 255],
-        msg: 'Product name length must be within range [3-255]'
-      }
-    }
+    imageCss: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
   },
-  price: {
-    type: DataTypes.DECIMAL(7, 2),
-    allowNull: false
-  },
-  discountPrice: {
-    type: DataTypes.DECIMAL(7, 2),
-    allowNull: false,
-    validate: {
-      min: {
-        args: 0.01,
-        msg: 'Price must be minimum 0.01'
-      }
-    }
-  },
-  description: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  image: {
-    type: DataTypes.STRING(600),
-    allowNull: true
-  },
-  quantity: {
-    type: DataTypes.INTEGER,
-    defaultValue: 1,
-    allowNull: false,
-    validate: {
-      notNull: {
-        msg: "Product's quantity must not be null"
-      },
-      isInt: {
-        msg: "Product's quantity must be integer"
-      }
-    }
-  },
-  hide: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-    allowNull: false
-  }
-},
   {
     paranoid: true,
-    timestamp: true
-  }
+    timestamp: true,
+  },
 );
 
-const Session = db.define("session", {
-  key: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true
+const Product = db.define(
+  'product',
+  {
+    name: {
+      type: DataTypes.STRING(200),
+      allowNull: false,
+      unique: {
+        msg: 'Product name must be unique!',
+      },
+      validate: {
+        len: {
+          args: [3, 255],
+          msg: 'Product name length must be within range [3-255]',
+        },
+      },
+    },
+    price: {
+      type: DataTypes.DECIMAL(7, 2),
+      allowNull: false,
+    },
+    discountPrice: {
+      type: DataTypes.DECIMAL(7, 2),
+      allowNull: false,
+      validate: {
+        min: {
+          args: 0.01,
+          msg: 'Price must be minimum 0.01',
+        },
+      },
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    image: {
+      type: DataTypes.STRING(600),
+      allowNull: true,
+    },
+    quantity: {
+      type: DataTypes.INTEGER,
+      defaultValue: 1,
+      allowNull: false,
+      validate: {
+        notNull: {
+          msg: "Product's quantity must not be null",
+        },
+        isInt: {
+          msg: "Product's quantity must be integer",
+        },
+      },
+    },
+    hide: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
   },
-  maxAge: {
-    type: DataTypes.INTEGER,
-    validate: {
-      isInt: {
-        msg: "Session's max age must be integer"
-      }
-    }
+  {
+    paranoid: true,
+    timestamp: true,
   },
-  expire: {
-    type: DataTypes.DATE
+);
+
+const Session = db.define(
+  'session',
+  {
+    key: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    maxAge: {
+      type: DataTypes.INTEGER,
+      validate: {
+        isInt: {
+          msg: "Session's max age must be integer",
+        },
+      },
+    },
+    expire: {
+      type: DataTypes.DATE,
+    },
+    messages: {
+      type: DataTypes.JSONB,
+    },
+    username: {
+      type: DataTypes.STRING(50),
+    },
+    staffUsername: {
+      type: DataTypes.STRING(50),
+    },
   },
-  messages: {
-    type: DataTypes.JSONB
-  },
-  username: {
-    type: DataTypes.STRING(50)
-  },
-  staffUsername: {
-    type: DataTypes.STRING(50)
-  },
-},
   {
     paranoid: false,
-    timestamp: false
-  }
-);
-
-const TargetGroupFilters = db.define("targetgroup_filters", {
-  filter: {
-    type: DataTypes.STRING,
-    allowNull: false,
+    timestamp: false,
   },
-  value: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  }
-},
-  {
-    paranoid: true,
-    timestamp: false
-  }
 );
 
-const TargetGroup = db.define("targetgroup", {
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: {
-      msg: 'Target group name must be unique'
+const TargetGroupFilters = db.define(
+  'targetgroup_filters',
+  {
+    filter: {
+      type: DataTypes.STRING,
+      allowNull: false,
     },
-    validate: {
-      notNull: {
-        msg: "Target group name should not be empty"
-      }
-    }
-  }
-},
+    value: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+  },
   {
     paranoid: true,
-    timestamp: false
-  }
+    timestamp: false,
+  },
+);
+
+const TargetGroup = db.define(
+  'targetgroup',
+  {
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: {
+        msg: 'Target group name must be unique',
+      },
+      validate: {
+        notNull: {
+          msg: 'Target group name should not be empty',
+        },
+      },
+    },
+  },
+  {
+    paranoid: true,
+    timestamp: false,
+  },
 );
 
 TargetGroupFilters.belongsTo(TargetGroup);
@@ -552,22 +572,22 @@ TargetGroup.hasMany(TargetGroupFilters);
 TargetGroup.belongsToMany(User, { through: 'targetgroup_users', allowNull: false, timestamps: false });
 User.belongsToMany(TargetGroup, { through: 'targetgroup_users', allowNull: false, timestamps: false });
 
-const Promotion = db.define("promotion", {
+const Promotion = db.define('promotion', {
   name: {
     type: DataTypes.STRING,
     allowNull: false,
     unique: {
-      msg: 'Promotion name must be unique'
+      msg: 'Promotion name must be unique',
     },
     validate: {
       notNull: {
-        msg: "Promotion's name is required"
+        msg: "Promotion's name is required",
       },
       len: {
-        args: [3,100],
-        msg: "Promotion's name must be within range [3 - 100]"
-      }
-    }
+        args: [3, 100],
+        msg: "Promotion's name must be within range [3 - 100]",
+      },
+    },
   },
   status: {
     // type: DataTypes.ENUM('pending', 'active', 'expired'), -> SEQUELIZE BUG
@@ -576,85 +596,85 @@ const Promotion = db.define("promotion", {
     defaultValue: 0,
     validate: {
       notNull: {
-        msg: "Promotion status should not be empty"
+        msg: 'Promotion status should not be empty',
       },
       isIn: {
         args: [Array.from(Array(configEcom.PROMOTION_STATUSES.length).keys())],
-        msg: "Promotion status is invalid"
+        msg: 'Promotion status is invalid',
       },
       isInt: {
-        msg: "Status is invalid"
-      }
-    }
+        msg: 'Status is invalid',
+      },
+    },
   },
   startDate: {
     type: DataTypes.DATEONLY,
     allowNull: false,
-    defaultValue: Sequelize.fn("NOW"),
+    defaultValue: Sequelize.fn('NOW'),
     validate: {
       notNull: {
-        msg: "Promotion start date should not be empty"
-      }
-    }
+        msg: 'Promotion start date should not be empty',
+      },
+    },
   },
   endDate: {
     type: DataTypes.DATEONLY,
     allowNull: false,
     validate: {
       notNull: {
-        msg: "Promotion end date should not be empty"
-      }
-    }
-  }
+        msg: 'Promotion end date should not be empty',
+      },
+    },
+  },
 }, {
-  paranoid: true
+  paranoid: true,
 });
 
-const Voucher = db.define("voucher", {
+const Voucher = db.define('voucher', {
   endDate: {
     type: DataTypes.DATEONLY,
     allowNull: false,
     validate: {
       notNull: {
-        msg: "Voucher end date should not be empty"
-      }
-    }
+        msg: 'Voucher end date should not be empty',
+      },
+    },
   },
   value: {
     type: DataTypes.DECIMAL(7, 2),
     allowNull: false,
     validate: {
       notNull: {
-        msg: "Voucher value should not be empty"
+        msg: 'Voucher value should not be empty',
       },
       min: {
         args: 0.01,
-        msg: "Voucher's price must be a non-negative number"
-      }
-    }
-  }
+        msg: "Voucher's price must be a non-negative number",
+      },
+    },
+  },
 }, {
-  paranoid: true
+  paranoid: true,
 });
 
-const UserVoucher = db.define("user_voucher", {
+const UserVoucher = db.define('user_voucher', {
   used: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
-    allowNull: false
+    allowNull: false,
   },
   activated: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
-    allowNull: false
-  }
+    allowNull: false,
+  },
 }, {
   paranoid: true,
   timestamps: false,
 });
 
-User.belongsToMany(Voucher, {through: UserVoucher});
-Voucher.belongsToMany(User, {through: UserVoucher});
+User.belongsToMany(Voucher, { through: UserVoucher });
+Voucher.belongsToMany(User, { through: UserVoucher });
 
 Promotion.hasOne(Voucher);
 Voucher.belongsTo(Promotion);
@@ -662,11 +682,11 @@ Voucher.belongsTo(Promotion);
 Promotion.belongsTo(TargetGroup);
 TargetGroup.hasOne(Promotion);
 
-Promotion.prototype.getTotalValue = async function() {
+Promotion.prototype.getTotalValue = async function () {
   return parseFloat(await this.getTotalValueStr());
-}
+};
 
-Promotion.prototype.getTotalValueStr = async function() {
+Promotion.prototype.getTotalValueStr = async function () {
   return (await db.query(
     `SELECT 
       COUNT("userId") * vouchers.value AS total 
@@ -681,14 +701,14 @@ Promotion.prototype.getTotalValueStr = async function() {
     GROUP BY vouchers.value`,
     {
       type: 'SELECT',
-      plain: true
-    }
+      plain: true,
+    },
   )).total;
-}
+};
 
 Product.prototype.getPriceWithVAT = async function () {
   return parseFloat(await this.getPriceWithVATStr());
-}
+};
 
 Product.prototype.getPriceWithVATStr = async function () {
   return (await db.query(
@@ -700,14 +720,14 @@ Product.prototype.getPriceWithVATStr = async function () {
       AND hide = false`,
     {
       type: 'SELECT',
-      plain: true
-    }
-    )).total;
-}
+      plain: true,
+    },
+  )).total;
+};
 
 Product.prototype.getDiscountPriceWithVAT = async function () {
   return parseFloat(await this.getDiscountPriceWithVATStr());
-}
+};
 
 Product.prototype.getDiscountPriceWithVATStr = async function () {
   return (await db.query(
@@ -719,97 +739,109 @@ Product.prototype.getDiscountPriceWithVATStr = async function () {
       AND hide = false`,
     {
       type: 'SELECT',
-      plain: true
-    }
-    )).total;
-}
+      plain: true,
+    },
+  )).total;
+};
 
 Product.belongsTo(Category, {
-  foreignKey: 'categoryId'
+  foreignKey: 'categoryId',
 });
 
-const Transaction = db.define("transacion", {
-  type: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    defaultValue: 'paypal'
-  }
-},
-{
-  paranoid: false,
-  timestamp: false
-});
+const Transaction = db.define(
+  'transacion',
+  {
+    type: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'paypal',
+    },
+  },
+  {
+    paranoid: false,
+    timestamp: false,
+  },
+);
 
-const PayPalTransaction = db.define("paypaltransacion", {
-  transactionId: {
-    type: DataTypes.STRING,
-    allowNull: false
+const PayPalTransaction = db.define(
+  'paypaltransacion',
+  {
+    transactionId: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    orderId: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    status: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    emailAddress: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    firstName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    lastName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    grossAmount: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: false,
+    },
+    paypalFee: {
+      type: DataTypes.DECIMAL(3, 2),
+      allowNull: false,
+    },
   },
-  orderId: {
-    type: DataTypes.STRING,
-    allowNull: false
+  {
+    paranoid: false,
+    timestamp: false,
   },
-  status: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  emailAddress: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  firstName: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  lastName: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  grossAmount: {
-    type: DataTypes.DECIMAL(15, 2),
-    allowNull: false
-  },
-  paypalFee: {
-    type: DataTypes.DECIMAL(3, 2),
-    allowNull: false
-  },
-},
-{
-  paranoid: false,
-  timestamp: false
-});
+);
 
 // Cash On Delivery
-const CODTransaction = db.define("codtransaction", { },
-{
-  paranoid: false,
-  timestamp: false
-});
-
-const OrderItem = db.define("orderitem", {
-  quantity: {
-    type: DataTypes.INTEGER,
-    defaultValue: 1,
-    validate: {
-      isInt: {
-        msg: "Order's product quantity must be integer"
-      }
-    }
+const CODTransaction = db.define(
+  'codtransaction',
+  { },
+  {
+    paranoid: false,
+    timestamp: false,
   },
-  price: {
-    type: DataTypes.DECIMAL(7, 2),
-    defaultValue: 0,
-    allowNull: false
-  }
-},
+);
+
+const OrderItem = db.define(
+  'orderitem',
+  {
+    quantity: {
+      type: DataTypes.INTEGER,
+      defaultValue: 1,
+      validate: {
+        isInt: {
+          msg: "Order's product quantity must be integer",
+        },
+      },
+    },
+    price: {
+      type: DataTypes.DECIMAL(7, 2),
+      defaultValue: 0,
+      allowNull: false,
+    },
+  },
   {
     paranoid: true,
-    timestamp: true
-  });
+    timestamp: true,
+  },
+);
 
 OrderItem.belongsTo(Product, {
   foreignKey: 'productId',
-  allowNull: false
+  allowNull: false,
 });
 
 OrderItem.prototype.getTotal = async function () {
@@ -817,25 +849,26 @@ OrderItem.prototype.getTotal = async function () {
 };
 
 OrderItem.prototype.getTotalStr = async function () {
-  if (this.price != 0)
-  return (await db.query(
-    `SELECT
+  if (this.price !== 0) {
+    return (await db.query(
+      `SELECT
        ROUND(price * quantity, 2) AS total
      FROM orderitems
      WHERE orderitems.id = ${this.id} 
        AND orderitems."deletedAt" is NULL`,
-     {
-       type: 'SELECT',
-       plain: true,
-     }
-   )).total;
+      {
+        type: 'SELECT',
+        plain: true,
+      },
+    )).total;
+  }
 
-  let product = await this.getProduct();
+  const product = await this.getProduct();
 
   assert(product);
 
   return (await db.query(
-   `SELECT
+    `SELECT
       ROUND("discountPrice" * orderitems.quantity, 2) AS total
     FROM products, orderitems
     WHERE products.id = ${product.id} 
@@ -847,16 +880,16 @@ OrderItem.prototype.getTotalStr = async function () {
     {
       type: 'SELECT',
       plain: true,
-    }
+    },
   )).total;
-}
+};
 
 OrderItem.prototype.getTotalWithVAT = async function () {
   return parseFloat(await this.getTotalWithVATStr());
 };
 
 OrderItem.prototype.getTotalWithVATStr = async function () {
-    if (this.price != 0)
+  if (this.price !== 0) {
     return (await db.query(
       `SELECT
         calculate_vat(price * quantity,
@@ -867,10 +900,11 @@ OrderItem.prototype.getTotalWithVATStr = async function () {
       {
         type: 'SELECT',
         plain: true,
-      }
-      )).total;
+      },
+    )).total;
+  }
 
-  let product = await this.getProduct();
+  const product = await this.getProduct();
 
   assert(product);
 
@@ -888,30 +922,33 @@ OrderItem.prototype.getTotalWithVATStr = async function () {
     {
       type: 'SELECT',
       plain: true,
-    }
-  )).total;
-}
-
-const Order = db.define("order", {
-  orderedAt: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  status: {
-    type: DataTypes.SMALLINT,
-    allowNull: false,
-    validate: {
-      notNull: {
-        msg: "Order's status cannot be null"
-      }
     },
-    defaultValue: 0
-  }
-},
-{
-  paranoid: true,
-  timestamp: true
-});
+  )).total;
+};
+
+const Order = db.define(
+  'order',
+  {
+    orderedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    status: {
+      type: DataTypes.SMALLINT,
+      allowNull: false,
+      validate: {
+        notNull: {
+          msg: "Order's status cannot be null",
+        },
+      },
+      defaultValue: 0,
+    },
+  },
+  {
+    paranoid: true,
+    timestamp: true,
+  },
+);
 
 Order.belongsToMany(User, { through: 'user_orders', allowNull: false });
 User.belongsToMany(Order, { through: 'user_orders', allowNull: false });
@@ -921,29 +958,29 @@ OrderItem.belongsTo(Order);
 
 Order.prototype.getItems = function () {
   return this.getOrderItems();
-}
+};
 
 Order.prototype.getItemsCount = function () {
   return this.getOrderItems().length;
-}
+};
 
-/*Order.prototype.getTotal = async function () {
+/* Order.prototype.getTotal = async function () {
   var total = 0.0;
   var orderitems = await this.getOrderitems();
 
   assert(orderitems);
 
-  for(i = 0; i < orderitems.length; i++) 
+  for(i = 0; i < orderitems.length; i++)
   {
     total += parseFloat(await orderitems[i].getTotal());
   }
-  
+
   return total;
-}*/
+} */
 
 Order.prototype.getTotal = async function () {
   return parseFloat(await this.getTotalStr());
-}
+};
 
 Order.prototype.getTotalStr = async function () {
   // Big possibility for a bug
@@ -954,7 +991,7 @@ Order.prototype.getTotalStr = async function () {
   // prices
 
   // If not ordered
-  if (this.status == 0)
+  if (this.status == 0) {
     return (await db.query(
       `SELECT
         COALESCE( ROUND( SUM(orderitems.quantity *
@@ -968,8 +1005,9 @@ Order.prototype.getTotalStr = async function () {
       {
         type: 'SELECT',
         plain: true,
-      }
+      },
     )).total;
+  }
 
   return (await db.query(
     `SELECT
@@ -983,16 +1021,16 @@ Order.prototype.getTotalStr = async function () {
     {
       type: 'SELECT',
       plain: true,
-    }
+    },
   )).total;
-}
+};
 
 Order.prototype.getTotalWithVAT = async function () {
   return parseFloat(await this.getTotalWithVATStr());
-}
+};
 
 Order.prototype.getTotalWithVATStr = async function () {
-    // Big possibility for a bug
+  // Big possibility for a bug
   // If Order is not complete
   // calculate by current product
   // prices, if the order is ocmplete
@@ -1000,7 +1038,7 @@ Order.prototype.getTotalWithVATStr = async function () {
   // prices
 
   // If not ordered
-  if (this.status == 0)
+  if (this.status == 0) {
     return (await db.query(
       `SELECT
         COALESCE( SUM( ROUND( orderitems.quantity * products."discountPrice" *
@@ -1014,8 +1052,9 @@ Order.prototype.getTotalWithVATStr = async function () {
       {
         type: 'SELECT',
         plain: true,
-      }
+      },
     )).total;
+  }
 
   return (await db.query(
     `SELECT
@@ -1029,22 +1068,22 @@ Order.prototype.getTotalWithVATStr = async function () {
     {
       type: 'SELECT',
       plain: true,
-    }
+    },
   )).total;
-}
+};
 
-Order.prototype.orderedAtHTML = function() {
+Order.prototype.orderedAtHTML = function () {
   return this.orderedAt.toISOString().substring(0, 19);
-}
+};
 
-Order.prototype.getVATSum = async function() {
+Order.prototype.getVATSum = async function () {
   return parseFloat(this.getVATSumStr());
-}
+};
 
-Order.prototype.getVATSumStr = async function() {
-    if (this.status == 0)
-      return (await db.query(
-        `SELECT
+Order.prototype.getVATSumStr = async function () {
+  if (this.status == 0) {
+    return (await db.query(
+      `SELECT
           COALESCE( SUM( ROUND(
             products."discountPrice" * orderitems.quantity *
             ${configEcom.SETTINGS.vat}, 2)), 0.00) AS total
@@ -1054,14 +1093,15 @@ Order.prototype.getVATSumStr = async function() {
         WHERE orders.id = ${this.id}
           AND orders."deletedAt" is NULL
           AND orderitems."deletedAt" is NULL`,
-        {
-          type: 'SELECT',
-          plain: true,
-        }
-      )).total;
-  
+      {
+        type: 'SELECT',
+        plain: true,
+      },
+    )).total;
+  }
+
   return (await db.query(
-      `SELECT
+    `SELECT
         COALESCE( SUM( ROUND( orderitems.price * orderitems.quantity *
           ${configEcom.SETTINGS.vat}, 2)), 0.00) AS total
       FROM orderitems
@@ -1069,24 +1109,24 @@ Order.prototype.getVATSumStr = async function() {
       WHERE orders.id = ${this.id}
         AND orders."deletedAt" is NULL
         AND orderitems."deletedAt" is NULL`,
-      {
-        type: 'SELECT',
-        plain: true,
-      }
-      )).total;
-}
+    {
+      type: 'SELECT',
+      plain: true,
+    },
+  )).total;
+};
 
-Order.hasOne(Transaction, {foreignKey: {name: 'orderid'}});
-Transaction.belongsTo(Order, {foreignKey: {name: 'orderid'}});
+Order.hasOne(Transaction, { foreignKey: { name: 'orderid' } });
+Transaction.belongsTo(Order, { foreignKey: { name: 'orderid' } });
 
 Voucher.belongsToMany(Order, { through: 'order_vouches', allowNull: false, timestamps: false });
 Order.belongsToMany(Voucher, { through: 'order_vouches', allowNull: false, timestamps: false });
 
-Transaction.hasOne(PayPalTransaction, {foreignKey: {name: 'transactionid'}});
-PayPalTransaction.belongsTo(Transaction, {foreignKey: {name: 'transactionid'}});
+Transaction.hasOne(PayPalTransaction, { foreignKey: { name: 'transactionid' } });
+PayPalTransaction.belongsTo(Transaction, { foreignKey: { name: 'transactionid' } });
 
-Transaction.hasOne(CODTransaction, {foreignKey: {name: 'transactionid'}});
-CODTransaction.belongsTo(Transaction, {foreignKey: {name: 'transactionid'}});
+Transaction.hasOne(CODTransaction, { foreignKey: { name: 'transactionid' } });
+CODTransaction.belongsTo(Transaction, { foreignKey: { name: 'transactionid' } });
 
 /* Order statuses
 NOT_ORDERED = 0, _('Not Ordered')
@@ -1171,13 +1211,29 @@ function vouchers() {
 }
 
 function uservouchers() {
-  return UserVoucher
+  return UserVoucher;
 }
 
 module.exports = {
-  category, product, user, staff, session, permission, role, order, orderitem, transaction,
-  paypaltransacion, codtransaction, log, settings, targetgroups, targetgroupfilters, promotions,
-  vouchers, uservouchers
+  category,
+  product,
+  user,
+  staff,
+  session,
+  permission,
+  role,
+  order,
+  orderitem,
+  transaction,
+  paypaltransacion,
+  codtransaction,
+  log,
+  settings,
+  targetgroups,
+  targetgroupfilters,
+  promotions,
+  vouchers,
+  uservouchers,
 };
 
 // Alter the database
@@ -1195,7 +1251,7 @@ module.exports = {
 
   // Create the permissions
 
-  let permissions = [
+  const permissions = [
     'orders.create',
     'orders.read',
     'orders.update',
@@ -1218,8 +1274,7 @@ module.exports = {
     'staff.read',
     'staff.update',
     'staff.delete',
-    'report.read',
-    'report.export',
+    'reports.read',
     'audit.read',
     'settings.email',
     'settings.other',
@@ -1235,9 +1290,7 @@ module.exports = {
   ];
 
   for (let i = 0; i < permissions.length; i++) {
-    Permission.findOrCreate({ where: { name: permissions[i]} }).then((perm) => {
-      Role.findOne({where: {name: 'Admin'}}).then(role => { role.addPermission(perm[0]); });
-    });
+    Permission.findOrCreate({ where: { name: permissions[i] } });
   }
 
   // Create associations
@@ -1273,7 +1326,7 @@ module.exports = {
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'targetgroups.view'}}).then(perm => {role.addPermission(perm);})});
   Role.findOne({where: {name: 'Admin'}}).then(role => {Permission.findOne({where: {name: 'targetgroups.delete'}}).then(perm => {role.addPermission(perm);})});
   */
-  
+
   // Staff.findOne({where: {username: 'dakata'}}).then(user => {Role.findOne({where: {name: 'Admin'}}).then(role => {user.addRole(role);})});
 
   // Make staff
@@ -1287,5 +1340,4 @@ module.exports = {
     lastName: 'Gyudzhenev',
   });
   */
-
 })();
