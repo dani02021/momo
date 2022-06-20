@@ -935,7 +935,10 @@ async function getProductsAndOrderCount(offset, limit, name, cat, minval, maxval
 }
 
 function isSessionValid(staff) {
-  assert(staff instanceof Staff);
+  // assert(staff instanceof Staff);
+
+  // Staff not found
+  if (!staff) { return false; }
 
   if (!staff.lastActivity) { return true; }
 

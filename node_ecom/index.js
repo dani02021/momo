@@ -121,7 +121,7 @@ let linksTable = {
       arg: "targetgroups.create",
       loggerMsg: "Tried to create a target group without a permission"
     }, requireStaff: true, requireSession: true },
-    "/admin/promotions/targetgroup/view/:id": { func: routes.adminPromotionTargetGroupsView, requirePermission: {
+    "/admin/promotions/targetgroup/view/:id/:page?": { func: routes.adminPromotionTargetGroupsView, requirePermission: {
       arg: "targetgroups.view",
       loggerMsg: "Tried to view a target group without a permission"
     }, requireStaff: true, requireSession: true },
