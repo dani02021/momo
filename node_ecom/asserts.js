@@ -334,11 +334,7 @@ function onFalse(value, ctx, options = {}, message) {
     assert(typeof options === "object");
 
     message = options.message || message;
-<<<<<<< HEAD
     type = options.type || "100"; // Other error
-=======
-    type = options.type || "500"; // Other error
->>>>>>> origin/20220615
 
     if (options.throwError) {
         switch (options.throwError) {
