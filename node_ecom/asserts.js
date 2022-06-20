@@ -329,7 +329,7 @@ function onFalse(value, ctx, options = {}, message) {
     assert(typeof options === "object");
 
     message = options.message || message;
-    type = options.type || 
+    type = options.type || "100"; // Other error
 
     if (options.throwError) {
         switch (options.throwError) {
