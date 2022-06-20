@@ -303,7 +303,7 @@ app.use(async (ctx, next) => {
       if (dispatchTableRoute) {
         // Require session
         if (dispatchTableRoute.requireSession) { // TODO: Make as assert?
-          if (!ctx.session || !ctx.session.dataValues.staffUsername) { utilsEcom.onSessionExpired(ctx); return; }
+          if (!ctx.session || !ctx.session.dataValues || !ctx.session.dataValues.staffUsername) { utilsEcom.onSessionExpired(ctx); return; }
           
           let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
