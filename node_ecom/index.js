@@ -353,11 +353,6 @@ app.use(async (ctx, next) => {
   return await next();
 });
 
-// ERROR TYPES
-// 100 -> Undefined error
-// 101 -> No permission error
-// 102 -> Sequelize Validation error
-
 app.use(router.routes()).use(router.allowedMethods());
 
 app.use(favicon(__dirname + '/static/img/favicon.ico'));
@@ -381,14 +376,19 @@ app.on("error", (err, ctx) => {
     // Redirect
     err.status = 302;
 
-    console.log(err.type);
+    // TODO: Paypal if error happens its not showed
 
+    const e = configEcom.ERROR_TYPES;
     switch(err.type) {
-      case "101":
+      case e.NO_PERMISSION:
         err.headers = { 'Location': '/admin' };  
         break;
+      case e.VOUCHERS_TOO_MUCH_COUNT:
+      case e.VOUCHERS_TOO_MUCH_VALUE:
+        err.headers = { 'Location': '/cart' };
+        break;
       default: // TODO: If ctx.path also throw error it will infinity be redirecting !
-        err.headers = { 'Location': ctx.path };
+        // err.headers = { 'Location': ctx.path };
         break;
     }
 

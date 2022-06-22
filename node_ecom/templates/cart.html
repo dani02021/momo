@@ -75,35 +75,29 @@
                                     <p>Sub Total (Without VAT)<span id="subtotal">$<%= subTotal %></span></p>
                                     <p>VAT<span id="vatsum">$<%= orderVATSum %></span></p>
                                     <h2>Grand Total<span id="grandtotal">$<%= grandTotal %></span></h2>
-                                    <br>
-                                    <div class="checkout-coupons">
-                                        <h1>Vouchers</h1>
-                                        <% for (i=0; i<vouchers.length; i++) { %>
-                                            <div class="media position-relative"
-                                                style="background-color: #9999; border: solid #999999;"
-                                                data-id="<%= vouchers[i].id %>">
-                                                <div class="media-body checkout-body">
-                                                    <h5 class="mt-0"><%= (await vouchers[i].getPromotion()).name %></h5>
-                                                    <p>Price: <%= vouchers[i].value %> USD</p>
-                                                    <a href="#" class="stretched-link" onclick="return toggleCoupon(this);"></a>
+                                    <% if (vouchers.length) { %>
+                                        <br>
+                                        <div class="checkout-coupons">
+                                            <h1>Vouchers</h1>
+                                            <% for (i=0; i<vouchers.length; i++) {  %>
+                                                <div class="media position-relative"
+                                                    style="background-color: #9999; border: solid #999999;"
+                                                    data-id="<%= vouchers[i].dataValues.voucherId %>">
+                                                    <div class="media-body checkout-body">
+                                                        <h3 style="margin-left: 10px;"><%= (await vouchers[i].getPromotion()).name %></h3>
+                                                        <p style="margin-left: 10px;">Price: <%= vouchers[i].value %> USD</p>
+                                                        <a href="#" class="stretched-link" onclick="return toggleCoupon(this);"></a>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <br>
-                                        <% } %>
-                                        <div class="media position-relative"
-                                            style="background-color: #9999; border: solid #999999;">
-                                            <div class="media-body checkout-body">
-                                              <h5 class="mt-0">Coupon Females only</h5>
-                                              <p>Price: 10 USD</p>
-                                              <a href="#" class="stretched-link"></a>
-                                            </div>
+                                                <br>
+                                            <% } %>
                                         </div>
-                                    </div>
+                                    <% } %>
                                 </div>
                                 <div class="cart-btn">
-                                    <% if (session.dataValues.username) { %>
+                                    <% if (session.dataValues && session.dataValues.username) { %>
                                         <button
-                                            onclick="javascript:window.location.href = '/checkout';">Checkout</button>
+                                            onclick="gotoCheckout(this);">Checkout</button>
                                         <% } else { %>
                                             <button data-bs-toggle="modal" data-bs-target="#loginModal"
                                                 href="">Checkout</button>
@@ -118,6 +112,8 @@
     </div>
 </div>
 <script>
+    let vouchers = [];
+    
     function toggleCoupon(elem) {
         let parent = elem.parentElement.parentElement;
 
@@ -132,6 +128,19 @@
         }
 
         return false;
+    }
+
+    // TODO: Mapping table for cart vouchers - Velko
+
+    function gotoCheckout(elem) {
+        let couponGetParams = "";
+
+        for (v of vouchers)
+            couponGetParams += `vouchers=${v}&`;
+        
+        couponGetParams = couponGetParams.substring(0, couponGetParams.length - 1);
+
+        window.location.href = `/checkout?${couponGetParams}`;
     }
 </script>
 <!-- Cart End -->

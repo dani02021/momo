@@ -77,7 +77,7 @@ async function handleError(err, options) {
     assert(typeof options === "object");
 
     if ((err.errors && err.errors[0] instanceof ValidationErrorItem)
-        || err.name === "SequelizeDatabaseError" || err instanceof ClientException) {
+         || err instanceof ClientException) {
             // Don't log the error
 
             return;

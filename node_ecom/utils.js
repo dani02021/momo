@@ -15,7 +15,7 @@ const { id, user } = require('rangen');
 const PDFDocument = require('pdfkit-table');
 const assert = require('assert/strict');
 
-const exceptions = require('./exceptions');
+const {ClientException, NotEnoughQuantityException} = require('./exceptions');
 const configEcom = require('./config');
 const { Sequelize } = require('./db');
 const loggerEcom = require('./logger');
@@ -318,11 +318,24 @@ async function getCartQuantity(ctx) {
  *
  * @param {string | number} orderId
  * @param {boolean} debug
- * @return PayPal responce object
+ * @return PayPal response object
  */
-async function captureOrder(orderId, debug) {
+async function captureOrder(orderId, orderPrice, debug = false) {
   try {
     assert(typeof orderId === 'string' || typeof orderId === 'number');
+
+    const details = new paypal.orders.OrdersGetRequest(orderId);
+
+    const detailsResponse = await paypalClient.execute(details);
+
+    // Check for price
+    console.log(detailsResponse.result.purchase_units);
+    let payedPrice = parseFloat(detailsResponse.result.purchase_units[0].amount.value);
+
+    console.log(await sumArrayInPostgres([orderPrice, -payedPrice]));
+    // More than 1 cent difference
+    if (Math.abs(await sumArrayInPostgres([orderPrice, -payedPrice])) > 0.01)
+        { throw new ClientException("Unexpected error occured! Please contact us!", configEcom.ERROR_TYPES.ORDER_PAYMENT_PRICE_DIFF); }
 
     const request = new paypal.orders.OrdersCaptureRequest(orderId);
     request.requestBody({});
@@ -351,6 +364,9 @@ async function captureOrder(orderId, debug) {
     }
     return response;
   } catch (e) {
+    if (e instanceof ClientException)
+      throw e;
+    
     loggerEcom.handleError(e, { fileOnly: true });
 
     loggerEcom.logger.log(
@@ -431,7 +447,7 @@ async function removeProductQtyFromOrder(cart) {
     const cartProduct = await cartOrderItems[i].getProduct();
 
     if (cartProduct.quantity < cartOrderItems[i].quantity) {
-      const err = new exceptions.NotEnoughQuantityException(`${cartProduct.name} has only ${cartProduct.quantity} quantity, but order #${cartOrderItems[i].id} is trying to order ${cartOrderItems[i].quantity}!`);
+      const err = new NotEnoughQuantityException(`${cartProduct.name} has only ${cartProduct.quantity} quantity, but order #${cartOrderItems[i].id} is trying to order ${cartOrderItems[i].quantity}!`);
 
       loggerEcom.logger.log(
         'alert',
@@ -1209,6 +1225,24 @@ function richToString(value) {
   return value.richText.map(({ text }) => text).join('');
 }
 
+/**
+ * Sums the array, if the sum < 0, return 0
+ * @param {object} array 
+ * @returns 
+ */
+async function sumArrayInPostgres(array) {
+  return (await db.query(
+    `SELECT
+      GREATEST(SUM(values), 0.00)            AS total
+    FROM
+      UNNEST(ARRAY [${array.toString()}])    AS values`, {
+        mapToModel: false,
+        plain: true,
+        type: 'SELECT'
+      }
+  )).total;
+}
+
 // Settings
 configEcom.loadSettings(Settings.findAll());
 
@@ -1282,4 +1316,5 @@ module.exports = {
   onSessionExpired,
   isRichValue,
   richToString,
+  sumArrayInPostgres,
 };

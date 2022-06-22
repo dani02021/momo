@@ -1543,6 +1543,10 @@ h2 {
     width: auto;
 }
 
+.cart-page .cart-content .coupon-selected {
+    border: solid #fffe4b9e !important;
+}
+
 .cart-page .table input {
     width: 40px;
     height: 30px;
@@ -1802,10 +1806,6 @@ h2 {
 
 .checkout .checkout-coupons .checkout-body {
     margin: 10px;
-}
-
-.checkout .checkout-coupons .coupon-selected {
-    border: solid #fffe4b9e !important;
 }
 
 .checkout .checkout-summary p.sub-total,

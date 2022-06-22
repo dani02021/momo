@@ -7,6 +7,7 @@ const loggerEcom = require('./logger');
 const models = require('./models');
 
 const db = require('./db');
+const { ClientException } = require('./exceptions.js');
 
 const { Op } = Sequelize;
 
@@ -25,6 +26,7 @@ const TargetGroup = models.targetgroups();
 const TargetGroupFilters = models.targetgroupfilters();
 const Promotion = models.promotions();
 const Voucher = models.vouchers();
+const UserVoucher = models.uservouchers();
 
 module.exports = {
 
@@ -463,8 +465,20 @@ module.exports = {
 
   addToCart: async (ctx) => {
     // Invalid request
-    if (!Number.isSafeInteger(Number(ctx.query.quantity)) || !Math.sign(Number(ctx.query.quantity)) > 0) {
+    if (!Number.isSafeInteger(Number(ctx.query.quantity)) ||
+      !Math.sign(Number(ctx.query.quantity)) > 0) {
       ctx.session.messages = { 'otherError': 'Invalid quantity of product' };
+
+      if (ctx.query.cart)
+        ctx.redirect('/cart');
+      ctx.redirect('/products');
+
+      return;
+    }
+
+    if (!Number.isSafeInteger(Number(ctx.query.id)) ||
+      !Math.sign(Number(ctx.query.id)) > 0) {
+      ctx.session.messages = { 'otherError': 'Invalid product' };
 
       if (ctx.query.cart)
         ctx.redirect('/cart');
@@ -819,7 +833,7 @@ module.exports = {
 
     const orderitem = await OrderItem.findOne({
       where: {
-        productId: ctx.params.id
+        productId: ctx.query.id
       },
       include: [{
         model: Order,
@@ -829,7 +843,7 @@ module.exports = {
         }
       }],
       defaults: {
-        productId: ctx.params.id,
+        productId: ctx.query.id,
         quantity: ctx.query.quantity,
       }
     });
@@ -973,6 +987,7 @@ module.exports = {
         selected: 'cart',
         cartQty: cartQty,
         items: orderitems,
+        vouchers: [],
         products: products,
         totals: totalsVAT,
         subTotal: subTotal,
@@ -1029,7 +1044,30 @@ module.exports = {
 
     let user = await User.findOne({ where: { username: ctx.session.dataValues.username } });
 
-    let vouchers = await user.getVouchers();
+    let vouchers = await db.query(
+      `SELECT 
+        user_vouchers."voucherId", vouchers."endDate", vouchers.value, vouchers."promotionId",
+        promotions.name, "targetgroupId"
+      FROM vouchers
+      INNER JOIN promotions       ON promotions.id = vouchers."promotionId"
+      INNER JOIN user_vouchers    ON user_vouchers."voucherId" = vouchers.id
+        LEFT JOIN order_vouchers  ON order_vouchers."userVoucherId" = user_vouchers.id
+      WHERE
+              "userId" = $1
+          AND order_vouchers."userVoucherId" IS NULL
+          AND vouchers."deletedAt" IS NULL
+          AND promotions."deletedAt" IS NULL
+          AND promotions."startDate" <= '${new Date().toISOString().split('T')[0]}'
+          AND vouchers."endDate" >= '${new Date().toISOString().split('T')[0]}'`,
+          //AND active = true`,
+      {
+        type: 'SELECT',
+        plain: false,
+        model: Voucher,
+        mapToModel: true,
+        bind: [user.id]
+      }
+    );
 
     await ctx.render('cart', {
       session: ctx.session,
@@ -1102,8 +1140,41 @@ module.exports = {
     }
 
     let subTotal = await order.getTotalStr();
-    let grandTotal = await order.getTotalWithVATStr();
+    let subTotalVAT = await order.getTotalWithVATStr(); 
+    let grandTotal = subTotalVAT;
     let orderVATSum = await order.getVATSumStr();
+
+    let vouchers = [];
+
+    if (ctx.query.vouchers) {
+      let vouchersId = ctx.query.vouchers;
+
+      if (vouchersId instanceof Array)
+      { throw new ClientException(`Voucher's count is too much`, configEcom.ERROR_TYPES.VOUCHERS_TOO_MUCH_COUNT); }
+
+      vouchers = await Voucher.findAll({where: { id: vouchersId }, include: [{ model: Promotion, required: true }]});
+      
+      // Sort vouchers as closer as the total order price, positive vouchers are more important
+      vouchers.sort( function (a, b) {
+        return (b.dataValues.value - parseFloat(grandTotal)) - (a.dataValues.value - parseFloat(grandTotal));
+      });
+
+      let voucherSum = 0;
+
+      for (let i = 0; i < vouchers.length; i++) {
+        voucherSum += vouchers[i].dataValues.value;
+
+        if (   voucherSum > parseFloat(grandTotal)
+            && i != vouchers.length - 1)
+            { throw new ClientException(`Voucher's sum value is too much`, configEcom.ERROR_TYPES.VOUCHERS_TOO_MUCH_VALUE); }
+      }
+
+      let voucherValues = vouchers.map(x => parseFloat(x.dataValues.value));
+
+      var vouchersSum = await utilsEcom.sumArrayInPostgres(voucherValues);
+    
+      grandTotal = await utilsEcom.sumArrayInPostgres([parseFloat(grandTotal), -vouchersSum]);
+    }
 
     let cartQty = await utilsEcom.getCartQuantity(ctx);
 
@@ -1114,10 +1185,13 @@ module.exports = {
       user: user,
       items: orderitems,
       products: products,
+      vouchers: vouchers,
       totals: totals,
       subTotal: subTotal,
+      subTotalVAT: subTotalVAT,
       grandTotal: grandTotal,
       orderVATSum: orderVATSum,
+      vouchersSum: vouchersSum,
     });
 
     // Clear the messages
@@ -1171,7 +1245,7 @@ module.exports = {
       utilsEcom.parseEmailPlaceholders(configEcom.SETTINGS.email_order_lower, user, order));
 
     if (ctx.request.fields.type == 'paypal') {
-      let responce = await utilsEcom.captureOrder(ctx.request.fields.orderID);
+      let responce = await utilsEcom.captureOrder(ctx.request.fields.orderID, await order.getTotalWithVAT());
 
       await transaction.createPaypaltransacion({
         transactionId: responce.result.id,
@@ -1197,7 +1271,20 @@ module.exports = {
         orderitems[i].update({ price: (await orderitems[i].getProduct()).discountPrice });
       }
 
-      await order.update({ status: 5, orderedAt: Sequelize.fn('NOW') });
+      // If order's price is 0 with the vouchers, set the status to PAID
+      let voucherIds = ctx.request.fields.vouchers;
+      let vouchers = await Voucher.findAll({where: { id: voucherIds }});
+      let voucherValues = vouchers.map(x => parseFloat(x.dataValues.value));
+      let vouchersSum = await utilsEcom.sumArrayInPostgres(voucherValues);
+
+      if (await utilsEcom.sumArrayInPostgres([await order.getTotalWithVAT(), -vouchersSum]) == 0)
+            { await order.update({ status: 1, orderedAt: Sequelize.fn('NOW') }); }
+      else
+            { await order.update({ status: 5, orderedAt: Sequelize.fn('NOW') }); }
+      
+      let userVouchers = await UserVoucher.findAll({where: { userId: user.id, voucherId: voucherIds }});
+
+      await order.setUser_vouchers(userVouchers);
 
       await utilsEcom.removeProductQtyFromOrder(order);
 
@@ -1211,7 +1298,7 @@ module.exports = {
 
   admin: async (ctx) => {
     if (await utilsEcom.isAuthenticatedStaff(ctx)) {
-      let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername }});
+      let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
       const orders = await Order.findAll({
         where: {
@@ -1354,7 +1441,7 @@ module.exports = {
     let offset = 0;
     if (ctx.params.page) {
       page = parseInt(ctx.params.page);
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     let categoriesNames = {};
@@ -1608,7 +1695,7 @@ module.exports = {
     let offset = 0;
 
     if (ctx.params.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     let result = await db.query(`SELECT * FROM users 
@@ -1746,7 +1833,7 @@ module.exports = {
     let offset = 0;
 
     if (ctx.params.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     const result = await db.query(`SELECT * FROM staffs WHERE
@@ -2391,7 +2478,7 @@ module.exports = {
     let offset = 0;
 
     if (ctx.params.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     const result = await Order.findAndCountAll({
@@ -2666,7 +2753,7 @@ module.exports = {
     let offset = 0;
 
     if (ctx.params.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     let time = 'month';
@@ -3238,7 +3325,7 @@ module.exports = {
     let offset = 0;
 
     if (ctx.params.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     let query =
@@ -3298,7 +3385,7 @@ module.exports = {
     let offset = 0;
 
     if (ctx.params.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     // Get filters
@@ -3711,7 +3798,7 @@ module.exports = {
     let offset = 0;
 
     if (ctx.params.page) {
-      offset = (parseInt(ctx.request.fields.page) - 1) * limit;
+      offset = (parseInt(ctx.params.page) - 1) * limit;
     }
 
     if (ctx.query.name) {
@@ -3878,21 +3965,26 @@ module.exports = {
       max: new Date(endDate)
     });
 
-    assert_isDateAfter(new Date(startDate), ctx, {
+    /* Locale problems
+    * assert_isDateAfter(new Date(startDate), ctx, {
       throwError: 'client',
       message: 'Start date of promotion cannot be before today',
       max: new Date(new Date().toLocaleDateString('en-ZA'))
-    });
+      });
+    */
 
     // TODO: Test isDateAfter + send email immediately
 
     await db.transaction(async (dbTr) => {
       let [promotion, created] = await Promotion.findOrCreate({
         where: {
-          name: name,
+          name: name
+        },
+        defaults: {
           startDate: startDate,
           endDate: endDate
         },
+        paranoid: false,
         transaction: dbTr
       });
 
@@ -3905,11 +3997,8 @@ module.exports = {
             startDate: startDate,
             endDate: endDate
           }, { transaction: dbTr, paranoid: false });
-
-          await promotion.setTargetgroup();
-          await promotion.setVoucher();
         } else {
-          ctx.body = { 'error': 'Target group already exists' };
+          ctx.body = { 'error': 'Promotion with that name already exists' };
 
           return;
         }

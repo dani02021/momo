@@ -658,12 +658,12 @@ const Voucher = db.define('voucher', {
 });
 
 const UserVoucher = db.define('user_voucher', {
-  used: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-    allowNull: false,
+  id: {
+    type: DataTypes.BIGINT,
+    autoIncrement: true,
+    primaryKey: true,
   },
-  activated: {
+  active: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
     allowNull: false,
@@ -889,7 +889,7 @@ OrderItem.prototype.getTotalWithVAT = async function () {
 };
 
 OrderItem.prototype.getTotalWithVATStr = async function () {
-  if (this.price !== 0) {
+  if (this.price != 0) {
     return (await db.query(
       `SELECT
         calculate_vat(price * quantity,
@@ -1119,8 +1119,8 @@ Order.prototype.getVATSumStr = async function () {
 Order.hasOne(Transaction, { foreignKey: { name: 'orderid' } });
 Transaction.belongsTo(Order, { foreignKey: { name: 'orderid' } });
 
-Voucher.belongsToMany(Order, { through: 'order_vouches', allowNull: false, timestamps: false });
-Order.belongsToMany(Voucher, { through: 'order_vouches', allowNull: false, timestamps: false });
+UserVoucher.belongsToMany(Order, { through: 'order_vouchers', allowNull: false, timestamps: false });
+Order.belongsToMany(UserVoucher, { through: 'order_vouchers', allowNull: false, timestamps: false });
 
 Transaction.hasOne(PayPalTransaction, { foreignKey: { name: 'transactionid' } });
 PayPalTransaction.belongsTo(Transaction, { foreignKey: { name: 'transactionid' } });
@@ -1281,7 +1281,7 @@ module.exports = {
     'targetgroups.create',
     'targetgroups.read',
     'targetgroups.update',
-    // 'targetgroups.view',
+    'targetgroups.view',
     'targetgroups.delete',
     'promotions.create',
     'promotions.read',

@@ -347,6 +347,19 @@ let PROMOTION_STATUSES = [
     'pending', 'active', 'expired'
 ];
 
+const ERROR_TYPES = {
+	// Back-end
+	NO_PERMISSION: 101,
+	SEQUELIZE_VALIDATION: 102,
+
+	// Front-end
+	VOUCHERS_TOO_MUCH_COUNT: 201,
+	VOUCHERS_TOO_MUCH_VALUE: 202,
+	ORDER_PAYMENT_PRICE_DIFF: 210,
+
+	UNDEFINED: 100
+}
+
 /**
  * 
  * @param {object} settings 
@@ -381,6 +394,7 @@ async function loadSettings(settings)
                 if (res.statusCode === 200) {
                     try {
                         var data = JSON.parse(json);
+
                         // data is available here:
                         COUNTRY_LIST = [];
 
@@ -412,5 +426,6 @@ module.exports = {
     COUNTRY_LIST,
     PRODUCT_IMPORT_TABLE_HEADERS,
     PROMOTION_STATUSES,
+	ERROR_TYPES,
     loadSettings
 }

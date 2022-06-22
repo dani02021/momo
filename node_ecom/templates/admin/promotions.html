@@ -74,7 +74,6 @@
                                     <th scope="col" class="clickable">VALIDITY</th>
                                     <th scope="col" class="clickable">VALUE</th>
                                     <th scope="col" class="clickable">TARGET GROUP</th>
-                                    <th scope="col" style="text-align: right;">ACTION</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -116,12 +115,6 @@
                                       <b>
                                         <%= (await promotions[i].getTargetgroup()).name %>
                                       </b>
-                                    </td>
-                                    <td style="text-align: right;">
-                                      <a href="/admin/promotions/view/<%= promotions[i].id %>"
-                                        class="tm-order-edit-link">
-                                        <i class="fas fa-search tm-order-edit-icon"></i>
-                                      </a>
                                     </td>
                                     </tr>
                                     <% } %>

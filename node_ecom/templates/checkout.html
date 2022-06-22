@@ -46,20 +46,34 @@
                                         $<%= totals[i] %>
                                     </span>
                             </p>
-                            <% } %>
+                        <% } %>
                                 <p>Sub Total (Without VAT)<span id="subtotal">
                                         $<%= subTotal %>
                                     </span></p>
                                 <p>VAT<span id="subvat">
                                         $<%= orderVATSum %>
                                     </span></p>
-                                <h2>Grand Total<span>
-                                        $<%= grandTotal %>
+                                <% if (vouchers && vouchers.length > 0) { %>
+                                <% for(i=0; i < vouchers.length; i++) { console.log(vouchers[i].dataValues) %>
+                                    <p><%= vouchers[i].dataValues.promotion.name %><span>
+                                        -$<%= vouchers[i].dataValues.value %>
+                                    </span></p>
+                                <% } %>
+                                <h2>Without vouchers<span>
+                                        $<%= subTotalVAT %>
                                     </span></h2>
+                                <h2>Vouchers<span>
+                                    -$<%= vouchersSum %>
+                                    </span></h2>
+                                <% } %>
+                                <h2>Grand Total<span>
+                                    $<%= grandTotal %>
+                                </span></h2>
                     </div>
                     <div class="checkout-payment">
                         <div class="payment-methods">
                             <h1>Payment Methods</h1>
+                            <% if (grandTotal != 0) { %>
                             <div class="payment-method">
                                 <div class="custom-control custom-radio">
                                     <input type="radio" class="custom-control-input" id="payment-1"
@@ -67,17 +81,29 @@
                                     <label class="custom-control-label" for="payment-1">PayPal</label>
                                 </div>
                             </div>
+                            <% } %>
                             <div class="payment-method">
                                 <div class="custom-control custom-radio">
                                     <input type="radio" class="custom-control-input" id="payment-2"
-                                        onclick="javascript:checkRadio(1);" name="payment">
+                                        onclick="javascript:checkRadio(1);" name="payment"
+                                        <% if (grandTotal == 0) { %>
+                                            checked
+                                        <% } %>>
                                     <label class="custom-control-label" for="payment-2">Наложен</label>
                                 </div>
                             </div>
-                            <div class="payment-method">
-                                <div id="paypal-button-container"></div>
-                            </div>
-                            <div class="checkout-btn" id="check-btn" style="display: none;">
+                            <% if (grandTotal != 0) { %>
+                                <div class="payment-method">
+                                    <div id="paypal-button-container"></div>
+                                </div>
+                            <% } %>
+                            <div class="checkout-btn" id="check-btn"
+                                <% if (grandTotal != 0) { %>
+                                    style="display: none;"
+                                <% } else { %>
+                                    style="display: block;"
+                                <% } %>
+                                >
                                 <button onclick="fetchCODPayment(this);">Place Order</button>
                             </div>
                         </div>
@@ -89,11 +115,12 @@
     <script
         src="https://www.paypal.com/sdk/js?client-id=AcUxHET3nbJ-rUnzZPhIJ7MKIEzb0a_8k6fh9MnDI74xUfWlF5xi9n17ra2aKGtbaMiwq98410rjt03F&currency=USD"></script>
     <script>
-        let vouchers = [];
+        let thisURL = new URL(window.location.href);
+        let thisURLSearch = new URLSearchParams(thisURL.search);
+        let vouchers = thisURLSearch.getAll('vouchers');
 
         // Render the PayPal button into #paypal-button-container
         paypal.Buttons({
-
             style: {
                 color: 'blue',
                 shape: 'pill',
@@ -108,7 +135,8 @@
                 return actions.order.create({
                     purchase_units: [{
                         amount: {
-                            value: '<%= grandTotal %>'
+                            value: '<%= grandTotal %>',
+                            currency: 'USD',
                         }
                     }]
                 });
@@ -124,7 +152,8 @@
                     body: JSON.stringify({
                         orderID: data.orderID,
                         type: "paypal",
-                        base: data
+                        base: data,
+                        vouchers: vouchers
                     })
                 }).then(function (res) {
                     if (!res.ok) {
@@ -176,7 +205,8 @@
                     'content-type': 'application/json'
                 },
                 body: JSON.stringify({
-                    type: "cod"
+                    type: "cod",
+                    vouchers: vouchers
                 })
             }).then(function (res) {
                 if (!res.ok) {
