@@ -1,5 +1,6 @@
 const { Sequelize, ValidationError } = require('sequelize');
 const fs = require('fs');
+const mv = require('mv');
 const { assert_isValidISODate, assert_notNull, assert_regex, assert_isNonNegativeNumber, assert_isInteger, assert_isElementInArrayCaseInsensitive, assert_isDateAfter } = require('./asserts.js');
 const utilsEcom = require('./utils');
 const configEcom = require('./config');
@@ -1230,6 +1231,12 @@ module.exports = {
     const user = (await order.getUsers())[0];
     const transaction = await Transaction.create({ type: ctx.request.fields.type });
 
+    let voucherIds = ctx.request.fields.vouchers;
+    let vouchers = await Voucher.findAll({where: { id: voucherIds }});
+    let voucherValues = vouchers.map(x => parseFloat(x.dataValues.value));
+    let vouchersSum = await utilsEcom.sumArrayInPostgres(voucherValues);
+    let orderGrandTotal = await utilsEcom.sumArrayInPostgres([await order.getTotalWithVAT(), -vouchersSum]);
+
     // Order complete
     utilsEcom.sendEmail(configEcom.SETTINGS.email_order_sender, user.dataValues.email,
       utilsEcom.parseEmailPlaceholders(configEcom.SETTINGS.email_order_subject, user, order), null,
@@ -1245,7 +1252,7 @@ module.exports = {
       utilsEcom.parseEmailPlaceholders(configEcom.SETTINGS.email_order_lower, user, order));
 
     if (ctx.request.fields.type == 'paypal') {
-      let responce = await utilsEcom.captureOrder(ctx.request.fields.orderID, await order.getTotalWithVAT());
+      let responce = await utilsEcom.captureOrder(ctx.request.fields.orderID, orderGrandTotal);
 
       await transaction.createPaypaltransacion({
         transactionId: responce.result.id,
@@ -1272,12 +1279,7 @@ module.exports = {
       }
 
       // If order's price is 0 with the vouchers, set the status to PAID
-      let voucherIds = ctx.request.fields.vouchers;
-      let vouchers = await Voucher.findAll({where: { id: voucherIds }});
-      let voucherValues = vouchers.map(x => parseFloat(x.dataValues.value));
-      let vouchersSum = await utilsEcom.sumArrayInPostgres(voucherValues);
-
-      if (await utilsEcom.sumArrayInPostgres([await order.getTotalWithVAT(), -vouchersSum]) == 0)
+      if (orderGrandTotal == 0)
             { await order.update({ status: 1, orderedAt: Sequelize.fn('NOW') }); }
       else
             { await order.update({ status: 5, orderedAt: Sequelize.fn('NOW') }); }
@@ -3087,7 +3089,7 @@ module.exports = {
       selected: 'audit',
       report: result,
       filters: filtersToReturn,
-      levels: utilsEcom.LOG_LEVELS,
+      levels: configEcom.LOG_LEVELS,
       page: page,
       pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS['elements_per_page']))
     });
@@ -4011,9 +4013,7 @@ module.exports = {
 
       let targetUsers = await targetgroup.getUsers();
 
-      for (i = 0; i < targetUsers.length; i++) {
-        await voucher.addUser(targetUsers[i], { transaction: dbTr });
-      }
+      await voucher.addUsers(targetUsers, {transaction: dbTr});
 
       await promotion.setTargetgroup(targetgroup, { transaction: dbTr });
     });

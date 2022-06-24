@@ -329,10 +329,8 @@ async function captureOrder(orderId, orderPrice, debug = false) {
     const detailsResponse = await paypalClient.execute(details);
 
     // Check for price
-    console.log(detailsResponse.result.purchase_units);
     let payedPrice = parseFloat(detailsResponse.result.purchase_units[0].amount.value);
 
-    console.log(await sumArrayInPostgres([orderPrice, -payedPrice]));
     // More than 1 cent difference
     if (Math.abs(await sumArrayInPostgres([orderPrice, -payedPrice])) > 0.01)
         { throw new ClientException("Unexpected error occured! Please contact us!", configEcom.ERROR_TYPES.ORDER_PAYMENT_PRICE_DIFF); }
@@ -1235,7 +1233,7 @@ async function sumArrayInPostgres(array) {
     `SELECT
       GREATEST(SUM(values), 0.00)            AS total
     FROM
-      UNNEST(ARRAY [${array.toString()}])    AS values`, {
+      UNNEST(ARRAY [${array.toString()}]::integer[])    AS values`, {
         mapToModel: false,
         plain: true,
         type: 'SELECT'

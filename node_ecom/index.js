@@ -376,8 +376,6 @@ app.on("error", (err, ctx) => {
     // Redirect
     err.status = 302;
 
-    // TODO: Paypal if error happens its not showed
-
     const e = configEcom.ERROR_TYPES;
     switch(err.type) {
       case e.NO_PERMISSION:

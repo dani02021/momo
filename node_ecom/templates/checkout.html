@@ -147,6 +147,7 @@
                 return fetch('/captureOrder', {
                     method: 'POST',
                     headers: {
+                        'Accept': 'application/json',
                         'content-type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -174,12 +175,18 @@
                 }).then(function (details) {
                     // alert('Transaction funds captured from ' + details.payer_given_name);
 
+                    // Legacy
                     if (details.status == 'ok') {
                         showPaymentModal()
                     } else if (details.status == 'error') {
                         showHiddenAlert('alert-danger', 'fa-exclamation-triangle', details.msg)
                     } else if (details.status == 'alert') {
                         showHiddenAlert('alert-warning', 'fa-circle-exclamation', details.msg)
+                    }
+
+                    // New way
+                    if (details.error) {
+                        showHiddenAlert('alert-danger', 'fa-exclamation-triangle', details.error);
                     }
                 });
             }
@@ -202,6 +209,7 @@
             fetch('/captureOrder', {
                 method: 'POST',
                 headers: {
+                    'Accept': 'application/json',
                     'content-type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -227,6 +235,7 @@
             }).then(function (details) {
                 // alert('Transaction funds captured from ' + details.payer_given_name);
 
+                // Legacy
                 if (details.status == 'ok') {
                     showPaymentModal()
                 } else if (details.status == 'error') {
@@ -234,6 +243,11 @@
                 } else if (details.status == 'alert') {
                     showHiddenAlert('alert-warning', 'fa-circle-exclamation', details.msg)
                 }
+
+                // New way
+                if (details.error) {
+                        showHiddenAlert('alert-danger', 'fa-exclamation-triangle', details.error);
+                    }
             });
         }
     </script>
