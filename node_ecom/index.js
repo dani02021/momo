@@ -10,21 +10,12 @@ const utilsEcom = require("./utils.js");
 const configEcom = require("./config.js");
 const loggerEcom = require("./logger.js");
 const session = require('koa-session');
-const assert = require('assert/strict');
-const ExcelJS = require('exceljs');
 const favicon = require('koa-favicon');
-const { PassThrough } = require("stream");
-const { imageHash } = require('image-hash');
-const { ClientException, NotEnoughQuantityException } = require('./exceptions.js');
-var mv = require('mv');
 
-const { Sequelize, ValidationError, ValidationErrorItem } = require("sequelize");
+const { Sequelize, ValidationErrorItem } = require("sequelize");
 
 const models = require("./models.js");
-const { parse, resolve } = require('path');
-const { bind } = require('koa-route');
-const { assert_isValidISODate, assert_notNull, assert_stringLength, assert_regex, assert_isSafeInteger, assert_isNonNegativeNumber, assert_isInteger, assert_isElementInArrayCaseInsensitive, assert_isDateAfter, assert_hasPermission } = require('./asserts.js');
-const { AssertionError } = require('assert');
+const { assert_hasPermission } = require('./asserts.js');
 const Staff = models.staff();
 
 const app = new Koa();

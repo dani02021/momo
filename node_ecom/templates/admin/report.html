@@ -47,6 +47,8 @@
                 <th scope="col" class="clickable">SUB TOTAL</th>
                 <th scope="col" class="clickable">VAT</th>
                 <th scope="col" class="clickable">GRAND TOTAL</th>
+                <th scope="col" class="clickable">VOUCHERS SUM</th>
+                <th scope="col" class="clickable">TOTAL - VOUCHERS</th>
               </tr>
             </thead>
             <tbody>
@@ -58,6 +60,8 @@
                 <td style="text-align: right;"><b>$<%= report[i].dataValues.subtotal %></b></td>
                 <td style="text-align: right;"><b>$<%= report[i].dataValues.vatsum %></b></td>
                 <td style="text-align: right;"><b>$<%= report[i].dataValues.grandtotal %></b></td>
+                <td style="text-align: right;"><b>$<%= report[i].dataValues.vouchersSum %></b></td>
+                <td style="text-align: right;"><b>$<%= report[i].dataValues.grandtotal - report[i].dataValues.vouchersSum %></b></td>
               </tr>
               <% } %>
             </tbody>

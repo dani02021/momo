@@ -808,7 +808,7 @@ const PayPalTransaction = db.define(
 // Cash On Delivery
 const CODTransaction = db.define(
   'codtransaction',
-  { },
+  {},
   {
     paranoid: false,
     timestamp: false,
@@ -1072,6 +1072,69 @@ Order.prototype.getTotalWithVATStr = async function () {
   )).total;
 };
 
+Order.prototype.getVouchers = async function () {
+  return parseFloat(await this.getVouchersStr());
+}
+
+Order.prototype.getVouchersStr = async function () {
+  // If not ordered
+  // Not supported
+  if (this.status == 0)
+    throw new AssertionError("Operation not supported!");
+
+  return (await db.query(
+    `SELECT
+        SUM("voucherValue")     AS total
+      FROM orders
+      INNER JOIN (
+        SELECT orders.id, COALESCE(SUM(value), 0.00)    AS "voucherValue"
+        FROM orders
+        LEFT JOIN order_vouchers                        ON order_vouchers."orderId" = orders.id
+          LEFT JOIN user_vouchers                       ON user_vouchers.id = order_vouchers."userVoucherId" LEFT JOIN vouchers                          ON user_vouchers."voucherId" = vouchers.id
+        GROUP BY orders.id
+      ) ord_vch               ON orders.id = ord_vch.id
+      WHERE orders.id = ${this.id}
+        AND orders."deletedAt" is NULL;`,
+    {
+      type: 'SELECT',
+      plain: true,
+    },
+  )).total;
+};
+
+Order.prototype.getTotalWithVATWithVouchers = async function () {
+  return parseFloat(await this.getTotalWithVATWithVouchersStr());
+}
+
+Order.prototype.getTotalWithVATWithVouchersStr = async function () {
+  // If not ordered
+  // Not supported
+  if (this.status == 0)
+    throw new AssertionError("Operation not supported!");
+
+  return (await db.query(
+    `SELECT
+        GREATEST( SUM( ROUND( ( orderitems.quantity * orderitems.price *
+          ( 1 + ${configEcom.SETTINGS.vat}) ) - "voucherValue", 2 )), 0.00) AS total
+      FROM orders
+      INNER JOIN (
+        SELECT orders.id, COALESCE(SUM(value), 0.00)    AS "voucherValue"
+        FROM orders
+        LEFT JOIN order_vouchers                        ON order_vouchers."orderId" = orders.id
+          LEFT JOIN user_vouchers                       ON user_vouchers.id = order_vouchers."userVoucherId" LEFT JOIN vouchers                          ON user_vouchers."voucherId" = vouchers.id
+        GROUP BY orders.id
+      ) ord_vch               ON orders.id = ord_vch.id
+      INNER JOIN orderitems   ON orderitems."orderId" = orders.id
+      WHERE orders.id = ${this.id}
+        AND orderitems."deletedAt" is NULL
+        AND orders."deletedAt" is NULL;`,
+    {
+      type: 'SELECT',
+      plain: true,
+    },
+  )).total;
+};
+
 Order.prototype.orderedAtHTML = function () {
   return this.orderedAt.toISOString().substring(0, 19);
 };
@@ -1291,7 +1354,7 @@ module.exports = {
 
   for (let i = 0; i < permissions.length; i++) {
     Permission.findOrCreate({ where: { name: permissions[i] } }).then(perm => {
-      Role.findOne({ where: { name: 'Admin'} } ).then(role => {
+      Role.findOne({ where: { name: 'Admin' } }).then(role => {
         role.addPermission(perm[0]);
       })
     });

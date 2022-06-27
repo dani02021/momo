@@ -553,32 +553,41 @@ async function validateStatus(ctx, orderId, responce) {
 }
 
 async function getReportResponce(filters, limit, offset, time) {
-  let text = `SELECT
-        date_trunc($1, orders."orderedAt")      AS "startDate", 
-        SUM(orderitems.quantity)                AS products, 
-        COUNT(distinct orders.id)               AS orders, 
-        COALESCE( SUM( ROUND(
-            price *
-            orderitems.quantity
-            , 2)), 0.00)                        AS subtotal,
-        COALESCE( SUM( ROUND(
-            price *
-            orderitems.quantity *
-            (1 + ${configEcom.SETTINGS.vat})
-            , 2 )), 0.00)                       AS grandtotal,
-        COALESCE( SUM( ROUND(
-            price *
-            orderitems.quantity *
-            ${configEcom.SETTINGS.vat},
-            2)), 0.00)                          AS vatsum
+  let text =
+    `SELECT
+      date_trunc($1, orders."orderedAt")        AS "startDate", 
+      SUM(orderitems.quantity)                  AS products, 
+      COUNT(distinct orders.id)                 AS orders, 
+      COALESCE( SUM( ROUND(
+        price *
+        orderitems.quantity
+        , 2)), 0.00)                            AS subtotal,
+      COALESCE( SUM( ROUND(
+        price *
+        orderitems.quantity *
+        (1 + ${configEcom.SETTINGS.vat})
+        , 2 )), 0.00)                           AS grandtotal,
+      COALESCE( SUM( ROUND(
+        price *
+        orderitems.quantity *
+        ${configEcom.SETTINGS.vat},
+        2)), 0.00)                              AS vatsum,
+      SUM("voucherValue")                       AS "vouchersSum"
     FROM orders 
-    INNER JOIN orderitems
-        ON orderitems."orderId" = orders.id 
+    INNER JOIN orderitems                         ON orderitems."orderId" = orders.id
+    INNER JOIN
+      (SELECT
+        orders.id, COALESCE(value, 0.00)              AS "voucherValue"
+      FROM orders
+      LEFT JOIN order_vouchers                        ON order_vouchers."orderId" = orders.id
+        LEFT JOIN user_vouchers                       ON user_vouchers.id = order_vouchers."userVoucherId"
+          LEFT JOIN vouchers                          ON user_vouchers."voucherId" = vouchers.id
+      ) ord_vch                                   ON orders.id = ord_vch.id
     WHERE status > 0
-        AND orders."deletedAt" is NULL
-        AND orderitems."deletedAt" is NULL
-        AND "orderedAt" BETWEEN $2 AND $3
-    GROUP BY "startDate" `;
+      AND orders."deletedAt" is NULL
+      AND orderitems."deletedAt" is NULL
+      AND "orderedAt" BETWEEN $2 AND $3
+    GROUP BY "startDate"`;
 
   const countText = `SELECT COUNT(*) FROM (${text}) AS foo;`;
 
@@ -590,20 +599,15 @@ async function getReportResponce(filters, limit, offset, time) {
 
   text += ';';
 
-  return [
-    db.query(text, {
-      type: 'SELECT',
-      plain: false,
-      model: OrderItem,
-      mapToModel: true,
-      bind: [time, filters.ordAfter, filters.ordBefore],
-    }),
-    db.query(countText, {
-      type: 'SELECT',
-      plain: false,
-      bind: [time, filters.ordAfter, filters.ordBefore],
-    }),
-  ];
+  let query = await db.query(text, {
+    type: 'SELECT',
+    plain: false,
+    model: OrderItem,
+    mapToModel: true,
+    bind: [time, filters.ordAfter, filters.ordBefore],
+  })
+
+  return query
 }
 
 function createTempFile(name = 'temp_file', data = '', encoding = 'utf8') {

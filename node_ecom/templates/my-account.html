@@ -28,7 +28,7 @@
                                     <tr>
                                         <td><%= orders[i].id %></td>
                                         <td><%= orders[i].orderedAt.toLocaleString("en-GB") %></td>
-                                        <td align="right">$<%= await orders[i].getTotalWithVATStr() %></td>
+                                        <td align="right">$<%= await orders[i].getTotalWithVATWithVouchersStr() %></td>
                                         <td><%= statuses[orders[i].status] %></td>
                                         <td><button class="btn" data-bs-toggle="modal" data-bs-target="#order<%= orders[i].id %>">View</button></td>
                                     </tr>
@@ -89,15 +89,14 @@
         <div class="modal-body">
             <p><b>Date:</b> <%= orders[i].orderedAt.toLocaleString("en-GB") %></p>
             <p><b>Status:</b> <%= statuses[orders[i].status] %></p>
-            <p><b>Total Price:</b> $<%= await orders[i].getTotalWithVATStr() %></p>
-            <p><b>Products:</b></p>
+            <br>
             <div class="table-responsive">
                 <table class="table table-bordered" style="width: 100%;">
                     <thead class="thead-dark">
                         <tr>
                             <th>Product</th>
-                            <th>Price</th>
                             <th>Quantity</th>
+                            <th>Price</th>
                         </tr>
                     </thead>
                     <% for (z=0;z< (await orders[i].getOrderitems()).length;z++) { %>
@@ -105,14 +104,33 @@
                             <td>
                                 <%= (await (await orders[i].getOrderitems())[z].getProduct()).name %>
                             </td>
-                            <td style="text-align: right;">
-                                $<%= await (await orders[i].getOrderitems())[z].getTotalWithVATStr() %>
-                            </td>
                             <td style="text-align: right">
                                 <%= (await orders[i].getOrderitems())[z].quantity %>
                             </td>
+                            <td style="text-align: right;">
+                                $<%= await (await orders[i].getOrderitems())[z].getTotalWithVATStr() %>
+                            </td>
                         </tr>
                     <% } %>
+                    <% if (vouchers[orders[i].id]) { %>
+                        <tr>
+                            <td>Vouchers:</td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                        <% for (z = 0; z < vouchers[orders[i].id].length; z++) { %>
+                            <tr>
+                                <td><%= (await vouchers[orders[i].id][z].getPromotion()).dataValues.name %></td>
+                                <td></td>
+                                <td style="text-align: right;">-$<%= vouchers[orders[i].id][z].dataValues.value %></td>
+                            </tr>
+                        <% } %>
+                    <% } %>
+                    <tr>
+                        <td>Total:</td>
+                        <td></td>
+                        <td align="right">$<%= await orders[i].getTotalWithVATWithVouchersStr() %></td>
+                    </tr>
                 </table>
             </div>
         </div>

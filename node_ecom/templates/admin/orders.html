@@ -90,7 +90,9 @@
                                     <th scope="col" class="clickable">SUB TOTAL</th>
                                     <th scope="col" class="clickable">VAT</th>
                                     <th scope="col" class="clickable">GRAND TOTAL</th>
-                                    <th scope="col">ACTION</th>
+                                    <th scope="col" class="clickable">VOUCHERS SUM</th>
+                                    <th scope="col" class="clickable">TOTAL - VOUCHERS</th>
+                                    <!-- <th scope="col">ACTION</th> -->
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -116,7 +118,7 @@
                                       </td>
                                       <td data-id="<%= orders[i].id %>"><b>#<%= orders[i].dataValues.id %></b></td>
                                       <td><b>
-                                          <%= orders[i].dataValues.firstName + " " + orders[i].dataValues.lastName %>
+                                          <%= (await orders[i].getUsers())[0].dataValues.firstName + " " + (await orders[i].getUsers())[0].dataValues.lastName %>
                                         </b></td>
                                       <td><b>
                                           <%= orders[i].dataValues.username %>
@@ -129,15 +131,16 @@
                                         </b></td>
                                       <td style="text-align: right;"><b>$<%= await orders[i].getTotalStr() %></b></td>
                                       <td style="text-align: right;"><b>$<%= await orders[i].getVATSumStr() %></b></td>
-                                      <td style="text-align: right;"><b>$<%= await orders[i].getTotalWithVATStr() %></b>
-                                      </td>
+                                      <td style="text-align: right;"><b>$<%= await orders[i].getTotalWithVATStr() %></b></td>
+                                      <td style="text-align: right;"><b>$<%= await orders[i].getVouchersStr() %></b></td>
+                                      <td style="text-align: right;"><b>$<%= await orders[i].getTotalWithVATWithVouchersStr() %></b></td>
+                                      <!--
                                       <td>
-                                        <!--
                                           <a href="/admin/orders/edit/<%= orders[i].dataValues.id %>" class="tm-order-edit-link">
                                           <i class="far fa-edit tm-order-edit-icon"></i>
                                           </a>
-                                        -->
                                       </td>
+                                      -->
                                     </tr>
                                     <% } %>
                                 </tbody>

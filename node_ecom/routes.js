@@ -182,11 +182,38 @@ module.exports = {
 
     let currency = await utilsEcom.getCurrency();
 
+    let orderIds = result.rows.map(order => { return order.dataValues.id });
+
+    // TODO: Voucher arrays to voucher object with key as order id
+    let vouchers = await db.query(
+      `SELECT 
+        order_vouchers."orderId" AS "orderId",
+        vouchers.*
+      FROM order_vouchers
+      INNER JOIN user_vouchers  ON user_vouchers.id = order_vouchers."userVoucherId"
+        INNER JOIN vouchers     ON user_vouchers."voucherId" = vouchers.id
+      WHERE order_vouchers."orderId" IN (${orderIds})`, {
+        type: 'SELECT',
+        mapToModel: true,
+        model: Voucher
+      }
+    );
+
+    let vouchersObj = {};
+
+    for (let voucher of vouchers) {
+      if (vouchersObj[voucher.dataValues.orderId])
+        { vouchersObj[voucher.dataValues.orderId].push(voucher); }
+      else
+      { vouchersObj[voucher.dataValues.orderId] = [voucher]; }
+    }
+
     await ctx.render('my-account', {
       selected: 'my-account',
       session: ctx.session,
       cartQty: cartQty,
       orders: result.rows,
+      vouchers: vouchersObj,
       currency: currency,
       page: page,
       pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS['elements_per_page'])),
@@ -2775,7 +2802,8 @@ module.exports = {
         break;
     }
 
-    const [reportRes, count] = await utilsEcom.getReportResponce(filters, limit, offset, time);
+    const reportRes = await utilsEcom.getReportResponce(filters, limit, offset, time);
+    const count = reportRes.length;
 
     loggerEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} `,
@@ -2785,10 +2813,10 @@ module.exports = {
       layout: '/admin/base',
       selected: 'report',
       session: ctx.session,
-      report: await reportRes,
+      report: reportRes,
       filters: filtersToReturn,
       page: page,
-      pages: utilsEcom.givePages(page, Math.ceil((await count)[0].count / configEcom.SETTINGS['elements_per_page'])),
+      pages: utilsEcom.givePages(page, Math.ceil(count / configEcom.SETTINGS['elements_per_page'])),
     });
   },
 
@@ -2835,7 +2863,7 @@ module.exports = {
 
     const currency = await utilsEcom.getCurrency();
 
-    const path = await utilsEcom.saveReportPdf((await reportRes[0]), filters, time, currency);
+    const path = await utilsEcom.saveReportPdf(reportRes, filters, time, currency);
 
     ctx.body = fs.createReadStream(path);
 
@@ -2897,7 +2925,7 @@ module.exports = {
 
     const currency = await utilsEcom.getCurrency();
 
-    const path = await utilsEcom.saveReportExcel((await reportRes[0]), filters, time, currency);
+    const path = await utilsEcom.saveReportExcel(reportRes, filters, time, currency);
 
     ctx.body = fs.createReadStream(path);
 
@@ -2959,7 +2987,7 @@ module.exports = {
 
     const currency = await utilsEcom.getCurrency();
 
-    const path = await utilsEcom.saveReportCsv((await reportRes[0]), filters, time, currency);
+    const path = await utilsEcom.saveReportCsv(reportRes, filters, time, currency);
 
     ctx.body = fs.createReadStream(path);
 
