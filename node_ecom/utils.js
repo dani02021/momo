@@ -627,7 +627,7 @@ function createTempFile(name = 'temp_file', data = '', encoding = 'utf8') {
   });
 }
 
-async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, sort, vat = true) {
+async function getProductsRaw(offset, limit, name, cat, minval, maxval, sort, vat = true) {
   let text = `SELECT * FROM products 
     LEFT JOIN (
         SELECT "productId", sum(quantity) FROM orderitems 
@@ -660,10 +660,6 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
     returnParamsBind.maxPrice = maxval;
   }
 
-  // Count
-  let countText = text.replace('*', 'count(*)');
-  if (countText.indexOf('OFFSET') != -1) { countText = countText.substring(0, countText.indexOf('OFFSET')); }
-
   if (sort) {
     if (sort === 'sales') {
       text += ' ORDER BY (sum IS NULL), sum DESC\n';
@@ -684,8 +680,7 @@ async function getProductsAndCountRaw(offset, limit, name, cat, minval, maxval, 
   };
 
   return [
-    db.query(text, returnParams),
-    db.query(countText, returnParams),
+    db.query(text, returnParams)
   ];
 }
 
@@ -1303,7 +1298,7 @@ module.exports = {
   addProductQtyFromOrder,
   removeProductQtyFromOrder,
   getReportResponce,
-  getProductsAndCountRaw,
+  getProductsRaw,
   getProductsAndOrderCount,
   rowSequence,
   saveReportCsv,

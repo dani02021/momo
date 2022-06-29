@@ -1300,7 +1300,7 @@ module.exports = {
 };
 
 // Alter the database
-(async () => {
+(async () => {we
   // await db.sync({ alter: true });
 
   // Create the roles

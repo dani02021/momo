@@ -43,83 +43,121 @@ let linksTable = {
     "/admin": { func: routes.admin, requireStaff: true, requireSession: true },
     "/admin/login": { func: routes.adminLogin },
     "/admin/logout": { func: routes.adminLogout },
-    "/admin/products/:page?": { func: routes.adminProducts, requirePermission: {
-      arg: "products.read",
-      loggerMsg: "Tried to create a product without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/products/edit/:id": { func: routes.adminProductsEdit, requirePermission: {
-      arg: "products.update",
-      loggerMsg: "Tried to update a product without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/accounts/:page?": { func: routes.adminAccounts, requirePermission: {
-      arg: "accounts.read",
-      loggerMsg: "Tried to view accounts without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/staff/:page?": { func: routes.adminStaff, requirePermission: {
-      arg: "staff.read",
-      loggerMsg: "Tried to view staff without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/staff/edit/:id": { func: routes.adminStaffEdit, requirePermission: {
-      arg: "staff.update",
-      loggerMsg: "Tried to update staff without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/roles/:page?": { func: routes.adminRoles, requirePermission: {
-      arg: "roles.read",
-      loggerMsg: "Tried to view roles without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/roles/edit/:id": { func: routes.adminRolesEdit, requirePermission: {
-      arg: "roles.update",
-      loggerMsg: "Tried to update roles without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/orders/:page?": { func: routes.adminOrders, requirePermission: {
-      arg: "orders.read",
-      loggerMsg: "Tried to view orders without a permission"
-    }, requireStaff: true, requireSession: true },
+    "/admin/products/:page?": {
+      func: routes.adminProducts, requirePermission: {
+        arg: "products.read",
+        loggerMsg: "Tried to create a product without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/products/edit/:id": {
+      func: routes.adminProductsEdit, requirePermission: {
+        arg: "products.update",
+        loggerMsg: "Tried to update a product without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/accounts/:page?": {
+      func: routes.adminAccounts, requirePermission: {
+        arg: "accounts.read",
+        loggerMsg: "Tried to view accounts without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/staff/:page?": {
+      func: routes.adminStaff, requirePermission: {
+        arg: "staff.read",
+        loggerMsg: "Tried to view staff without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/staff/edit/:id": {
+      func: routes.adminStaffEdit, requirePermission: {
+        arg: "staff.update",
+        loggerMsg: "Tried to update staff without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/roles/:page?": {
+      func: routes.adminRoles, requirePermission: {
+        arg: "roles.read",
+        loggerMsg: "Tried to view roles without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/roles/edit/:id": {
+      func: routes.adminRolesEdit, requirePermission: {
+        arg: "roles.update",
+        loggerMsg: "Tried to update roles without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/orders/:page?": {
+      func: routes.adminOrders, requirePermission: {
+        arg: "orders.read",
+        loggerMsg: "Tried to view orders without a permission"
+      }, requireStaff: true, requireSession: true
+    },
     //  "/admin/orders/edit": { func: routes.adminOrdersEdit, requirePermission: "orders.update", requireStaff: true, requireSession: true },
-    "/admin/report/:page?": { func: routes.adminReport, requirePermission: {
-      arg: "report.read",
-      loggerMsg: "Tried to view report without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/export/report/pdf": { func: routes.adminExportReportPdf, requirePermission: {
-      arg: "report.export",
-      loggerMsg: "Tried to export report via pdf without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/export/report/excel": { func: routes.adminExportReportExcel, requirePermission: {
-      arg: "report.export",
-      loggerMsg: "Tried to export report via xlsx without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/export/report/csv": { func: routes.adminExportReportCsv, requirePermission: {
-      arg: "report.export",
-      loggerMsg: "Tried to export report via csv without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/audit/:page?": { func: routes.adminAudit, requirePermission: {
-      arg: "audit.read",
-      loggerMsg: "Tried to view audit without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/settings/email": { func: routes.adminSettingsEmail, requirePermission: {
-      arg: "settings.email",
-      loggerMsg: "Tried to view email settings without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/settings/other": { func: routes.adminSettingsOther, requirePermission: {
-      arg: "settings.other",
-      loggerMsg: "Tried to view settings without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/promotions/targetgroups/:page?": { func: routes.adminPromotionTargetGroups, requirePermission: {
-      arg: "targetgroups.read",
-      loggerMsg: "Tried to view target groups without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/promotions/targetgroup/add/:page?": { func: routes.adminPromotionTargetGroupsAdd, requirePermission: {
-      arg: "targetgroups.create",
-      loggerMsg: "Tried to create a target group without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/promotions/targetgroup/view/:id/:page?": { func: routes.adminPromotionTargetGroupsView, requirePermission: {
-      arg: "targetgroups.view",
-      loggerMsg: "Tried to view a target group without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/promotions/:page?": { func: routes.adminPromotions, requirePermission: {
-      arg: "promotions.read",
-      loggerMsg: "Tried to view promotions without a permission"
-    }, requireStaff: true, requireSession: true },
+    "/admin/report/:page?": {
+      func: routes.adminReport, requirePermission: {
+        arg: "report.read",
+        loggerMsg: "Tried to view report without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/export/report/pdf": {
+      func: routes.adminExportReportPdf, requirePermission: {
+        arg: "report.export",
+        loggerMsg: "Tried to export report via pdf without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/export/report/excel": {
+      func: routes.adminExportReportExcel, requirePermission: {
+        arg: "report.export",
+        loggerMsg: "Tried to export report via xlsx without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/export/report/csv": {
+      func: routes.adminExportReportCsv, requirePermission: {
+        arg: "report.export",
+        loggerMsg: "Tried to export report via csv without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/audit/:page?": {
+      func: routes.adminAudit, requirePermission: {
+        arg: "audit.read",
+        loggerMsg: "Tried to view audit without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/settings/email": {
+      func: routes.adminSettingsEmail, requirePermission: {
+        arg: "settings.email",
+        loggerMsg: "Tried to view email settings without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/settings/other": {
+      func: routes.adminSettingsOther, requirePermission: {
+        arg: "settings.other",
+        loggerMsg: "Tried to view settings without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/promotions/targetgroups/:page?": {
+      func: routes.adminPromotionTargetGroups, requirePermission: {
+        arg: "targetgroups.read",
+        loggerMsg: "Tried to view target groups without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/promotions/targetgroup/add/:page?": {
+      func: routes.adminPromotionTargetGroupsAdd, requirePermission: {
+        arg: "targetgroups.create",
+        loggerMsg: "Tried to create a target group without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/promotions/targetgroup/view/:id/:page?": {
+      func: routes.adminPromotionTargetGroupsView, requirePermission: {
+        arg: "targetgroups.view",
+        loggerMsg: "Tried to view a target group without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/promotions/:page?": {
+      func: routes.adminPromotions, requirePermission: {
+        arg: "promotions.read",
+        loggerMsg: "Tried to view promotions without a permission"
+      }, requireStaff: true, requireSession: true
+    },
 
     "/api/v0/permissions/get": { func: routes.apiPermissions, requireStaff: true, requireSession: true },
     "/api/v0/accounts/get": { func: routes.apiAccounts, requireStaff: true, requireSession: true },
@@ -130,96 +168,140 @@ let linksTable = {
     "/login": { func: routes.login },
     "/captureOrder": { func: routes.captureOrder },
     "/admin/login": { func: routes.adminLoginPost },
-    "/admin/products/add": { func: routes.adminProductsAdd, requirePermission: {
-      arg: "products.create",
-      loggerMsg: "Tried to create a product without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/products/edit/:id": { func: routes.adminProductsEditPost, requirePermission: {
-      arg: "products.update",
-      loggerMsg: "Tried to update a product without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/products/delete": { func: routes.adminProductsDelete, requirePermission: {
-      arg: "products.delete",
-      loggerMsg: "Tried to delete a product without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/accounts/add": { func: routes.adminAccountsAdd, requirePermission: {
-      arg: "accounts.create",
-      loggerMsg: "Tried to create an account without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/accounts/delete": { func: routes.adminAccountsDelete, requirePermission: {
-      arg: "products.delete",
-      loggerMsg: "Tried to delete an account without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/staff/add": { func: routes.adminStaffAdd, requirePermission: {
-      arg: "staff.create",
-      loggerMsg: "Tried to create a staff without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/staff/edit/:id": { func: routes.adminStaffEditPost, requirePermission: {
-      arg: "staff.update",
-      loggerMsg: "Tried to update a staff without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/staff/delete": { func: routes.adminStaffDelete, requirePermission: {
-      arg: "staff.delete",
-      loggerMsg: "Tried to delete a staff without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/categories/add": { func: routes.adminCategoriesAdd, requirePermission: {
-      arg: "categories.create",
-      loggerMsg: "Tried to create a category without a permission",
-    }, requireStaff: true, requireSession: true },
-    "/admin/categories/delete": { func: routes.adminCategoriesDelete, requirePermission: {
-      arg: "categories.delete",
-      loggerMsg: "Tried to delete a category without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/roles/add": { func: routes.adminRolesAdd, requirePermission: {
-      arg: "roles.create",
-      loggerMsg: "Tried to create a role without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/roles/edit/:id": { func: routes.adminRolesEditPost, requirePermission: {
-      arg: "roles.update",
-      loggerMsg: "Tried to update a role without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/roles/delete": { func: routes.adminRolesDelete, requirePermission: {
-      arg: "roles.delete",
-      loggerMsg: "Tried to delete a role without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/orders/add": { func: routes.adminOrdersAdd, requirePermission: {
-      arg: "orders.create",
-      loggerMsg: "Tried to create an order without a permission"
-    }, requireStaff: true, requireSession: true },
+    "/admin/products/add": {
+      func: routes.adminProductsAdd, requirePermission: {
+        arg: "products.create",
+        loggerMsg: "Tried to create a product without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/products/edit/:id": {
+      func: routes.adminProductsEditPost, requirePermission: {
+        arg: "products.update",
+        loggerMsg: "Tried to update a product without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/products/delete": {
+      func: routes.adminProductsDelete, requirePermission: {
+        arg: "products.delete",
+        loggerMsg: "Tried to delete a product without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/accounts/add": {
+      func: routes.adminAccountsAdd, requirePermission: {
+        arg: "accounts.create",
+        loggerMsg: "Tried to create an account without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/accounts/delete": {
+      func: routes.adminAccountsDelete, requirePermission: {
+        arg: "products.delete",
+        loggerMsg: "Tried to delete an account without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/staff/add": {
+      func: routes.adminStaffAdd, requirePermission: {
+        arg: "staff.create",
+        loggerMsg: "Tried to create a staff without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/staff/edit/:id": {
+      func: routes.adminStaffEditPost, requirePermission: {
+        arg: "staff.update",
+        loggerMsg: "Tried to update a staff without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/staff/delete": {
+      func: routes.adminStaffDelete, requirePermission: {
+        arg: "staff.delete",
+        loggerMsg: "Tried to delete a staff without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/categories/add": {
+      func: routes.adminCategoriesAdd, requirePermission: {
+        arg: "categories.create",
+        loggerMsg: "Tried to create a category without a permission",
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/categories/delete": {
+      func: routes.adminCategoriesDelete, requirePermission: {
+        arg: "categories.delete",
+        loggerMsg: "Tried to delete a category without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/roles/add": {
+      func: routes.adminRolesAdd, requirePermission: {
+        arg: "roles.create",
+        loggerMsg: "Tried to create a role without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/roles/edit/:id": {
+      func: routes.adminRolesEditPost, requirePermission: {
+        arg: "roles.update",
+        loggerMsg: "Tried to update a role without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/roles/delete": {
+      func: routes.adminRolesDelete, requirePermission: {
+        arg: "roles.delete",
+        loggerMsg: "Tried to delete a role without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/orders/add": {
+      func: routes.adminOrdersAdd, requirePermission: {
+        arg: "orders.create",
+        loggerMsg: "Tried to create an order without a permission"
+      }, requireStaff: true, requireSession: true
+    },
     //  "/admin/orders/edit": { func: routes.adminOrdersEditPost, requirePermission: "orders.update", requireStaff: true, requireSession: true },
-    "/admin/orders/delete": { func: routes.adminOrdersDelete, requirePermission: {
-      arg: "orders.delete",
-      loggerMsg: "Tried to delete an order without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/settings/email": { func: routes.adminSettingsEmailPost, requirePermission: {
-      arg: "settings.email",
-      loggerMsg: "Tried to change email templates without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/settings/other": { func: routes.adminSettingsOtherPost, requirePermission: {
-      arg: "settings.other",
-      loggerMsg: "Tried to change settings without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/promotions/targetgroup/add": { func: routes.adminPromotionTargetGroupsAddPost, requirePermission: {
-      arg: "targetgroups.create",
-      loggerMsg: "Tried to create a targetgroup without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/promotions/targetgroup/delete": { func: routes.adminPromotionTargetGroupsDelete, requirePermission: {
-      arg: "targetgroups.delete",
-      loggerMsg: "Tried to delete a targetgroup without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/promotion/add": { func: routes.adminPromotionsAdd, requirePermission: {
-      arg: "promotions.create",
-      loggerMsg: "Tried to create a promotion without a permission"
-    }, requireStaff: true, requireSession: true },
-    "/admin/promotion/delete": { func: routes.adminPromotionsDelete, requirePermission: {
-      arg: "promotions.delete",
-      loggerMsg: "Tried to delete a promotion without a permission"
-    }, requireStaff: true, requireSession: true },
+    "/admin/orders/delete": {
+      func: routes.adminOrdersDelete, requirePermission: {
+        arg: "orders.delete",
+        loggerMsg: "Tried to delete an order without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/settings/email": {
+      func: routes.adminSettingsEmailPost, requirePermission: {
+        arg: "settings.email",
+        loggerMsg: "Tried to change email templates without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/settings/other": {
+      func: routes.adminSettingsOtherPost, requirePermission: {
+        arg: "settings.other",
+        loggerMsg: "Tried to change settings without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/promotions/targetgroup/add": {
+      func: routes.adminPromotionTargetGroupsAddPost, requirePermission: {
+        arg: "targetgroups.create",
+        loggerMsg: "Tried to create a targetgroup without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/promotions/targetgroup/delete": {
+      func: routes.adminPromotionTargetGroupsDelete, requirePermission: {
+        arg: "targetgroups.delete",
+        loggerMsg: "Tried to delete a targetgroup without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/promotion/add": {
+      func: routes.adminPromotionsAdd, requirePermission: {
+        arg: "promotions.create",
+        loggerMsg: "Tried to create a promotion without a permission"
+      }, requireStaff: true, requireSession: true
+    },
+    "/admin/promotion/delete": {
+      func: routes.adminPromotionsDelete, requirePermission: {
+        arg: "promotions.delete",
+        loggerMsg: "Tried to delete a promotion without a permission"
+      }, requireStaff: true, requireSession: true
+    },
 
-    "/admin/api/v0/products/import/xlsx": { func: routes.adminApiProductsImportXLSX, requirePermission: {
-      arg: "products.import",
-      loggerMsg: "Tried to import products without a permission"
-    }, requireStaff: true, requireSession: true },
+    "/admin/api/v0/products/import/xlsx": {
+      func: routes.adminApiProductsImportXLSX, requirePermission: {
+        arg: "products.import",
+        loggerMsg: "Tried to import products without a permission"
+      }, requireStaff: true, requireSession: true
+    },
   }
 }
 
@@ -295,7 +377,7 @@ app.use(async (ctx, next) => {
         // Require session
         if (dispatchTableRoute.requireSession) { // TODO: Make as assert?
           if (!ctx.session || !ctx.session.dataValues || !ctx.session.dataValues.staffUsername) { utilsEcom.onSessionExpired(ctx); return; }
-          
+
           let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
           if (!utilsEcom.isSessionValid(staff)) {
@@ -337,6 +419,21 @@ app.use(async (ctx, next) => {
             loggerMessage: permissionObj.loggerMsg,
           });
         }
+
+        // Paginator
+        let page = 1;
+
+        let limit = configEcom.SETTINGS['elements_per_page'];
+        let offset = 0;
+
+        if (ctx.params && ctx.params.page) {
+          page = parseInt(ctx.params.page);
+          offset = (parseInt(ctx.params.page) - 1) * limit;
+        }
+
+        ctx.page = page;
+        ctx.limit = limit;
+        ctx.offset = offset;
       }
     }
   }
@@ -368,9 +465,9 @@ app.on("error", (err, ctx) => {
     err.status = 302;
 
     const e = configEcom.ERROR_TYPES;
-    switch(err.type) {
+    switch (err.type) {
       case e.NO_PERMISSION:
-        err.headers = { 'Location': '/admin' };  
+        err.headers = { 'Location': '/admin' };
         break;
       case e.VOUCHERS_TOO_MUCH_COUNT:
       case e.VOUCHERS_TOO_MUCH_VALUE:

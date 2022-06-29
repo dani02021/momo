@@ -33,19 +33,16 @@ module.exports = {
 
   // FRONT-OFFICE
   index: async (ctx) => {
-    let categories, products;
+    let categories = await Category.findAll();
 
-    await Category.findAll().then((categoriesv) => categories = categoriesv);
-
-    await Product.findAll({
+    let products = await Product.findAll({
       where: {
         hide: false
       }, order: [
         ['createdAt', 'DESC']
       ],
       limit: 10
-    }
-    ).then((productsv) => { products = productsv });
+    });
 
     let cartQty = await utilsEcom.getCartQuantity(ctx);
 
@@ -93,21 +90,9 @@ module.exports = {
       filters['search'] = ''
     }
 
-    let page = 1;
     let categories = await Category.findAll();
 
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page)
-    }
-
-    let limit = configEcom.SETTINGS['elements_per_page'];
-    let offset = 0;
-
-    if (ctx.params.page) {
-      offset = (parseInt(ctx.params.page) - 1) * limit;
-    }
-
-    let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.search, filters.cat, filters.minval, filters.maxval, ctx.query.sort, true);
+    let products = await utilsEcom.getProductsRaw(offset, ctx.limit, filters.search, filters.cat, filters.minval, filters.maxval, ctx.query.sort, true);
 
     let cartQty = await utilsEcom.getCartQuantity(ctx);
 
@@ -116,10 +101,10 @@ module.exports = {
       session: ctx.session,
       cartQty: cartQty,
       categories: categories,
-      products: await products,
+      products: products,
       filters: filtersToReturn,
-      page: page,
-      pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.SETTINGS['elements_per_page']))
+      page: ctx.page,
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(products.length / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages
@@ -149,24 +134,11 @@ module.exports = {
   myAccount: async (ctx) => {
     let cartQty = await utilsEcom.getCartQuantity(ctx);
 
-    let page = 1;
-
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page)
-    }
-
-    let limit = configEcom.SETTINGS['elements_per_page'];
-    let offset = 0;
-
-    if (ctx.params.page) {
-      offset = (parseInt(ctx.params.page) - 1) * limit;
-    }
-
     let result = await Order.findAndCountAll({
       where: {
         status: { [Op.gte]: 1 },
       },
-      limit: limit,
+      limit: ctx.limit,
       offset: offset,
       include: [{
         model: User,
@@ -184,7 +156,6 @@ module.exports = {
 
     let orderIds = result.rows.map(order => { return order.dataValues.id });
 
-    // TODO: Voucher arrays to voucher object with key as order id
     let vouchers = await db.query(
       `SELECT 
         order_vouchers."orderId" AS "orderId",
@@ -192,9 +163,10 @@ module.exports = {
       FROM order_vouchers
       INNER JOIN user_vouchers  ON user_vouchers.id = order_vouchers."userVoucherId"
         INNER JOIN vouchers     ON user_vouchers."voucherId" = vouchers.id
-      WHERE order_vouchers."orderId" IN (${orderIds})`, {
+      WHERE order_vouchers."orderId" IN ($1)`, {
         type: 'SELECT',
         mapToModel: true,
+        bind: [orderIds],
         model: Voucher
       }
     );
@@ -215,8 +187,8 @@ module.exports = {
       orders: result.rows,
       vouchers: vouchersObj,
       currency: currency,
-      page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS['elements_per_page'])),
+      page: ctx.page,
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(result.count / configEcom.SETTINGS['elements_per_page'])),
       statuses: configEcom.STATUS_DISPLAY
     });
 
@@ -572,16 +544,17 @@ module.exports = {
             `SELECT
               products."id", "name", "price", "discountPrice", "image",
               ROUND("discountPrice", 2) * x.qty AS "totalPrice",
-              ROUND("discountPrice" * ( 1 + ${configEcom.SETTINGS.vat}), 2) * x.qty AS "totalPriceVAT"
+              ROUND("discountPrice" * ( 1 + :vat), 2) * x.qty AS "totalPriceVAT"
             FROM products
             INNER JOIN
-              unnest(ARRAY[${ids}], ARRAY[${qtys}]) as x(id, qty)
+              unnest(ARRAY[:ids], ARRAY[:qtys]) as x(id, qty)
             ON products.id = x.id
             WHERE (products."deletedAt" IS NULL
-              AND products."id" IN (${ids}))`,
+              AND products."id" IN (:ids))`,
             {
               type: 'SELECT',
               mapToModel: true,
+              bind: { ids: ids.push, qtys: qtys, vat: configEcom.SETTINGS.vat },
               model: Product,
             }
           ).catch(err => utilsEcom.handleError(err));
@@ -1463,23 +1436,13 @@ module.exports = {
 
     const categories = await Category.findAll();
 
-    // Paginator
-    let page = 1;
-
-    let limit = configEcom.SETTINGS['elements_per_page'];
-    let offset = 0;
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page);
-      offset = (parseInt(ctx.params.page) - 1) * limit;
-    }
-
     let categoriesNames = {};
 
     for (let i = 0; i < categories.length; i++) {
       categoriesNames[categories[i].id] = categories[i].name;
     }
 
-    let [products, count] = await utilsEcom.getProductsAndCountRaw(offset, limit, filters.name, filters.category, filters.minprice, filters.maxprice, null, false);
+    let products = await utilsEcom.getProductsRaw(ctx.offset, ctx.limit, filters.name, filters.category, filters.minprice, filters.maxprice, null, false);
 
     let cartQty = await utilsEcom.getCartQuantity(ctx);
 
@@ -1488,12 +1451,12 @@ module.exports = {
       selected: 'products',
       session: ctx.session,
       cartQty: cartQty,
-      products: await products,
+      products: products,
       categories: categories,
       categoriesNames: categoriesNames, // Find better way
       filters: filtersToReturn,
-      page: page,
-      pages: utilsEcom.givePages(page, Math.ceil((await count)[0].dataValues.count / configEcom.SETTINGS['elements_per_page']))
+      page: ctx.page,
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(products.length / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear old messages
@@ -1714,40 +1677,23 @@ module.exports = {
       filters['country'] = '';
     }
 
-    let page = 1;
-
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page)
-    }
-
-    let limit = configEcom.SETTINGS['elements_per_page'];
-    let offset = 0;
-
-    if (ctx.params.page) {
-      offset = (parseInt(ctx.params.page) - 1) * limit;
-    }
-
-    let result = await db.query(`SELECT * FROM users 
-      WHERE position(upper($1) in upper(username)) > 0
-      AND position(upper($2) in upper(email)) > 0
-      AND position(upper($3) in upper(country)) > 0
-      AND "deletedAt" is NULL
-      ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`, {
+    let result = await db.query(
+      `SELECT
+        *,
+        COUNT(*) OVER() AS full_count
+      FROM users 
+      WHERE
+        position(upper($1) in upper(username)) > 0 AND
+        position(upper($2) in upper(email)) > 0 AND
+        position(upper($3) in upper(country)) > 0 AND
+        "deletedAt" is NULL
+      ORDER BY "createdAt" DESC
+      LIMIT $4 OFFSET $5`, {
       type: 'SELECT',
       plain: false,
       model: User,
       mapToModel: true,
-      bind: [filters.user, filters.email, filters.country]
-    }).catch(err => utilsEcom.handleError(err));
-
-    let count = await db.query(`SELECT COUNT(*) FROM users
-      WHERE position(upper($1) in upper(username)) > 0
-      AND position(upper($2) in upper(email)) > 0
-      AND position(upper($3) in upper(country)) > 0
-      AND "deletedAt" is NULL`, {
-      type: 'SELECT',
-      plain: true,
-      bind: [filters.user, filters.email, filters.country]
+      bind: [filters.user, filters.email, filters.country, ctx.limit, ctx.offset]
     }).catch(err => utilsEcom.handleError(err));
 
     await ctx.render('admin/accounts', {
@@ -1756,8 +1702,8 @@ module.exports = {
       session: ctx.session,
       users: result,
       filters: filtersToReturn,
-      page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS['elements_per_page']))
+      page: ctx.page,
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(result[0].dataValues.full_count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages
@@ -1852,38 +1798,22 @@ module.exports = {
       filters['email'] = '';
     }
 
-    let page = 1;
-
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page)
-    }
-
-    let limit = configEcom.SETTINGS['elements_per_page'];
-    let offset = 0;
-
-    if (ctx.params.page) {
-      offset = (parseInt(ctx.params.page) - 1) * limit;
-    }
-
-    const result = await db.query(`SELECT * FROM staffs WHERE
-      position(upper($1) in upper(username)) > 0 AND
-      position(upper($2) in upper(email)) > 0 AND
-      "deletedAt" is NULL ORDER BY "createdAt" DESC
-      LIMIT ${limit} OFFSET ${offset}`, {
+    const result = await db.query(
+      `SELECT
+        *,
+        COUNT(*) OVER() AS full_count
+      FROM staffs
+      WHERE
+        position(upper($1) in upper(username)) > 0 AND
+        position(upper($2) in upper(email)) > 0 AND
+        "deletedAt" is NULL
+      ORDER BY "createdAt" DESC
+      LIMIT $3 OFFSET $4`, {
       type: 'SELECT',
       plain: false,
       model: Staff,
       mapToModel: true,
-      bind: [filters.user, filters.email]
-    }).catch(err => utilsEcom.handleError(err));
-
-    const count = await db.query(`SELECT COUNT(*) FROM staffs WHERE
-      position(upper($1) in upper(username)) > 0 AND
-      position(upper($2) in upper(email)) > 0 AND
-      "deletedAt" is NULL`, {
-      type: 'SELECT',
-      plain: true,
-      bind: [filters.user, filters.email]
+      bind: [filters.user, filters.email, ctx.limit, ctx.offset]
     }).catch(err => utilsEcom.handleError(err));
 
     await ctx.render('admin/staff', {
@@ -1892,8 +1822,8 @@ module.exports = {
       session: ctx.session,
       staff: result,
       filters: filtersToReturn,
-      page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS['elements_per_page']))
+      page: ctx.page,
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(result[0].dataValues.full_count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages
@@ -2045,22 +1975,9 @@ module.exports = {
   },
 
   adminRoles: async (ctx) => {
-    let page = 1;
-
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page)
-    }
-
-    let limit = configEcom.SETTINGS['elements_per_page'];
-    let offset = 0;
-
-    if (ctx.params.page) {
-      offset = (parseInt(ctx.params.page) - 1) * limit;
-    }
-
     const result = await Role.findAndCountAll({
-      limit: limit,
-      offset: offset,
+      limit: ctx.limit,
+      offset: ctx.offset,
       order: [
         ['createdAt', 'DESC']
       ]
@@ -2071,8 +1988,8 @@ module.exports = {
       selected: 'roles',
       session: ctx.session,
       roles: result.rows,
-      page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS['elements_per_page']))
+      page: ctx.page,
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(result.count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages
@@ -2497,25 +2414,12 @@ module.exports = {
       filters['ordAfter'] = new Date(0).toISOString();
     }
 
-    let page = 1;
-
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page)
-    }
-
-    let limit = configEcom.SETTINGS['elements_per_page'];
-    let offset = 0;
-
-    if (ctx.params.page) {
-      offset = (parseInt(ctx.params.page) - 1) * limit;
-    }
-
     const result = await Order.findAndCountAll({
       where: {
         status: { [Op.gte]: 1 },
       },
-      limit: limit,
-      offset: offset,
+      limit: ctx.limit,
+      offset: ctx.offset,
       include: User,
       order: [
         ['orderedAt', 'DESC']
@@ -2529,8 +2433,8 @@ module.exports = {
       orders: result.rows,
       statuses: configEcom.STATUS_DISPLAY,
       filters: filtersToReturn,
-      page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(result.count / configEcom.SETTINGS['elements_per_page']))
+      page: ctx.page,
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(result.count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages
@@ -2772,19 +2676,6 @@ module.exports = {
       filters['ordAfter'] = new Date(0).toISOString();
     }
 
-    let page = 1;
-
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page)
-    }
-
-    let limit = configEcom.SETTINGS['elements_per_page'];
-    let offset = 0;
-
-    if (ctx.params.page) {
-      offset = (parseInt(ctx.params.page) - 1) * limit;
-    }
-
     let time = 'month';
 
     switch (filters.timegroup) {
@@ -2802,7 +2693,7 @@ module.exports = {
         break;
     }
 
-    const reportRes = await utilsEcom.getReportResponce(filters, limit, offset, time);
+    const reportRes = await utilsEcom.getReportResponce(filters, ctx.limit, ctx.offset, time);
     const count = reportRes.length;
 
     loggerEcom.logger.log('info',
@@ -2815,8 +2706,8 @@ module.exports = {
       session: ctx.session,
       report: reportRes,
       filters: filtersToReturn,
-      page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(count / configEcom.SETTINGS['elements_per_page'])),
+      page: ctx.page,
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(count / configEcom.SETTINGS['elements_per_page'])),
     });
   },
 
@@ -3065,50 +2956,38 @@ module.exports = {
         break;
     }
 
-    let page = 1;
-
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page)
-    }
-
-    let limit = configEcom.SETTINGS['elements_per_page'];
-    let offset = 0;
-
-    if (ctx.params.page) {
-      offset = (page - 1) * limit;
-    }
-
-    let query = `SELECT * FROM logs WHERE
-    position(upper($1) in upper(user)) > 0 AND
-    position(upper($2) in upper(level)) > 0 AND
-    timestamp BETWEEN $3 AND $4
-    ORDER BY timestamp DESC`;
-
-    if (filters.datetrunc != '-1') {
-      query = `SELECT count(*), date_trunc('${time}', timestamp) t FROM logs WHERE
+    let query =
+      `SELECT
+        *,
+        COUNT(*) OVER() AS full_count
+      FROM logs
+      WHERE
         position(upper($1) in upper(user)) > 0 AND
         position(upper($2) in upper(level)) > 0 AND
         timestamp BETWEEN $3 AND $4
-        GROUP BY t
-        ORDER BY t DESC`;
+      ORDER BY timestamp DESC`;
+
+    if (filters.datetrunc != '-1') {
+      query =
+      `SELECT
+        COUNT(*) AS full_count,
+        date_trunc('${time}', timestamp) t
+      FROM logs WHERE
+        position(upper($1) in upper(user)) > 0 AND
+        position(upper($2) in upper(level)) > 0 AND
+        timestamp BETWEEN $3 AND $4
+      GROUP BY t
+      ORDER BY t DESC`;
     }
 
-    let queryC = `SELECT COUNT(*) FROM (${query}) foo`
-
-    query += `\nLIMIT ${limit} OFFSET ${offset}`;
+    query += `\nLIMIT $5 OFFSET $6`;
 
     const result = await db.query(query, {
       type: 'SELECT',
       plain: false,
       model: Log,
       mapToModel: true,
-      bind: [filters.user, filters.level, filters.ordAfter, filters.ordBefore]
-    }).catch(err => utilsEcom.handleError(err));
-
-    const count = await db.query(queryC, {
-      type: 'SELECT',
-      plain: true,
-      bind: [filters.user, filters.level, filters.ordAfter, filters.ordBefore]
+      bind: [filters.user, filters.level, filters.ordAfter, filters.ordBefore, ctx.limit, ctx.offset]
     }).catch(err => utilsEcom.handleError(err));
 
     await ctx.render('/admin/audit', {
@@ -3118,8 +2997,8 @@ module.exports = {
       report: result,
       filters: filtersToReturn,
       levels: configEcom.LOG_LEVELS,
-      page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(count.count / configEcom.SETTINGS['elements_per_page']))
+      page: ctx.page,
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(result[0].dataValues.full_count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages
@@ -3314,8 +3193,7 @@ module.exports = {
     let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
     // Get filters
-    let filters = {}, filtersToReturn = {};
-    let bindParams = [];
+    let filters = {}, filtersToReturn = {}, bindParams = {};
 
     if (!isNaN(new Date(ctx.query.timeAfter))) {
       filters['timeAfter'] = new Date(ctx.query.timeAfter);
@@ -3336,45 +3214,30 @@ module.exports = {
       filters['createdBy'] = '';
     }
 
-    bindParams.push(filters.timeAfter.toISOString());
-    bindParams.push(filters.timeBefore.toISOString());
+    bindParams.timeAfter = filters.timeAfter.toISOString();
+    bindParams.timeBefore = filters.timeBefore.toISOString();
 
     if (Number.isSafeInteger(Number(ctx.query.targetID))) {
       filters['targetID'] = ctx.query.targetID;
       filtersToReturn['targetID'] = ctx.query.targetID;
-      bindParams.push(ctx.query.targetID);
+      bindParams.targetID = ctx.query.targetID;
     }
 
-    let page = 1;
-
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page)
-    }
-
-    let limit = configEcom.SETTINGS['elements_per_page'];
-    let offset = 0;
-
-    if (ctx.params.page) {
-      offset = (parseInt(ctx.params.page) - 1) * limit;
-    }
+    bindParams.limit = ctx.limit;
+    bindParams.offset = ctx.offset;
 
     let query =
-      `SELECT * FROM targetgroups
+      `SELECT
+        *,
+        COUNT(*) OVER() AS full_count
+       FROM targetgroups
       WHERE "deletedAt" is NULL\n
-        AND "createdAt" BETWEEN $1 AND $2\n`;
+        AND "createdAt" BETWEEN $timeAfter AND $timeBefore\n`;
 
     if (filters.targetID)
-      query += 'AND id = $3\n';
+      query += 'AND id = $targetID\n';
 
-    query += `ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
-
-    let queryC =
-      `SELECT COUNT(*) FROM targetgroups
-      WHERE "deletedAt" is NULL\n
-        AND "createdAt" BETWEEN $1 AND $2\n`;
-
-    if (filters.targetID)
-      queryC += 'AND id = $3\n';
+    query += `ORDER BY "createdAt" DESC LIMIT $limit OFFSET $offset`;
 
     let targetgroups = await db.query(query, {
       type: 'SELECT',
@@ -3384,39 +3247,21 @@ module.exports = {
       bind: bindParams
     });
 
-    let count = (await db.query(queryC, {
-      type: 'SELECT',
-      plain: true,
-      bind: bindParams
-    })).count;
-
     await ctx.render('/admin/targetgroups', {
       layout: '/admin/base',
       session: ctx.session,
       selected: 'more',
       targetgroups: targetgroups,
       filters: filtersToReturn,
-      page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(count / limit))
+      page: ctx.page,
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(targetgroups[0].dataValues.full_count / ctx.limit))
     });
 
     // Clear old messages
-    // ctx.session.messages = null;
+    ctx.session.messages = null;
   },
 
   adminPromotionTargetGroupsAdd: async (ctx) => {
-    let page = 1;
-
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page)
-    }
-
-    let limit = configEcom.SETTINGS['elements_per_page'];
-    let offset = 0;
-
-    if (ctx.params.page) {
-      offset = (parseInt(ctx.params.page) - 1) * limit;
-    }
 
     // Get filters
     let filters = {}, filtersToReturn = {};
@@ -3481,23 +3326,7 @@ module.exports = {
     if (filters.birthday)
       query += 'AND to_char(birthday, \'MM/DD\') = $birthday\n';
 
-    query += `ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
-
-    let queryC =
-      `SELECT COUNT(*) FROM users
-      WHERE "deletedAt" is NULL
-      AND POSITION(UPPER($firstName) IN UPPER("firstName")) > 0
-      AND POSITION(UPPER($lastName) IN UPPER("lastName")) > 0
-      AND POSITION(UPPER($country) IN UPPER("country")) > 0\n`;
-
-    if (filters.userID)
-      queryC += 'AND id = $userID\n';
-
-    if (filters.gender)
-      queryC += 'AND gender = $gender\n';
-
-    if (filters.birthday)
-      queryC += 'AND to_char(birthday, \'DD/MM\') = $birthday\n';
+    query += `ORDER BY "createdAt" DESC LIMIT $limit OFFSET $offset`;
 
     let users = await db.query(query, {
       type: 'SELECT',
@@ -3507,12 +3336,6 @@ module.exports = {
       bind: bindParams
     });
 
-    let count = (await db.query(queryC, {
-      type: 'SELECT',
-      plain: true,
-      bind: bindParams
-    })).count;
-
     await ctx.render('/admin/targetgroups-add', {
       layout: '/admin/base',
       session: ctx.session,
@@ -3520,8 +3343,8 @@ module.exports = {
       users: users,
       filters: filtersToReturn,
       countries: configEcom.COUNTRY_LIST,
-      page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(count / limit))
+      page: ctx.page,
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(users.length / ctx.limit))
     });
 
     // Clear old messages
@@ -3736,19 +3559,6 @@ module.exports = {
       }
     }
 
-    let page = 1;
-
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page)
-    }
-
-    let limit = configEcom.SETTINGS['elements_per_page'];
-    let offset = 0;
-
-    if (ctx.params.page) {
-      offset = (parseInt(ctx.params.page) - 1) * limit;
-    }
-
     let targetgroup = await TargetGroup.findOne({
       where: {
         id: ctx.params.id
@@ -3775,7 +3585,7 @@ module.exports = {
     }
 
     let targetgroupusersAll = await targetgroup.getUsers({ where: whereParams });
-    let targetgroupusers = await targetgroup.getUsers({ where: whereParams, limit: limit, offset: offset });
+    let targetgroupusers = await targetgroup.getUsers({ where: whereParams, limit: ctx.limit, offset: offset });
 
     await ctx.render('/admin/targetgroups-view', {
       layout: '/admin/base',
@@ -3786,8 +3596,8 @@ module.exports = {
       targetgroupfilters: targetgroupfiltersRet,
       filters: filtersToReturn,
       countries: configEcom.COUNTRY_LIST,
-      page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(targetgroupusersAll.length / configEcom.SETTINGS['elements_per_page']))
+      page: ctx.page,
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(targetgroupusersAll.length / configEcom.SETTINGS['elements_per_page']))
     });
   },
 
@@ -3815,21 +3625,9 @@ module.exports = {
 
     let staff = await Staff.findOne({ where: { username: ctx.session.dataValues.staffUsername } });
 
-    let page = 1;
     let filters = {};
     let filtersToReturn = {};
     let bindParams = {};
-
-    if (ctx.params.page) {
-      page = parseInt(ctx.params.page)
-    }
-
-    let limit = configEcom.SETTINGS['elements_per_page'];
-    let offset = 0;
-
-    if (ctx.params.page) {
-      offset = (parseInt(ctx.params.page) - 1) * limit;
-    }
 
     if (ctx.query.name) {
       filters['name'] = ctx.query.name;
@@ -3865,40 +3663,37 @@ module.exports = {
 
     bindParams.name = filters.name;
     bindParams.targetName = filters.targetName;
+    
+    bindParams.limit = ctx.limit;
+    bindParams.offset = ctx.offset;
 
     let queryTargetGroups =
       `SELECT * FROM targetgroups
-    WHERE "deletedAt" is NULL
-      AND POSITION(UPPER($targetName) IN UPPER(name)) > 0
-    ORDER BY "createdAt"`;
+      WHERE "deletedAt" is NULL
+        AND POSITION(UPPER($targetName) IN UPPER(name)) > 0
+      ORDER BY "createdAt"`;
 
     let query =
-      `SELECT promotions.id, promotions.name, promotions."startDate",
-            promotions."endDate", promotions."targetgroupId",
-            promotions.status, targetgroups.name AS "targetName",
-            promotions."createdAt"
-    FROM promotions
-    INNER JOIN targetgroups ON targetgroups.id = "targetgroupId"
-    WHERE promotions."deletedAt" is NULL
-      AND targetgroups."deletedAt" is NULL
-      AND POSITION(UPPER($targetName) IN UPPER("targetgroups"."name")) > 0
-      AND POSITION(UPPER($name) IN UPPER(promotions."name")) > 0\n`;
+      `SELECT promotions.id,
+              promotions.name,
+              promotions."startDate",
+              promotions."endDate",
+              promotions."targetgroupId",
+              promotions.status,
+              targetgroups.name           AS "targetName",
+              promotions."createdAt",
+              COUNT(*) OVER()             AS full_count
+      FROM promotions
+      INNER JOIN targetgroups ON targetgroups.id = "targetgroupId"
+      WHERE promotions."deletedAt" is NULL AND
+        targetgroups."deletedAt" is NULL AND
+        POSITION(UPPER($targetName) IN UPPER("targetgroups"."name")) > 0 AND
+        POSITION(UPPER($name) IN UPPER(promotions."name")) > 0\n`;
 
     if (filters.status)
       query += 'AND status = $status\n'
 
-    query += `ORDER BY promotions."createdAt" DESC LIMIT ${limit} OFFSET ${offset}`;
-
-    let queryC =
-      `SELECT COUNT(*) FROM promotions
-    INNER JOIN targetgroups ON targetgroups.id = "targetgroupId"
-    WHERE promotions."deletedAt" is NULL
-      AND targetgroups."deletedAt" is NULL
-      AND POSITION(UPPER($targetName) IN UPPER("targetgroups"."name")) > 0
-      AND POSITION(UPPER($name) IN UPPER(promotions."name")) > 0\n`;
-
-    if (filters.status)
-      queryC += 'AND status = $status\n';
+    query += `ORDER BY promotions."createdAt" DESC LIMIT $limit OFFSET $offset`;
 
     let promotions = await db.query(query, {
       type: 'SELECT',
@@ -3907,12 +3702,6 @@ module.exports = {
       mapToModel: true,
       bind: bindParams
     });
-
-    let count = (await db.query(queryC, {
-      type: 'SELECT',
-      plain: true,
-      bind: bindParams
-    })).count;
 
     let targetgroups = await db.query(queryTargetGroups, {
       type: 'SELECT',
@@ -3930,8 +3719,8 @@ module.exports = {
       filters: filtersToReturn,
       statuses: configEcom.PROMOTION_STATUSES,
       targetgroups: targetgroups,
-      page: page,
-      pages: utilsEcom.givePages(page, Math.ceil(count / limit))
+      page: ctx.page,
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(promotions[0].dataValues.full_count / ctx.limit))
     });
 
     // Clear old messages
