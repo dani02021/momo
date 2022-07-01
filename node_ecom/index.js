@@ -134,19 +134,19 @@ let linksTable = {
         loggerMsg: "Tried to view settings without a permission"
       }, requireStaff: true, requireSession: true
     },
-    "/admin/promotions/targetgroups/:page?": {
+    "/admin/promotion/targetgroups/:page?": {
       func: routes.adminPromotionTargetGroups, requirePermission: {
         arg: "targetgroups.read",
         loggerMsg: "Tried to view target groups without a permission"
       }, requireStaff: true, requireSession: true
     },
-    "/admin/promotions/targetgroup/add/:page?": {
+    "/admin/promotion/targetgroup/add/:page?": {
       func: routes.adminPromotionTargetGroupsAdd, requirePermission: {
         arg: "targetgroups.create",
         loggerMsg: "Tried to create a target group without a permission"
       }, requireStaff: true, requireSession: true
     },
-    "/admin/promotions/targetgroup/view/:id/:page?": {
+    "/admin/promotion/targetgroup/view/:id/:page?": {
       func: routes.adminPromotionTargetGroupsView, requirePermission: {
         arg: "targetgroups.view",
         loggerMsg: "Tried to view a target group without a permission"
@@ -271,13 +271,13 @@ let linksTable = {
         loggerMsg: "Tried to change settings without a permission"
       }, requireStaff: true, requireSession: true
     },
-    "/admin/promotions/targetgroup/add": {
+    "/admin/promotion/targetgroup/add": {
       func: routes.adminPromotionTargetGroupsAddPost, requirePermission: {
         arg: "targetgroups.create",
         loggerMsg: "Tried to create a targetgroup without a permission"
       }, requireStaff: true, requireSession: true
     },
-    "/admin/promotions/targetgroup/delete": {
+    "/admin/promotion/targetgroup/delete": {
       func: routes.adminPromotionTargetGroupsDelete, requirePermission: {
         arg: "targetgroups.delete",
         loggerMsg: "Tried to delete a targetgroup without a permission"
@@ -426,10 +426,18 @@ app.use(async (ctx, next) => {
         let limit = configEcom.SETTINGS['elements_per_page'];
         let offset = 0;
 
-        if (ctx.params && ctx.params.page) {
-          page = parseInt(ctx.params.page);
-          offset = (parseInt(ctx.params.page) - 1) * limit;
+        // Router code to get ctx.params - hacky way
+        let params = routerMostSpecificLayer.params(path,
+          routerMostSpecificLayer.captures(path, null),
+          null
+        );
+
+        if (params.page) {
+          page = parseInt(params.page);
+          offset = (parseInt(params.page) - 1) * limit;
         }
+
+        console.log(routerLayers);
 
         ctx.page = page;
         ctx.limit = limit;

@@ -92,7 +92,7 @@ module.exports = {
 
     let categories = await Category.findAll();
 
-    let products = await utilsEcom.getProductsRaw(offset, ctx.limit, filters.search, filters.cat, filters.minval, filters.maxval, ctx.query.sort, true);
+    let products = await utilsEcom.getProductsRaw(ctx.offset, ctx.limit, filters.search, filters.cat, filters.minval, filters.maxval, ctx.query.sort, true);
 
     let cartQty = await utilsEcom.getCartQuantity(ctx);
 
@@ -139,7 +139,7 @@ module.exports = {
         status: { [Op.gte]: 1 },
       },
       limit: ctx.limit,
-      offset: offset,
+      offset: ctx.offset,
       include: [{
         model: User,
         required: true,
@@ -163,7 +163,7 @@ module.exports = {
       FROM order_vouchers
       INNER JOIN user_vouchers  ON user_vouchers.id = order_vouchers."userVoucherId"
         INNER JOIN vouchers     ON user_vouchers."voucherId" = vouchers.id
-      WHERE order_vouchers."orderId" IN ($1)`, {
+      WHERE order_vouchers."orderId" = ANY($1::int[])`, {
         type: 'SELECT',
         mapToModel: true,
         bind: [orderIds],
@@ -1295,6 +1295,10 @@ module.exports = {
 
     await order.setTransacion(transaction);
   },
+
+  //activateVoucher: async (ctx) => {
+  //  let voucherToken
+  // }
 
   // BACK-OFFICE
 
@@ -3585,7 +3589,7 @@ module.exports = {
     }
 
     let targetgroupusersAll = await targetgroup.getUsers({ where: whereParams });
-    let targetgroupusers = await targetgroup.getUsers({ where: whereParams, limit: ctx.limit, offset: offset });
+    let targetgroupusers = await targetgroup.getUsers({ where: whereParams, limit: ctx.limit, offset: ctx.offset });
 
     await ctx.render('/admin/targetgroups-view', {
       layout: '/admin/base',

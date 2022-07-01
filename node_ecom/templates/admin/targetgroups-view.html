@@ -43,7 +43,7 @@
                           <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1000px;">
                             <h2 class="tm-block-title">Target Group <%= targetgroup.name %></h2>
                             <div class="container">
-                              <form id="filters-form" action="/admin/promotions/targetgroup/view/<%= targetgroup.id %>"
+                              <form id="filters-form" action="/admin/promotion/targetgroup/view/<%= targetgroup.id %>"
                                 method="get" onsubmit="checkTargetgroupsFilter(this);">
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="col-sm-3">
@@ -95,7 +95,7 @@
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="d-grid gap-2">
                                     <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
-                                    <a href="/admin/promotions/targetgroup/view/<%= targetgroup.id %>"
+                                    <a href="/admin/promotion/targetgroup/view/<%= targetgroup.id %>"
                                       class="btn btn-primary text-uppercase">Clear
                                       filters</a>
                                   </div>

@@ -679,9 +679,7 @@ async function getProductsRaw(offset, limit, name, cat, minval, maxval, sort, va
     bind: returnParamsBind,
   };
 
-  return [
-    db.query(text, returnParams)
-  ];
+  return db.query(text, returnParams);
 }
 
 function escapeCSVParam(param) {
@@ -1232,7 +1230,7 @@ async function sumArrayInPostgres(array) {
     `SELECT
       GREATEST(SUM(values), 0.00)            AS total
     FROM
-      UNNEST(ARRAY [${array.toString()}]::integer[])    AS values`, {
+      UNNEST(ARRAY [${array.toString()}]::decimal[])    AS values`, {
         mapToModel: false,
         plain: true,
         type: 'SELECT'

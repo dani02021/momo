@@ -39,7 +39,7 @@
                           <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1000px;">
                             <h2 class="tm-block-title">Add Target Group</h2>
                             <div class="container">
-                              <form id="filters-form" action="/admin/promotions/targetgroup/add" method="get"
+                              <form id="filters-form" action="/admin/promotion/targetgroup/add" method="get"
                                 onsubmit="checkTargetgroupsFilter(this);">
                                 <input type="hidden" name="name" id="targetName">
                                 <div class="row" style="margin-bottom: 12px;">
@@ -87,7 +87,7 @@
                                 <div class="row" style="margin-bottom: 12px;">
                                   <div class="d-grid gap-2">
                                     <button type="submit" class="btn btn-primary text-uppercase">Filter</button>
-                                    <a href="/admin/promotions/targetgroup/add"
+                                    <a href="/admin/promotion/targetgroup/add"
                                       class="btn btn-primary text-uppercase">Clear
                                       filters</a>
                                   </div>
@@ -338,7 +338,7 @@
 
                         $.ajax({
                           type: "POST",
-                          url: "/admin/promotions/targetgroup/add",
+                          url: "/admin/promotion/targetgroup/add",
                           data: $("#filters-form").serialize(),
                           dataType: "json",
                           headers: {
@@ -348,7 +348,7 @@
                           if (data.error) {
                             document.getElementById("err").innerHTML = data.error;
                           } else if (data.ok) {
-                            window.location.pathname = "/admin/promotions/targetgroups";
+                            window.location.pathname = "/admin/promotion/targetgroups";
                           }
                         }).fail(function (data) {
                           document.getElementById("err").innerHTML = 'There was an error while adding target group. Please try again later.';
