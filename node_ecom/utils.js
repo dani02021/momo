@@ -576,7 +576,8 @@ async function getReportResponce(filters, limit, offset, time) {
         orderitems.quantity *
         ${configEcom.SETTINGS.vat},
         2)), 0.00)                              AS vatsum,
-      SUM("voucherValue")                       AS "vouchersSum"
+      SUM("voucherValue")                       AS "vouchersSum",
+      COUNT(*) OVER()                           AS row_count
     FROM orders 
     INNER JOIN orderitems                         ON orderitems."orderId" = orders.id
     INNER JOIN
@@ -593,8 +594,6 @@ async function getReportResponce(filters, limit, offset, time) {
       AND "orderedAt" BETWEEN $2 AND $3
     GROUP BY "startDate"`;
 
-  const countText = `SELECT COUNT(*) FROM (${text}) AS foo;`;
-
   text += `OFFSET ${offset}`;
 
   if (limit >= 0) {
@@ -609,7 +608,7 @@ async function getReportResponce(filters, limit, offset, time) {
     model: OrderItem,
     mapToModel: true,
     bind: [time, filters.ordAfter, filters.ordBefore],
-  })
+  });
 
   return query
 }

@@ -2698,7 +2698,7 @@ module.exports = {
     }
 
     const reportRes = await utilsEcom.getReportResponce(filters, ctx.limit, ctx.offset, time);
-    const count = reportRes.length;
+    const count = reportRes[0].dataValues.row_count;
 
     loggerEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} `,
@@ -3521,14 +3521,14 @@ module.exports = {
     if (ctx.query.firstName) {
       filters['firstName'] = ctx.query.firstName;
       filtersToReturn['firstName'] = ctx.query.firstName;
-      whereParams.firstName = { [Op.iLike]: filters.firstName };
+      whereParams.firstName = { [Op.iLike]: '%' + filters.firstName + '%' }; // TODO: Injection?
     } else {
       filters['firstName'] = '';
     }
     if (ctx.query.lastName) {
       filters['lastName'] = ctx.query.lastName;
       filtersToReturn['lastName'] = ctx.query.lastName;
-      whereParams.lastName = { [Op.iLike]: filters.lastName };
+      whereParams.lastName = { [Op.iLike]: '%' + filters.lastName + '%' };
     } else {
       filters['lastName'] = '';
     }

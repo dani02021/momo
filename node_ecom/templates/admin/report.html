@@ -7,7 +7,7 @@
   <div class="row tm-content-row">
     <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12 tm-block-col">
       <div class="tm-bg-primary-dark tm-block tm-block-products" style="max-height: 1050px;">
-        <h2 class="tm-block-title">Report</h2>
+        <h2 class="tm-block-title">Report Orders</h2>
         <div class="container">
           <form action="/admin/report" method="get" onsubmit="checkOrderFilter(this);">
             <div class="row">
@@ -61,7 +61,7 @@
                 <td style="text-align: right;"><b>$<%= report[i].dataValues.vatsum %></b></td>
                 <td style="text-align: right;"><b>$<%= report[i].dataValues.grandtotal %></b></td>
                 <td style="text-align: right;"><b>$<%= report[i].dataValues.vouchersSum %></b></td>
-                <td style="text-align: right;"><b>$<%= report[i].dataValues.grandtotal - report[i].dataValues.vouchersSum %></b></td>
+                <td style="text-align: right;"><b>$<%= (report[i].dataValues.grandtotal - report[i].dataValues.vouchersSum).toFixed(2) %></b></td>
               </tr>
               <% } %>
             </tbody>
