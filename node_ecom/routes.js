@@ -2418,27 +2418,40 @@ module.exports = {
       filters['ordAfter'] = new Date(0).toISOString();
     }
 
-    const result = await Order.findAndCountAll({
-      where: {
-        status: { [Op.gte]: 1 },
-      },
-      limit: ctx.limit,
-      offset: ctx.offset,
-      include: User,
-      order: [
-        ['orderedAt', 'DESC']
-      ]
-    });
+    const result = await db.query(
+      `SELECT
+        *
+      FROM (
+        SELECT COUNT(*)
+        FROM orders
+      ) count, orders
+      INNER JOIN user_orders  ON "orderId" = orders.id
+      INNER JOIN users        ON "userId" = users.id
+      WHERE
+            status > 0 AND
+            orders."deletedAt" IS NULL AND
+            users."deletedAt" IS NULL
+      ORDER BY "orderedAt" DESC
+      LIMIT $limit OFFSET $offset`,
+      {
+        type: 'SELECT',
+        mapToModel: true,
+        model: Order,
+        bind: {limit: ctx.limit, offset: ctx.offset}
+      }
+    );
+
+    console.log(result);
 
     await ctx.render('/admin/orders', {
       layout: '/admin/base',
       session: ctx.session,
       selected: 'orders',
-      orders: result.rows,
+      orders: result,
       statuses: configEcom.STATUS_DISPLAY,
       filters: filtersToReturn,
       page: ctx.page,
-      pages: utilsEcom.givePages(ctx.page, Math.ceil(result.count / configEcom.SETTINGS['elements_per_page']))
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(result[0].dataValues.count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages

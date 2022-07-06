@@ -9,7 +9,8 @@ let options = {
   // currently supported: 'mysql', 'sqlite', 'postgres', 'mssql'
   dialect: 'postgres',
 
-  logging: false,
+  // logging: false,
+  benchmark: true,
 
   // custom port; default: dialect default
   port: 5432,

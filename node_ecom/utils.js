@@ -576,8 +576,7 @@ async function getReportResponce(filters, limit, offset, time) {
         orderitems.quantity *
         ${configEcom.SETTINGS.vat},
         2)), 0.00)                              AS vatsum,
-      SUM("voucherValue")                       AS "vouchersSum",
-      COUNT(*) OVER()                           AS row_count
+      SUM("voucherValue")                       AS "vouchersSum"
     FROM orders 
     INNER JOIN orderitems                         ON orderitems."orderId" = orders.id
     INNER JOIN
@@ -594,6 +593,8 @@ async function getReportResponce(filters, limit, offset, time) {
       AND "orderedAt" BETWEEN $2 AND $3
     GROUP BY "startDate"`;
 
+  const countText = `SELECT COUNT(*) FROM (${text}) AS foo;`;
+
   text += `OFFSET ${offset}`;
 
   if (limit >= 0) {
@@ -608,7 +609,7 @@ async function getReportResponce(filters, limit, offset, time) {
     model: OrderItem,
     mapToModel: true,
     bind: [time, filters.ordAfter, filters.ordBefore],
-  });
+  })
 
   return query
 }
@@ -1022,11 +1023,17 @@ function getAge(dateString) {
 }
 
 // Generate
+
+// WARN:
+// Remove all orders without orderitems
+// Remove all orders without user
+// Remove all orderitems without products
+// Remove all orderitems without order
 async function generateOrders(x = 100) {
   const products = await Product.findAll();
   const users = await User.findAll();
 
-  for (let o = 0; o < x; o = +1) {
+  for (let o = 0; o < x; o += 1) {
     const order = await Order.create({
       status: 1,
       orderedAt: new Date(+(new Date()) - Math.floor(Math.random() * 900000000000)),
@@ -1052,8 +1059,6 @@ async function generateOrders(x = 100) {
     }
   }
 }
-
-generateOrders(100);
 
 async function generateStaff(x = 100) {
   const testUsers = user({
