@@ -197,6 +197,10 @@ function generateEmailVerfToken() {
   return crypto.randomBytes(60).toString('hex');
 }
 
+function generateVoucherActivateToken() {
+  return crypto.randomBytes(64).toString('hex');
+}
+
 // Email functions
 function parseEmailPlaceholders(text, user, order) {
   assert(typeof text === 'string');
@@ -1039,16 +1043,18 @@ async function generateOrders(x = 100) {
 
       await orderitem.setProduct(product);
 
+      await orderitem.update({ price: product.discountPrice });
+
       await order.addOrderitem(orderitem);
 
-      const user = users[Math.floor(Math.random() * 10000) + 1];
-
-      order.update({ price: await order.getTotal() });
+      const user = users[Math.floor(Math.random() * 10_000) + 1];
 
       user.addOrder(order);
     }
   }
 }
+
+generateOrders(100);
 
 async function generateStaff(x = 100) {
   const testUsers = user({
@@ -1074,16 +1080,18 @@ async function generateUsers(x = 100) {
   for (let o = 0; o < x; o += 1) {
     const token = generateEmailVerfToken();
 
-    User.create({
+    await User.create({
       username: id(),
-      email: testUsers[o].email + id(),
-      password: id(),
+      email: id() + testUsers[o].email,
+      password: ( id() + token).substring(0, 30),
       firstName: testUsers[o].name.first,
       lastName: testUsers[o].name.last,
       address: 'Bulgaria',
       country: 'Bulgaria',
       emailConfirmed: true,
       verificationToken: token,
+      gender: 'Male',
+      birthday: ~~new Date(Math.random() * 900000000000)
     });
   }
 }
@@ -1281,6 +1289,7 @@ module.exports = {
   givePages,
   generateEmailVerfToken,
   generateSessionKey,
+  generateVoucherActivateToken,
   configPostgreSessions,
   parseEmailPlaceholders,
   sendEmail,

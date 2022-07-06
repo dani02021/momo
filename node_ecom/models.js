@@ -663,11 +663,20 @@ const UserVoucher = db.define('user_voucher', {
     autoIncrement: true,
     primaryKey: true,
   },
+  token: {
+    type: DataTypes.STRING(32),
+    allowNull: false,
+  },
   active: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
     allowNull: false,
   },
+  emailSend: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+  }
 }, {
   paranoid: true,
   timestamps: false,

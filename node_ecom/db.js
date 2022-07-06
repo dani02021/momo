@@ -9,14 +9,14 @@ let options = {
   // currently supported: 'mysql', 'sqlite', 'postgres', 'mssql'
   dialect: 'postgres',
 
-  // logging: false,
+  logging: false,
 
   // custom port; default: dialect default
   port: 5432,
 
   // pool configuration used to pool database connections
   pool: {
-    max: 150,
+    max: 100,
     idle: 30000,
     acquire: 60000,
   }
