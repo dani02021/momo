@@ -959,11 +959,13 @@ const Order = db.define(
   },
 );
 
-Order.belongsToMany(User, { through: 'user_orders', allowNull: false });
-User.belongsToMany(Order, { through: 'user_orders', allowNull: false });
-
 Order.hasMany(OrderItem, { foreignKey: 'orderId' });
 OrderItem.belongsTo(Order);
+
+Order.belongsTo(User, {
+  foreignKey: 'userId',
+  allowNull: false,
+});
 
 Order.prototype.getItems = function () {
   return this.getOrderItems();
