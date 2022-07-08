@@ -587,6 +587,9 @@ async function getReportResponce(filters, limit, offset, time) {
       LEFT JOIN order_vouchers                        ON order_vouchers."orderId" = orders.id
         LEFT JOIN user_vouchers                       ON user_vouchers.id = order_vouchers."userVoucherId"
           LEFT JOIN vouchers                          ON user_vouchers."voucherId" = vouchers.id
+            WHERE orders."deletedAt" IS NULL
+              AND vouchers."deletedAt" IS NULL
+              AND orders.status > 0
       ) ord_vch                                   ON orders.id = ord_vch.id
     WHERE status > 0
       AND orders."deletedAt" is NULL

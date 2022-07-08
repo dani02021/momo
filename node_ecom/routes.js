@@ -2425,7 +2425,9 @@ module.exports = {
     // Two queries are faster than one combined dunno why
     const rows = await db.query(
       `SELECT
-        *
+        orders."orderedAt", orders.id, orders.status,
+        users."firstName", users."lastName", users.username,
+        users.country, users.address
       FROM orders
       INNER JOIN users ON orders."userId" = users.id
       WHERE
