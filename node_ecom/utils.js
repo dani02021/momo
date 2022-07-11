@@ -197,6 +197,10 @@ function generateEmailVerfToken() {
   return crypto.randomBytes(60).toString('hex');
 }
 
+function generateVoucherActivateToken() {
+  return crypto.randomBytes(64).toString('hex');
+}
+
 // Email functions
 function parseEmailPlaceholders(text, user, order) {
   assert(typeof text === 'string');
@@ -573,7 +577,7 @@ async function getReportResponce(filters, limit, offset, time) {
         ${configEcom.SETTINGS.vat},
         2)), 0.00)                              AS vatsum,
       SUM("voucherValue")                       AS "vouchersSum",
-      COUNT(*) OVER()                           AS row_count
+      COUNT(*)            OVER ()               AS count
     FROM orders 
     INNER JOIN orderitems                         ON orderitems."orderId" = orders.id
     INNER JOIN
@@ -583,6 +587,9 @@ async function getReportResponce(filters, limit, offset, time) {
       LEFT JOIN order_vouchers                        ON order_vouchers."orderId" = orders.id
         LEFT JOIN user_vouchers                       ON user_vouchers.id = order_vouchers."userVoucherId"
           LEFT JOIN vouchers                          ON user_vouchers."voucherId" = vouchers.id
+            WHERE orders."deletedAt" IS NULL
+              AND vouchers."deletedAt" IS NULL
+              AND orders.status > 0
       ) ord_vch                                   ON orders.id = ord_vch.id
     WHERE status > 0
       AND orders."deletedAt" is NULL
@@ -604,7 +611,7 @@ async function getReportResponce(filters, limit, offset, time) {
     model: OrderItem,
     mapToModel: true,
     bind: [time, filters.ordAfter, filters.ordBefore],
-  });
+  })
 
   return query
 }
@@ -1018,11 +1025,17 @@ function getAge(dateString) {
 }
 
 // Generate
+
+// WARN:
+// Remove all orders without orderitems
+// Remove all orders without user
+// Remove all orderitems without products
+// Remove all orderitems without order
 async function generateOrders(x = 100) {
   const products = await Product.findAll();
   const users = await User.findAll();
 
-  for (let o = 0; o < x; o = +1) {
+  for (let o = 0; o < x; o += 1) {
     const order = await Order.create({
       status: 1,
       orderedAt: new Date(+(new Date()) - Math.floor(Math.random() * 900000000000)),
@@ -1038,11 +1051,11 @@ async function generateOrders(x = 100) {
 
       await orderitem.setProduct(product);
 
+      await orderitem.update({ price: product.discountPrice });
+
       await order.addOrderitem(orderitem);
 
-      const user = users[Math.floor(Math.random() * 10000) + 1];
-
-      order.update({ price: await order.getTotal() });
+      const user = users[Math.floor(Math.random() * 10_000) + 1];
 
       user.addOrder(order);
     }
@@ -1073,16 +1086,18 @@ async function generateUsers(x = 100) {
   for (let o = 0; o < x; o += 1) {
     const token = generateEmailVerfToken();
 
-    User.create({
+    await User.create({
       username: id(),
-      email: testUsers[o].email + id(),
-      password: id(),
+      email: id() + testUsers[o].email,
+      password: ( id() + token).substring(0, 30),
       firstName: testUsers[o].name.first,
       lastName: testUsers[o].name.last,
       address: 'Bulgaria',
       country: 'Bulgaria',
       emailConfirmed: true,
       verificationToken: token,
+      gender: 'Male',
+      birthday: ~~new Date(Math.random() * 900000000000)
     });
   }
 }
@@ -1280,6 +1295,7 @@ module.exports = {
   givePages,
   generateEmailVerfToken,
   generateSessionKey,
+  generateVoucherActivateToken,
   configPostgreSessions,
   parseEmailPlaceholders,
   sendEmail,

@@ -437,8 +437,6 @@ app.use(async (ctx, next) => {
           offset = (parseInt(params.page) - 1) * limit;
         }
 
-        console.log(routerLayers);
-
         ctx.page = page;
         ctx.limit = limit;
         ctx.offset = offset;

@@ -10,13 +10,14 @@ let options = {
   dialect: 'postgres',
 
   // logging: false,
+  benchmark: true,
 
   // custom port; default: dialect default
   port: 5432,
 
   // pool configuration used to pool database connections
   pool: {
-    max: 150,
+    max: 100,
     idle: 30000,
     acquire: 60000,
   }

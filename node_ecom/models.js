@@ -663,11 +663,20 @@ const UserVoucher = db.define('user_voucher', {
     autoIncrement: true,
     primaryKey: true,
   },
+  token: {
+    type: DataTypes.STRING(32),
+    allowNull: false,
+  },
   active: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
     allowNull: false,
   },
+  emailSend: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+  }
 }, {
   paranoid: true,
   timestamps: false,
@@ -950,11 +959,13 @@ const Order = db.define(
   },
 );
 
-Order.belongsToMany(User, { through: 'user_orders', allowNull: false });
-User.belongsToMany(Order, { through: 'user_orders', allowNull: false });
-
 Order.hasMany(OrderItem, { foreignKey: 'orderId' });
 OrderItem.belongsTo(Order);
+
+Order.belongsTo(User, {
+  foreignKey: 'userId',
+  allowNull: false,
+});
 
 Order.prototype.getItems = function () {
   return this.getOrderItems();
@@ -1301,7 +1312,7 @@ module.exports = {
 
 // Alter the database
 (async () => {
-  await db.sync({ alter: true });
+  // await db.sync({ alter: true });
 
   // Create the roles
 

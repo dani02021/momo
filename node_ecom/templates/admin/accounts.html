@@ -70,6 +70,7 @@
                 <th scope="col" class="clickable">GENDER</th>
                 <th scope="col" class="clickable">BIRTHDAY</th>
                 <th scope="col" class="clickable">LAST LOGIN</th>
+                <th scope="col">PROMOTIONS</th>
               </tr>
             </thead>
             <tbody>
@@ -95,6 +96,7 @@
                 <% } else { %>
                 <td><b></b></td>
                 <% } %>
+                <td><b><a style="color: #f5a623" href="#" data-bs-toggle="modal" data-bs-target="#promotion<%= users[i].id %>">See Promotions</a></b></td>
               </tr>
               <% } %>
             </tbody>
@@ -147,6 +149,32 @@
   </nav>
 </div>
 <!-- Modal -->
+<!-- User Promotions -->
+<% for (i = 0; i < users.length; i++) { %>
+  <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="promotion<%= users[i].id %>" tabindex="-1"
+    aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Vouchers of <%= users[i].username %></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+        <div class="modal-body">
+          <ul>
+            <li>
+              <% for (promotion in await users[i].getPromotions() %>
+                <% console.log(promotion) %>
+              <% } %>
+            </li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+    </div>
+  </div>
+</div>
+<% } %>
 <div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="add-account" tabindex="-1"
   aria-labelledby="add-account" aria-hidden="true">
   <div class="modal-dialog">
