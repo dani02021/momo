@@ -157,7 +157,7 @@ module.exports = {
     let orderIds = result.rows.map(order => { return order.dataValues.id });
 
     let vouchers = await db.query(
-      `SELECT 
+      `SELECT
         order_vouchers."orderId" AS "orderId",
         vouchers.*
       FROM order_vouchers
@@ -1046,7 +1046,7 @@ module.exports = {
     let user = await User.findOne({ where: { username: ctx.session.dataValues.username } });
 
     let vouchers = await db.query(
-      `SELECT 
+      `SELECT
         user_vouchers."voucherId", vouchers."endDate", vouchers.value, vouchers."promotionId",
         promotions.name, "targetgroupId"
       FROM vouchers
@@ -1141,7 +1141,7 @@ module.exports = {
     }
 
     let subTotal = await order.getTotalStr();
-    let subTotalVAT = await order.getTotalWithVATStr(); 
+    let subTotalVAT = await order.getTotalWithVATStr();
     let grandTotal = subTotalVAT;
     let orderVATSum = await order.getVATSumStr();
 
@@ -1154,7 +1154,7 @@ module.exports = {
       { throw new ClientException(`Voucher's count is too much`, configEcom.ERROR_TYPES.VOUCHERS_TOO_MUCH_COUNT); }
 
       vouchers = await Voucher.findAll({where: { id: vouchersId }, include: [{ model: Promotion, required: true }]});
-      
+
       // Sort vouchers as closer as the total order price, positive vouchers are more important
       vouchers.sort( function (a, b) {
         return (b.dataValues.value - parseFloat(grandTotal)) - (a.dataValues.value - parseFloat(grandTotal));
@@ -1173,7 +1173,7 @@ module.exports = {
       let voucherValues = vouchers.map(x => parseFloat(x.dataValues.value));
 
       var vouchersSum = await utilsEcom.sumArrayInPostgres(voucherValues);
-    
+
       grandTotal = await utilsEcom.sumArrayInPostgres([parseFloat(grandTotal), -vouchersSum]);
     }
 
@@ -1283,7 +1283,7 @@ module.exports = {
             { await order.update({ status: 1, orderedAt: Sequelize.fn('NOW') }); }
       else
             { await order.update({ status: 5, orderedAt: Sequelize.fn('NOW') }); }
-      
+
       let userVouchers = await UserVoucher.findAll({where: { userId: user.id, voucherId: voucherIds }});
 
       await order.setUser_vouchers(userVouchers);
@@ -1685,7 +1685,7 @@ module.exports = {
       `SELECT
         *,
         COUNT(*) OVER() AS count
-      FROM users 
+      FROM users
       WHERE
         position(upper($1) in upper(username)) > 0 AND
         position(upper($2) in upper(email)) > 0 AND
@@ -2728,7 +2728,7 @@ module.exports = {
     }
 
     const reportRes = await utilsEcom.getReportResponce(filters, ctx.limit, ctx.offset, time);
-    const count = reportRes ? reportRes[0].dataValues.count : 0;
+    const count = reportRes.length ? reportRes[0].dataValues.count : 0;
 
     loggerEcom.logger.log('info',
       `Staff ${ctx.session.dataValues.staffUsername} generated orders report from ${new Date(filters.ordAfter).toLocaleString('en-GB')} to ${new Date(filters.ordBefore).toLocaleString('en-GB')} trunced by ${time} `,
@@ -3127,7 +3127,7 @@ module.exports = {
     if (!/^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/g.test(sender)) {
       ctx.session.messages = { "tableError": type == "payment" ? "Payment email is invalid!" : "Order email is invalid!" };
       ctx.redirect("/admin/settings/email");
-  
+
       return;
     }
     */
@@ -3708,7 +3708,7 @@ module.exports = {
 
     bindParams.name = filters.name;
     bindParams.targetName = filters.targetName;
-    
+
     bindParams.limit = ctx.limit;
     bindParams.offset = ctx.offset;
 

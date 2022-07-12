@@ -4,7 +4,7 @@
   "description": "NodeJS ecommerce project",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon --use_strict --trace-warnings --signal SIGTERM index.js"
+    "start": "nodemon -e js,html,ejs,json --use_strict --trace-warnings --signal SIGTERM index.js"
   },
   "repository": {
     "type": "git",

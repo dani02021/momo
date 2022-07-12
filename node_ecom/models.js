@@ -697,8 +697,8 @@ Promotion.prototype.getTotalValue = async function () {
 
 Promotion.prototype.getTotalValueStr = async function () {
   return (await db.query(
-    `SELECT 
-      COUNT("userId") * vouchers.value AS total 
+    `SELECT
+      COUNT("userId") * vouchers.value AS total
     FROM promotions
     INNER JOIN targetgroups ON
       "targetgroupId" = targetgroups.id
@@ -863,7 +863,7 @@ OrderItem.prototype.getTotalStr = async function () {
       `SELECT
        ROUND(price * quantity, 2) AS total
      FROM orderitems
-     WHERE orderitems.id = ${this.id} 
+     WHERE orderitems.id = ${this.id}
        AND orderitems."deletedAt" is NULL`,
       {
         type: 'SELECT',
@@ -880,8 +880,8 @@ OrderItem.prototype.getTotalStr = async function () {
     `SELECT
       ROUND("discountPrice" * orderitems.quantity, 2) AS total
     FROM products, orderitems
-    WHERE products.id = ${product.id} 
-      AND orderitems.id = ${this.id} 
+    WHERE products.id = ${product.id}
+      AND orderitems.id = ${this.id}
       AND products.id = orderitems."productId"
       AND orderitems."deletedAt" is NULL
       AND products."deletedAt" is NULL

@@ -67,10 +67,10 @@ const logger = winston.createLogger({
 
 /**
  * Global error handler
- * 
- * @param {Error} err 
- * @param {import('koa').Context} ctx 
- * @param {boolean} fileOnly 
+ *
+ * @param {Error} err
+ * @param {import('koa').Context} ctx
+ * @param {boolean} fileOnly
  */
 async function handleError(err, options) {
     assert(err instanceof Error);
@@ -125,7 +125,7 @@ async function handleError(err, options) {
 
     console.log("ERRRRR");
 
-    console.log(err);
+    console.err(err);
 }
 
 module.exports = {
