@@ -1,8 +1,11 @@
-#! /usr/bin/perl -wT
+#! /usr/bin/perl -wT -l ~/perl5/lib/perl5
 
 use DBI;
 use Getopt::Std;
-use MIME::Lite;
+use Email::Sender::Simple qw(sendmail);
+use Email::Simple;
+use Email::Sender::Transport::SMTP qw();
+use Try::Tiny;
 
 use strict; use warnings;
 
@@ -16,8 +19,11 @@ delete @ENV{ 'IFS', 'CDPATH', 'ENV', 'BASH_ENV'  };
 
 our($opt_u, $opt_p);
 
-print "$opt_u$opt_p\n";
-
+try {
+    ;
+} catch {
+    die "Yay error caught!";
+};
 my $driver = "Pg";
 my $database = "ecommercenodejs";
 my $dsn = "DBI:$driver:dbname=$database;host=localhost;port=5432";
@@ -56,25 +62,35 @@ while (my @row = $sth->fetchrow_array()) {
     my $token = $row[3];
     my $message = "Promo: $promotion and your token is: $token";
 
-    $msg = MIME::Lite->new(
-        From => 'danielgudjenev@gmail.com',
-        To => $to,
-        Subject => $subject
-        Data => $message
+    my $msg = Email::Simple->create(
+        header  => [
+            From    => 'danielgudjenev@gmail.com',
+            To      => $to,
+            Subject => 'Hey I just met you'
+        ],
+        body    => 'Hey yo!'
     );
 
-    $msg->send('smtp', 'smtp.gmail.com', AuthUser=>'danielgudjenev@gmail.com', AuthPass=>'ynimcicxhgzifbct');
+    my $transport = Email::Sender::Transport::SMTP->new({
+            host => 'smtp.gmail.com',
+            port => 587,
+            sasl_username => 'danielgudjenev@gmail.com',
+            sasl_password => 'ynimcicxhgzifbct '
+    });
+
+    sendmail(
+        $msg,
+        $transport
+    );
 
     print "Email Sent yo!\n$msg\n";
 
-    system("/usr/local/bin/sendEmail -f danielgudjenev\@gmail.com -t @row[1] -s smtp.gmail.com:587 -xu danielgudjenev\@gmail.com -xp ynimcicxhgzifbct -u \"test email\" -m \"$row[2] $row[3]\" > /dev/null");
-    print "$?\n";
+    # system("/usr/local/bin/sendEmail -f danielgudjenev\@gmail.com -t @row[1] -s smtp.gmail.com:587 -xu danielgudjenev\@gmail.com -xp ynimcicxhgzifbct -u \"test email\" -m \"$row[2] $row[3]\" > /dev/null");
 }
 
 my $to = 'akea@abv.bg';
 my $subject = 'Test Email';
 my $message = 'This is test email sent by Perl Script';
-
 
 
 print "$?\n";

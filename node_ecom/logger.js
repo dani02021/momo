@@ -125,7 +125,7 @@ async function handleError(err, options) {
 
     console.log("ERRRRR");
 
-    console.err(err);
+    console.error(err);
 }
 
 module.exports = {
