@@ -368,7 +368,7 @@ async function captureOrder(orderId, orderPrice, debug = false) {
   } catch (e) {
     if (e instanceof ClientException)
       throw e;
-    
+
     loggerEcom.handleError(e, { fileOnly: true });
 
     loggerEcom.logger.log(
@@ -559,42 +559,39 @@ async function validateStatus(ctx, orderId, responce) {
 async function getReportResponce(filters, limit, offset, time) {
   let text =
     `SELECT
-      date_trunc($1, orders."orderedAt")        AS "startDate", 
-      SUM(orderitems.quantity)                  AS products, 
-      COUNT(distinct orders.id)                 AS orders, 
-      COALESCE( SUM( ROUND(
-        price *
-        orderitems.quantity
-        , 2)), 0.00)                            AS subtotal,
-      COALESCE( SUM( ROUND(
-        price *
-        orderitems.quantity *
-        (1 + ${configEcom.SETTINGS.vat})
-        , 2 )), 0.00)                           AS grandtotal,
-      COALESCE( SUM( ROUND(
-        price *
-        orderitems.quantity *
-        ${configEcom.SETTINGS.vat},
-        2)), 0.00)                              AS vatsum,
-      SUM("voucherValue")                       AS "vouchersSum",
-      COUNT(*)            OVER ()               AS count
-    FROM orders 
-    INNER JOIN orderitems                         ON orderitems."orderId" = orders.id
-    INNER JOIN
-      (SELECT
-        orders.id, COALESCE(value, 0.00)              AS "voucherValue"
-      FROM orders
-      LEFT JOIN order_vouchers                        ON order_vouchers."orderId" = orders.id
-        LEFT JOIN user_vouchers                       ON user_vouchers.id = order_vouchers."userVoucherId"
-          LEFT JOIN vouchers                          ON user_vouchers."voucherId" = vouchers.id
-            WHERE orders."deletedAt" IS NULL
-              AND vouchers."deletedAt" IS NULL
-              AND orders.status > 0
-      ) ord_vch                                   ON orders.id = ord_vch.id
-    WHERE status > 0
-      AND orders."deletedAt" is NULL
-      AND orderitems."deletedAt" is NULL
-      AND "orderedAt" BETWEEN $2 AND $3
+        date_trunc($1, orders."orderedAt")          AS "startDate",
+        SUM(orderitems.quantity)                    AS products,
+        COUNT(distinct orders.id)                   AS orders,
+        COALESCE( SUM( ROUND(
+          price * orderitems.quantity
+          , 2) ), 0.00 )                            AS subtotal,
+        COALESCE( SUM( ROUND(
+          price * orderitems.quantity
+          , 2) ), 0.00 ) * {config.SETTINGS.vat}    AS grandtotal,
+        COALESCE( SUM( ROUND(
+          price * orderitems.quantity
+          , 2) ), 0.00 ) * {config.SETTINGS.vat}    AS vatsum,
+        SUM("voucherValue")                         AS "vouchersSum",
+        COUNT(*) OVER()                             AS count
+    FROM orders
+    INNER JOIN orderitems                           ON orderitems."orderId" = orders.id
+    LEFT JOIN
+        (SELECT
+          orders.id,
+          COALESCE(value, 0.00)                 AS "voucherValue"
+        FROM orders
+        JOIN order_vouchers                         ON order_vouchers."orderId" = orders.id
+            JOIN user_vouchers                          ON user_vouchers.id = order_vouchers."userVoucherId"
+                JOIN vouchers                               ON user_vouchers."voucherId" = vouchers.id
+        WHERE status > 0
+          AND orders."deletedAt" IS NULL
+          AND vouchers."deletedAt" IS NULL
+          AND orders."orderedAt" BETWEEN $2 AND $3
+        ) ord_vch                                   ON orders.id = ord_vch.id
+        WHERE status > 0
+          AND orders."deletedAt" is NULL
+          AND orderitems."deletedAt" is NULL
+          AND orders."orderedAt" BETWEEN $2 AND $3
     GROUP BY "startDate"`;
 
   text += `OFFSET ${offset}`;
@@ -634,12 +631,12 @@ function createTempFile(name = 'temp_file', data = '', encoding = 'utf8') {
 }
 
 async function getProductsRaw(offset, limit, name, cat, minval, maxval, sort, vat = true) {
-  let text = `SELECT * FROM products 
+  let text = `SELECT * FROM products
     LEFT JOIN (
-        SELECT "productId", sum(quantity) FROM orderitems 
+        SELECT "productId", sum(quantity) FROM orderitems
         GROUP BY "productId"
-    ) foo ON "productId" = products.id 
-    WHERE "deletedAt" IS NULL 
+    ) foo ON "productId" = products.id
+    WHERE "deletedAt" IS NULL
     AND hide = false \n`;
 
   const returnParamsBind = {};
@@ -1236,8 +1233,8 @@ function richToString(value) {
 
 /**
  * Sums the array, if the sum < 0, return 0
- * @param {object} array 
- * @returns 
+ * @param {object} array
+ * @returns
  */
 async function sumArrayInPostgres(array) {
   return (await db.query(

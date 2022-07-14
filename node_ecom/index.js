@@ -161,7 +161,8 @@ let linksTable = {
 
     "/api/v0/permissions/get": { func: routes.apiPermissions, requireStaff: true, requireSession: true },
     "/api/v0/accounts/get": { func: routes.apiAccounts, requireStaff: true, requireSession: true },
-    "/api/v0/products/get": { func: routes.apiProducts, requireStaff: true, requireSession: true },
+    "/api/v0/products/get": { func: routes.apiProducts, requireStaff: true, requireSession: true },,
+    "/error": {func: router.error}
   },
   post: {
     "/register": { func: routes.registerPost },
@@ -323,7 +324,7 @@ for (let method in linksTable) {
 // So if user try to upload 7 files silmuntaniously,
 // the browser will reject it!
 
-/* WARNING: 
+/* WARNING:
    The session can be null at any request
    I don't fking know why, but check for empty session
    on each request
@@ -480,7 +481,7 @@ app.on("error", (err, ctx) => {
         err.headers = { 'Location': '/cart' };
         break;
       default: // TODO: If ctx.path also throw error it will infinity be redirecting !
-        // err.headers = { 'Location': ctx.path };
+        err.headers = { 'Location': '/error' };
         break;
     }
 

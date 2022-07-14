@@ -3982,4 +3982,8 @@ module.exports = {
       ).catch(err => utilsEcom.handleError(err))
     );
   },
+
+  error: async (ctx) => {
+      await ctx.render('500-error', {  });
+  }
 }
