@@ -564,18 +564,30 @@ async function getReportResponce(filters, limit, offset, time) {
         COUNT(distinct orders.id)                           AS orders,
         SUM( ROUND(
           price * orderitems.quantity
-          , 2) ), 0.00 )                                    AS subtotal,
+          , 2) )                                    AS subtotal,
         SUM( ROUND(
           price * orderitems.quantity
-          , 2) ), 0.00 ) * ( 1 + {config.SETTINGS.vat} )    AS grandtotal,
+          , 2) ) * ( 1 + {config.SETTINGS.vat} )    AS grandtotal,
         SUM( ROUND(
           price * orderitems.quantity
-          , 2) ), 0.00 ) * {config.SETTINGS.vat}            AS vatsum,
+          , 2) ) * {config.SETTINGS.vat}            AS vatsum,
         COALESE( SUM("voucherValue"), 0.00)                 AS "vouchersSum",
-          AND orders."deletedAt" IS NULL
-          AND vouchers."deletedAt" IS NULL
-          AND orders."orderedAt" BETWEEN $2 AND $3
-        ) ord_vch                                   ON orders.id = ord_vch.id
+        COUNT(*) OVER ()                                    AS count
+        FROM orders
+        INNER JOIN orderitems                           ON orderitems."orderId" = orders.id
+        LEFT JOIN
+          (SELECT
+            orders.id,
+            COALESCE(value, 0.00)                 AS "voucherValue"
+            FROM orders
+            JOIN order_vouchers                     ON order_vouchers."orderId" = orders.id
+              JOIN user_vouchers                    ON user_vouchers.id = order_vouchers."userVoucherId"
+                JOIN vouchers                       ON user_vouchers."voucherId" = vouchers.id)
+            WHERE status > 0
+              AND orders."deletedAt" IS NULL
+              AND vouchers."deletedAt" IS NULL
+              AND orders."orderedAt" BETWEEN $2 AND $3
+          ) ord_vch                                   ON orders.id = ord_vch.id
         WHERE status > 0
           AND orders."deletedAt" is NULL
           AND orderitems."deletedAt" is NULL
