@@ -3984,6 +3984,9 @@ module.exports = {
   },
 
   error: async (ctx) => {
-      await ctx.render('500-error', {  });
+      await ctx.render('500-error', {
+          layout: false,
+          session: ctx.session
+      });
   }
 }

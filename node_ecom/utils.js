@@ -559,31 +559,19 @@ async function validateStatus(ctx, orderId, responce) {
 async function getReportResponce(filters, limit, offset, time) {
   let text =
     `SELECT
-        date_trunc($1, orders."orderedAt")          AS "startDate",
-        SUM(orderitems.quantity)                    AS products,
-        COUNT(distinct orders.id)                   AS orders,
-        COALESCE( SUM( ROUND(
+        date_trunc($1, orders."orderedAt")                  AS "startDate",
+        SUM(orderitems.quantity)                            AS products,
+        COUNT(distinct orders.id)                           AS orders,
+        SUM( ROUND(
           price * orderitems.quantity
-          , 2) ), 0.00 )                            AS subtotal,
-        COALESCE( SUM( ROUND(
+          , 2) ), 0.00 )                                    AS subtotal,
+        SUM( ROUND(
           price * orderitems.quantity
-          , 2) ), 0.00 ) * {config.SETTINGS.vat}    AS grandtotal,
-        COALESCE( SUM( ROUND(
+          , 2) ), 0.00 ) * ( 1 + {config.SETTINGS.vat} )    AS grandtotal,
+        SUM( ROUND(
           price * orderitems.quantity
-          , 2) ), 0.00 ) * {config.SETTINGS.vat}    AS vatsum,
-        SUM("voucherValue")                         AS "vouchersSum",
-        COUNT(*) OVER()                             AS count
-    FROM orders
-    INNER JOIN orderitems                           ON orderitems."orderId" = orders.id
-    LEFT JOIN
-        (SELECT
-          orders.id,
-          COALESCE(value, 0.00)                 AS "voucherValue"
-        FROM orders
-        JOIN order_vouchers                         ON order_vouchers."orderId" = orders.id
-            JOIN user_vouchers                          ON user_vouchers.id = order_vouchers."userVoucherId"
-                JOIN vouchers                               ON user_vouchers."voucherId" = vouchers.id
-        WHERE status > 0
+          , 2) ), 0.00 ) * {config.SETTINGS.vat}            AS vatsum,
+        COALESE( SUM("voucherValue"), 0.00)                 AS "vouchersSum",
           AND orders."deletedAt" IS NULL
           AND vouchers."deletedAt" IS NULL
           AND orders."orderedAt" BETWEEN $2 AND $3

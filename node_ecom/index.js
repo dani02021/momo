@@ -161,8 +161,8 @@ let linksTable = {
 
     "/api/v0/permissions/get": { func: routes.apiPermissions, requireStaff: true, requireSession: true },
     "/api/v0/accounts/get": { func: routes.apiAccounts, requireStaff: true, requireSession: true },
-    "/api/v0/products/get": { func: routes.apiProducts, requireStaff: true, requireSession: true },,
-    "/error": {func: router.error}
+    "/api/v0/products/get": { func: routes.apiProducts, requireStaff: true, requireSession: true },
+    "/error": { func: routes.error },
   },
   post: {
     "/register": { func: routes.registerPost },
