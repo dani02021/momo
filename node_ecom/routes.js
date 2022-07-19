@@ -1316,11 +1316,13 @@ module.exports = {
         limit: 10
       });
 
-      let orderitems = []
+      let orderitems = [];
 
       for (i = 0; i < orders.length; i++) {
         orderitems.push(await orders[i].getOrderitems());
       }
+
+      console.log(ctx.session);
 
       await ctx.render('/admin/index', {
         layout: '/admin/base',
@@ -3877,7 +3879,13 @@ module.exports = {
 
       let targetUsers = await targetgroup.getUsers();
 
-      await voucher.addUsers(targetUsers, {transaction: dbTr});
+      let bulkArray = targetUsers.map(x => ({
+        userId: x.dataValues.id,
+        voucherId: voucher.dataValues.id,
+        token: utilsEcom.generateVoucherActivateToken()
+      }));
+
+      await UserVoucher.bulkCreate(bulkArray, {transaction: dbTr});
 
       await promotion.setTargetgroup(targetgroup, { transaction: dbTr });
     });

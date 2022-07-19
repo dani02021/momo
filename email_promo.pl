@@ -1,10 +1,10 @@
-#! /usr/bin/perl -wT -l ~/perl5/lib/perl5
+#! /usr/bin/perl -wT
 
 use DBI;
 use Getopt::Std;
 use Email::Sender::Simple qw(sendmail);
 use Email::Simple;
-use Email::Sender::Transport::SMTP qw();
+use Email::Sender::Transport::SMTP::Persistent qw();
 use Try::Tiny;
 
 use strict; use warnings;
@@ -14,6 +14,7 @@ getopt('up');
 # print "@ARGV\n";
 
 our($opt_u, $opt_p);
+our $dbh;
 
 try {
     my $driver = "Pg";
@@ -22,8 +23,17 @@ try {
     my $user = defined($opt_u) ? $opt_u : die "No -u argument supplied!";
     my $pass = defined($opt_p) ? $opt_p : die "No -p argument supplied!";
 
-    my $dbh = DBI->connect($dsn, $user, $pass, { RaiseError => 1 }) or die DBI::errstr;
+    $dbh = DBI->connect($dsn, $user, $pass, { RaiseError => 1 }) or die DBI::errstr;
 
+    # Connect to G-Mail
+    my $transport = Email::Sender::Transport::SMTP::Persistent->new({
+            host => 'smtp.gmail.com',
+            port => 465,
+            ssl => 1,
+            sasl_username => 'danielgudjenev@gmail.com',
+            sasl_password => 'ynimcicxhgzifbct '
+    });
+    
     my $stmt = q(
             SELECT
                 username, email, promotions.name, token
@@ -45,7 +55,7 @@ try {
     print $DBI::errstr if $rv < 0;
     
     while (my @row = $sth->fetchrow_array()) {
-        print "a@row\n";
+        print "@row\n";
         
         my $to = $row[1];
         my $subject = 'Test E-Mail';
@@ -59,27 +69,19 @@ try {
                 To      => $to,
                 Subject => 'Hey I just met you'
             ],
-            body    => 'Hey yo!'
+            body    => $message
         );
-    
-        print "good";
-        
-        my $transport = Email::Sender::Transport::SMTP->new({
-            host => 'smtp.gmail.com',
-            port => 587,
-            sasl_username => 'danielgudjenev@gmail.com',
-            sasl_password => 'ynimcicxhgzifbct '
-        });
-        
-        print "good";
-        
+          
         sendmail(
             $msg,
-            $transport
+            { transport => $transport }
         );
         
-        print "Email Sent yo!\n$msg\n";
+        print "Email Sent!\n$msg\n";
     }
 } catch {
-    die "Yay error caught! $_";
+    my $sth = $dbh->prepare('INSERT INTO logs(level, message, "longMessage") VALUES (?, ?, ?);');
+    my $rv = $sth->execute('error', "Error while trying to send email!", "Error while trying to send email!");
+
+    # die "Error caught! $_";
 };

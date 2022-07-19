@@ -198,7 +198,7 @@ function generateEmailVerfToken() {
 }
 
 function generateVoucherActivateToken() {
-  return crypto.randomBytes(64).toString('hex');
+  return crypto.randomBytes(16).toString('hex');
 }
 
 // Email functions

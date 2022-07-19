@@ -91,6 +91,7 @@ const Log = db.define(
     isStaff: {
       type: DataTypes.BOOLEAN,
       allowNull: true,
+      default: false
     },
   },
   {
@@ -666,6 +667,11 @@ const UserVoucher = db.define('user_voucher', {
   token: {
     type: DataTypes.STRING(32),
     allowNull: false,
+    validate: {
+        notNull: {
+          msg: "User's voucher token cannot be null!",
+        },
+      },
   },
   active: {
     type: DataTypes.BOOLEAN,
