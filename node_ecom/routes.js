@@ -287,7 +287,7 @@ module.exports = {
   },
 
   verifyAccount: async (ctx) => {
-    let token = ctx.request.fieldstoken;
+    let token = ctx.request.fields.token;
 
     const user = await User.findOne({
       where: {
@@ -319,6 +319,37 @@ module.exports = {
 
     ctx.redirect('/');
   },
+
+  verifyVoucher: async (ctx) => {
+    let token = ctx.params.token;
+
+    if (await utilsEcom.isAuthenticatedUser(ctx)) {
+      let user = await User.findOne({
+        where: {
+          username: ctx.session.dataValues.username
+        }
+      });
+
+       const uservoucher = await UserVoucher.findOne({
+        where: {
+          token: token,
+          userId: user.dataValues.id,
+          active: false
+        }
+      });
+
+      if (uservoucher == null) {
+        ctx.session.messages = { 'verfError': 'Invalid voucher!' };
+        ctx.redirect('/');
+        return;
+      }
+
+      ctx.session.messages = { 'voucherSuccess': 'Your voucher is activated!' };
+
+      ctx.redirect('/');
+    }
+  },
+
 
   login: async (ctx) => {
     const user = await User.findOne({
@@ -2192,7 +2223,7 @@ module.exports = {
 
         while (true) {
           rowLoop:
-          for (var i = 0; i < Math.min(worksheet.rowCount / 5, 50); i++) {
+          for (var i = 0; i < Math.min(worksheet.rowCount / 5, configEcom.DEFAULT_IMPORT_PRODUCT_CHUNK_SIZE); i++) {
             rowsProcessed++;
 
             // Not needed code?! Don't hard code headers

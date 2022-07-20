@@ -33,6 +33,7 @@ let linksTable = {
     "/my-account/orders/:page?": { func: routes.myAccount, requireUser: true },
     "/register": { func: routes.register },
     "/verify_account/:token": { func: routes.verifyAccount },
+    "/verify_voucher/:token": { func: routes.verifyVoucher },
     "/logout": { func: routes.logout },
     "/product-detail/:id": { func: routes.productDetail },
     "/cart": { func: routes.cart },

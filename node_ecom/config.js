@@ -21,6 +21,8 @@ const DEFAULT_VAT = 20 / 100; // 20%
 
 const DEFAULT_EMAIL_SENDER = "danielgudjenev@gmail.com";
 
+const DEFAULT_IMPORT_PRODUCT_CHUNK_SIZE = 50;
+
 const DEFAULT_PAYMENT_EMAIL_TEMPLATE = Object.freeze({
     email_payment_sender: 'danielgudjenev@gmail.com',
     email_payment_subject: 'Платена поръчка #$orderid',
@@ -361,21 +363,21 @@ const ERROR_TYPES = {
 }
 
 /**
- * 
- * @param {object} settings 
+ *
+ * @param {object} settings
  */
-async function loadSettings(settings) 
+async function loadSettings(settings)
 {
     assert(settings !== null);
     assert(typeof settings === "object");
-    
+
     // if (settings instanceof Promise) NOT GOOD PRACTICE
     //    settings = await settings;
 
     if (typeof settings.then === "function")
         settings = await settings;
 
-    for (i = 0; i < settings.length; i++) 
+    for (i = 0; i < settings.length; i++)
     {
         SETTINGS[settings[i].key] = settings[i].value;
     }

@@ -170,7 +170,7 @@
     <% if(session.dataValues) { %>
     <% for(i in session.dataValues.messages) { %>
     <% if(session.dataValues.messages.hasOwnProperty(i)) { %>
-    <% if(i == 'registerSuccess' || i == 'loginSuccess' || i == 'productAdded') { %>
+    <% if(i == 'registerSuccess' || i == 'loginSuccess' || i == 'productAdded' || i == 'voucherSuccess') { %>
         <div class="alert alert-success alert-dismissible fade show align-items-center" role="alert">
             <i class="fas fa-check" style="margin-right: 10px;"></i>
             <div>

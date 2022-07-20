@@ -678,9 +678,9 @@ const UserVoucher = db.define('user_voucher', {
     defaultValue: false,
     allowNull: false,
   },
-  emailSend: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
+  status: {
+    type: DataTypes.SMALLINT,
+    defaultValue: 0,
     allowNull: false,
   }
 }, {
@@ -1130,7 +1130,7 @@ Order.prototype.getTotalWithVATWithVouchersStr = async function () {
     throw new AssertionError("Operation not supported!");
 
   return (await db.query(
-    `SELECT
+ invalidVal   `SELECT
         GREATEST( SUM( ROUND( ( orderitems.quantity * orderitems.price *
           ( 1 + ${configEcom.SETTINGS.vat}) ) - "voucherValue", 2 )), 0.00) AS total
       FROM orders
