@@ -1130,10 +1130,10 @@ Order.prototype.getTotalWithVATWithVouchersStr = async function () {
     throw new AssertionError("Operation not supported!");
 
   return (await db.query(
- invalidVal   `SELECT
+    `SELECT
         GREATEST( SUM( ROUND( ( orderitems.quantity * orderitems.price *
           ( 1 + ${configEcom.SETTINGS.vat}) ) - "voucherValue", 2 )), 0.00) AS total
-      FROM orders
+    FROM orders
       INNER JOIN (
         SELECT orders.id, COALESCE(SUM(value), 0.00)    AS "voucherValue"
         FROM orders

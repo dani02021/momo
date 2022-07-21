@@ -428,6 +428,6 @@ module.exports = {
     COUNTRY_LIST,
     PRODUCT_IMPORT_TABLE_HEADERS,
     PROMOTION_STATUSES,
-	ERROR_TYPES,
+	  ERROR_TYPES,
     loadSettings
 }

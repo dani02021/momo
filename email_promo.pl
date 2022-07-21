@@ -13,8 +13,8 @@ getopt('up');
 
 # print "@ARGV\n";
 
-our($opt_u, $opt_p);
-our $dbh;
+my ($opt_u, $opt_p);
+my $dbh;
 
 try {
     my $driver = "Pg";
@@ -36,37 +36,48 @@ try {
     
     my $stmt = q(
             SELECT
-                username, email, promotions.name, token
+                user_vouchers.id    AS id,
+                users.username      AS username,
+                users.email         AS email,
+                promotions.name     AS promotion,
+                user_vouchers.token AS token
             FROM user_vouchers
-            JOIN users          ON user_vouchers."userId"  = users.id
-            JOIN vouchers       ON "voucherId"             = vouchers.id
-                JOIN promotions ON "promotionId"           = promotions.id
+            JOIN users          ON user_vouchers."userId"       = users.id
+            JOIN vouchers       ON user_vouchers."voucherId"    = vouchers.id
+                JOIN promotions ON vouchers."promotionId"       = promotions.id
             WHERE
-                    "emailSend"      = false
-                AND "emailConfirmed" = true
-                AND active           = false
-                AND NOW() BETWEEN   promotions."startDate"
-                              AND   promotions."endDate";
+                    user_vouchers.status = 0
+                AND user_vouchers.active        = false
+                AND users."emailConfirmed"      = true
+                AND NOW() BETWEEN
+                        promotions."startDate"
+                    AND promotions."endDate"
+            ORDER BY vouchers."createdAt"
             );
             
     my $sth = $dbh->prepare( $stmt  );
-    my $rv = $sth->execute() or die $DBI::errstr;
+
+    my $rv = $sth->execute() or die DBI::errstr;
+
+    print DBI::errstr if $rv < 0;
     
-    print $DBI::errstr if $rv < 0;
-    
-    while (my @row = $sth->fetchrow_array()) {
-        print "@row\n";
-        
-        my $to = $row[1];
+    while (my $rowref = $sth->fetchrow_hashref()) {
+        my %row = %$rowref;
+
+        my $username = $row{'username'};
         my $subject = 'Test E-Mail';
-        my $promotion = $row[2];
-        my $token = $row[3];
-        my $message = "Promo: $promotion and your token is: $token";
+        my $promotion = $row{'promotion'};
+        my $token = $row{'token'};
+        my $message =
+            "Congratz!
+            You have a voucher!
+            Promotion: $promotion and your link is:
+            10.21.9.163/verify_token/$token";
         
         my $msg = Email::Simple->create(
             header  => [
                 From    => 'danielgudjenev@gmail.com',
-                To      => $to,
+                To      => $row{'email'},
                 Subject => 'Hey I just met you'
             ],
             body    => $message
@@ -76,12 +87,15 @@ try {
             $msg,
             { transport => $transport }
         );
+
+        my $sth = $dbh->prepare("UPDATE user_vouchers SET status = 1 WHERE id = $row{'id'};");
+        my $rv = $sth->execute();
         
         print "Email Sent!\n$msg\n";
     }
 } catch {
     my $sth = $dbh->prepare('INSERT INTO logs(level, message, "longMessage") VALUES (?, ?, ?);');
-    my $rv = $sth->execute('error', "Error while trying to send email!", "Error while trying to send email!");
+    my $rv = $sth->execute('error', "Error while trying to send email!", $_);
 
-    # die "Error caught! $_";
+    die "Error caught! $_";
 };

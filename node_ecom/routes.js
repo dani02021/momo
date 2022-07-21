@@ -344,10 +344,18 @@ module.exports = {
         return;
       }
 
+      uservoucher.update({ active: true });
+
       ctx.session.messages = { 'voucherSuccess': 'Your voucher is activated!' };
+
+      loggerEcom.logger.log('info',
+        `${user.dataValues.username} activated their voucher!`);
 
       ctx.redirect('/');
     }
+
+    ctx.session.messages = { 'voucherError': 'Please log-in to receive your voucher' };
+    ctx.redirect('/');
   },
 
 
