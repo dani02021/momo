@@ -198,7 +198,7 @@ function generateEmailVerfToken() {
 }
 
 function generateVoucherActivateToken() {
-  return crypto.randomBytes(16).toString('hex');
+  return crypto.randomBytes(64).toString('hex');
 }
 
 // Email functions
@@ -559,40 +559,36 @@ async function validateStatus(ctx, orderId, responce) {
 async function getReportResponce(filters, limit, offset, time) {
   let text =
     `SELECT
-        date_trunc($1, orders."orderedAt")                  AS "startDate",
-        SUM(orderitems.quantity)                            AS products,
-        COUNT(distinct orders.id)                           AS orders,
-        SUM( ROUND(
-          price * orderitems.quantity
-          , 2) )                                    AS subtotal,
-        SUM( ROUND(
-          price * orderitems.quantity
-          , 2) ) * ( 1 + {config.SETTINGS.vat} )    AS grandtotal,
-        SUM( ROUND(
-          price * orderitems.quantity
-          , 2) ) * {config.SETTINGS.vat}            AS vatsum,
-        COALESE( SUM("voucherValue"), 0.00)                 AS "vouchersSum",
-        COUNT(*) OVER ()                                    AS count
+        date_trunc($1, orders."orderedAt")            AS "startDate",
+        SUM(orderitems.quantity)                      AS products,
+        COUNT(distinct orders.id)                     AS orders,
+        ROUND(SUM( price * orderitems.quantity ), 2)  AS subtotal,
+        ROUND(SUM( price * orderitems.quantity ), 2)
+          * 1.2                                       AS grandtotal,
+        ROUND(SUM( price * orderitems.quantity ), 2)
+          * 0.2                                       AS vatsum,
+        COALESCE(SUM("voucherValue"), 0.00)           AS "vouchersSum",
+        COUNT(*) OVER()                               AS count
+    FROM orderitems
+    JOIN orders                           ON orderitems."orderId" = orders.id
+    LEFT JOIN
+        (SELECT
+          orders.id,
+          COALESCE(value, 0.00)                 AS "voucherValue"
         FROM orders
-        INNER JOIN orderitems                           ON orderitems."orderId" = orders.id
-        LEFT JOIN
-          (SELECT
-            orders.id,
-            COALESCE(value, 0.00)                 AS "voucherValue"
-            FROM orders
-            JOIN order_vouchers                     ON order_vouchers."orderId" = orders.id
-              JOIN user_vouchers                    ON user_vouchers.id = order_vouchers."userVoucherId"
-                JOIN vouchers                       ON user_vouchers."voucherId" = vouchers.id)
-            WHERE status > 0
-              AND orders."deletedAt" IS NULL
-              AND vouchers."deletedAt" IS NULL
-              AND orders."orderedAt" BETWEEN $2 AND $3
-          ) ord_vch                                   ON orders.id = ord_vch.id
-        WHERE status > 0
-          AND orders."deletedAt" is NULL
-          AND orderitems."deletedAt" is NULL
+        JOIN order_vouchers                         ON order_vouchers."orderId" = orders.id
+          JOIN user_vouchers                          ON user_vouchers.id = order_vouchers."userVoucherId"
+            JOIN vouchers                               ON user_vouchers."voucherId" = vouchers.id
+        WHERE orders.status > 0
+          AND orders."deletedAt" IS NULL
+          AND vouchers."deletedAt" IS NULL
           AND orders."orderedAt" BETWEEN $2 AND $3
-    GROUP BY "startDate"`;
+        ) ord_vch                                   ON orders.id = ord_vch.id
+      WHERE orders.status > 0
+        AND orders."deletedAt" is NULL
+        AND orderitems."deletedAt" is NULL
+        AND orders."orderedAt" BETWEEN $2 AND $3
+      GROUP BY "startDate"`
 
   text += `OFFSET ${offset}`;
 

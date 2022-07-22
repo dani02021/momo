@@ -233,8 +233,27 @@
             // Alert fade auto
             $( ".alert" ).delay(3000).slideUp(200, function() {
                 $(this).alert('close')
-            })
+            });
 
+            let id = -1;
+
+            window.addEventListener('beforeunload', (event) => {
+              console.log(event);
+
+              if (id == -1) {
+                id = setTimeout(() => {
+                  console.log('Loading');
+                  document.getElementById('home').style.filter = 'blur(2px)';
+                  let loader = document.createElement("div");
+                  loader.classList.add("loader");
+                  document.body.appendChild(loader);
+                  $(':button').prop('disabled', true);
+
+                  id = -1; // Go back to initial
+                }, 300);
+              }
+            });
+            
             // Server clock
             const timezone = "<%= Intl.DateTimeFormat().resolvedOptions().timeZone %>";
 

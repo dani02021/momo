@@ -2768,6 +2768,10 @@ module.exports = {
         break;
     }
 
+    ctx.limit = configEcom.SETTINGS['reports_per_page'];
+
+    ctx.offset = (ctx.page - 1) * ctx.limit;
+
     const reportRes = await utilsEcom.getReportResponce(filters, ctx.limit, ctx.offset, time);
     const count = reportRes.length ? reportRes[0].dataValues.count : 0;
 
@@ -2782,7 +2786,7 @@ module.exports = {
       report: reportRes,
       filters: filtersToReturn,
       page: ctx.page,
-      pages: utilsEcom.givePages(ctx.page, Math.ceil(count / configEcom.SETTINGS['elements_per_page'])),
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(count / ctx.limit)),
     });
   },
 
