@@ -559,16 +559,21 @@ async function validateStatus(ctx, orderId, responce) {
 async function getReportResponce(filters, limit, offset, time) {
   let text =
     `SELECT
-        date_trunc($1, orders."orderedAt")            AS "startDate",
-        SUM(orderitems.quantity)                      AS products,
-        COUNT(distinct orders.id)                     AS orders,
-        ROUND(SUM( price * orderitems.quantity ), 2)  AS subtotal,
-        ROUND(SUM( price * orderitems.quantity ), 2)
-          * 1.2                                       AS grandtotal,
-        ROUND(SUM( price * orderitems.quantity ), 2)
-          * 0.2                                       AS vatsum,
-        COALESCE(SUM("voucherValue"), 0.00)           AS "vouchersSum",
-        COUNT(*) OVER()                               AS count
+        date_trunc($1, orders."orderedAt")                  AS "startDate",
+        SUM(orderitems.quantity)                            AS products,
+        COUNT(distinct orders.id)                           AS orders,
+        CAST( ROUND(SUM( price * orderitems.quantity ), 2)
+              AS money)                                     AS subtotal,
+        CAST( ROUND(SUM( price * orderitems.quantity ), 2)
+              * 1.2 AS money)                               AS grandtotal,
+        CAST( ROUND(SUM( price * orderitems.quantity ), 2)
+              * 0.2 AS money)                               AS vatsum,
+        CAST( COALESCE(SUM("voucherValue"), 0.00)
+              AS money)                                     AS "vouchersSum",
+        CAST( (ROUND(SUM( price * orderitems.quantity ), 2)
+                * 1.2) - COALESCE(SUM("voucherValue"), 0.00)
+            AS money)                                       AS "paidAmount",
+        COUNT(*) OVER()                                     AS count
     FROM orderitems
     JOIN orders                           ON orderitems."orderId" = orders.id
     LEFT JOIN
@@ -627,7 +632,10 @@ function createTempFile(name = 'temp_file', data = '', encoding = 'utf8') {
 }
 
 async function getProductsRaw(offset, limit, name, cat, minval, maxval, sort, vat = true) {
-  let text = `SELECT * FROM products
+  let text = `SELECT
+              *,
+              COUNT(*) OVER () AS count
+              FROM products
     LEFT JOIN (
         SELECT "productId", sum(quantity) FROM orderitems
         GROUP BY "productId"

@@ -788,14 +788,21 @@ div.alert > div {
   border-top: 10px solid #3498db;
   width: 150px;
   height: 150px;
-  -webkit-animation: spin 0.5s linear infinite; /* Safari */
-  animation: spin 0.5s linear infinite;
+  -webkit-animation: spin 0.5s linear infinite reverse; /* Safari */
+  animation: spin 0.5s linear infinite reverse;
   
   position: fixed;
   left: 50%;
   top: 50%;
   margin-left: -5em;
   margin-top: -5em;
+}
+
+.outer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
 }
 
 /* Safari */

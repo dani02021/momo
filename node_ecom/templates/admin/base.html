@@ -235,24 +235,34 @@
                 $(this).alert('close')
             });
 
-            let id = -1;
+            let loaderTimeoutId = -1;
 
             window.addEventListener('beforeunload', (event) => {
-              console.log(event);
-
-              if (id == -1) {
-                id = setTimeout(() => {
-                  console.log('Loading');
+              if (loaderTimeoutId == -1) {
+                loaderTimeoutId = setTimeout(() => {
                   document.getElementById('home').style.filter = 'blur(2px)';
-                  let loader = document.createElement("div");
-                  loader.classList.add("loader");
-                  document.body.appendChild(loader);
-                  $(':button').prop('disabled', true);
+                  let outer = document.createElement('div');
 
-                  id = -1; // Go back to initial
+                  outer.id = 'outer';
+                  outer.classList.add('outer');
+                  let loader = document.createElement('div');
+                  loader.classList.add('loader');
+
+                  outer.appendChild(loader);
+                  document.body.insertBefore(outer, document.getElementById('home'));
+
+                  // loaderTimeoutId = -1;
                 }, 300);
               }
             });
+
+            $( function() {
+              $( "#datepicker"  ).datepicker({
+                showWeek: true,
+                firstDay: 1,
+                dateFormat: 'yy-mm-dd'
+              });
+            } );
             
             // Server clock
             const timezone = "<%= Intl.DateTimeFormat().resolvedOptions().timeZone %>";

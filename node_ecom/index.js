@@ -163,6 +163,7 @@ let linksTable = {
     "/api/v0/permissions/get": { func: routes.apiPermissions, requireStaff: true, requireSession: true },
     "/api/v0/accounts/get": { func: routes.apiAccounts, requireStaff: true, requireSession: true },
     "/api/v0/products/get": { func: routes.apiProducts, requireStaff: true, requireSession: true },
+    "/api/v0/promotions/get": {func: routes.apiPromotions, requireStaff: true, requireSession: true},
     "/error": { func: routes.error },
   },
   post: {
@@ -481,7 +482,7 @@ app.on("error", (err, ctx) => {
       case e.VOUCHERS_TOO_MUCH_VALUE:
         err.headers = { 'Location': '/cart' };
         break;
-      default: // TODO: If ctx.path also throw error it will infinity be redirecting !
+      default: // TODO: If ctx.path also throw error it will infinity be redirecting
         err.headers = { 'Location': '/error' };
         break;
     }

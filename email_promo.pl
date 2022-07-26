@@ -16,6 +16,14 @@ getopt('up');
 my ($opt_u, $opt_p);
 my $dbh;
 
+#
+# Email statuses
+# 0 -> Exist
+# 1 -> Email sent
+# 2 -> Activated
+# 3 -> Used
+#
+
 try {
     my $driver = "Pg";
     my $database = "ecommercenodejs";
@@ -47,7 +55,6 @@ try {
                 JOIN promotions ON vouchers."promotionId"       = promotions.id
             WHERE
                     user_vouchers.status = 0
-                AND user_vouchers.active        = false
                 AND users."emailConfirmed"      = true
                 AND NOW() BETWEEN
                         promotions."startDate"
@@ -97,5 +104,5 @@ try {
     my $sth = $dbh->prepare('INSERT INTO logs(level, message, "longMessage") VALUES (?, ?, ?);');
     my $rv = $sth->execute('error', "Error while trying to send email!", $_);
 
-    die "Error caught! $_";
+    print "Error caught! $_";
 };

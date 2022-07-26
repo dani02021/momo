@@ -104,7 +104,7 @@ module.exports = {
       products: products,
       filters: filtersToReturn,
       page: ctx.page,
-      pages: utilsEcom.givePages(ctx.page, Math.ceil(products.length / configEcom.SETTINGS['elements_per_page']))
+      pages: utilsEcom.givePages(ctx.page, Math.ceil(products[0].dataValues.count / configEcom.SETTINGS['elements_per_page']))
     });
 
     // Clear the messages
@@ -4028,6 +4028,32 @@ module.exports = {
           plain: false,
           model: Permission,
           mapToModel: true,
+          bind: [term]
+        }
+      ).catch(err => utilsEcom.handleError(err))
+    );
+  },
+
+  apiPromotions: async (ctx) => {
+    let term = ctx.request.query.term;
+
+    if (!term) {
+      ctx.body = {};
+      return;
+    }
+
+    ctx.body = JSON.stringify(
+      await db.query(
+        `SELECT name
+        FROM promotions
+        INNER JOIN vouchers ON vouchers."promotionId" = promotions.id
+          INNER JOIN  user_vouchers on user_vouchers."voucherId" = vouchers.id
+        WHERE
+          user_voucher."userId" = $1
+          user_vouchers.status = 3`,
+        {
+          type: 'SELECT',
+          plain: true,
           bind: [term]
         }
       ).catch(err => utilsEcom.handleError(err))
