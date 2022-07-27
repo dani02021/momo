@@ -66,6 +66,8 @@ try {
 
     my $rv = $sth->execute() or die DBI::errstr;
 
+    die "died";
+
     print DBI::errstr if $rv < 0;
     
     while (my $rowref = $sth->fetchrow_hashref()) {
@@ -101,6 +103,8 @@ try {
         print "Email Sent!\n$msg\n";
     }
 } catch {
+  print STDERR "err" . $_;
+  die "rado";
     my $sth = $dbh->prepare('INSERT INTO logs(level, message, "longMessage") VALUES (?, ?, ?);');
     my $rv = $sth->execute('error', "Error while trying to send email!", $_);
 
