@@ -25,6 +25,7 @@ my $dbh;
 #
 
 try {
+  try {
     my $driver = "Pg";
     my $database = "ecommercenodejs";
     my $dsn = "DBI:$driver:dbname=$database;host=localhost;port=5432";
@@ -54,7 +55,7 @@ try {
             JOIN vouchers       ON user_vouchers."voucherId"    = vouchers.id
                 JOIN promotions ON vouchers."promotionId"       = promotions.id
             WHERE
-                    user_vouchers.status = 0
+                    user_vouchers.status        = 0
                 AND users."emailConfirmed"      = true
                 AND NOW() BETWEEN
                         promotions."startDate"
@@ -65,8 +66,6 @@ try {
     my $sth = $dbh->prepare( $stmt  );
 
     my $rv = $sth->execute() or die DBI::errstr;
-
-    die "died";
 
     print DBI::errstr if $rv < 0;
     
@@ -102,11 +101,12 @@ try {
         
         print "Email Sent!\n$msg\n";
     }
-} catch {
-  print STDERR "err" . $_;
-  die "rado";
+  } catch {
     my $sth = $dbh->prepare('INSERT INTO logs(level, message, "longMessage") VALUES (?, ?, ?);');
     my $rv = $sth->execute('error', "Error while trying to send email!", $_);
 
     print "Error caught! $_";
+  };
+} catch {
+    print STDERR "Error caught! $_";
 };

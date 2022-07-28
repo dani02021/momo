@@ -4042,22 +4042,31 @@ module.exports = {
       return;
     }
 
-    ctx.body = JSON.stringify(
-      await db.query(
-        `SELECT name
-        FROM promotions
-        INNER JOIN vouchers ON vouchers."promotionId" = promotions.id
-          INNER JOIN  user_vouchers on user_vouchers."voucherId" = vouchers.id
-        WHERE
-          user_voucher."userId" = $1
-          user_vouchers.status = 3`,
-        {
-          type: 'SELECT',
-          plain: true,
-          bind: [term]
-        }
-      ).catch(err => utilsEcom.handleError(err))
-    );
+    let query = {};
+
+    try {
+      query = await db.query(
+              `SELECT
+                promotions.name,
+                user_vouchers.status
+              FROM promotions
+              JOIN vouchers ON vouchers."promotionId" = promotions.id
+                JOIN user_vouchers on user_vouchers."voucherId" = vouchers.id
+              WHERE
+                user_vouchers."userId"  = $1`,
+                {
+                  type: 'SELECT',
+                  plain: true,
+                  bind: [term]
+                }
+      );
+
+      if (!query)
+        query = {};
+
+    } catch (e) {  };
+
+    ctx.body = JSON.stringify(query);
   },
 
   error: async (ctx) => {

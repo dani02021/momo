@@ -678,15 +678,27 @@ const UserVoucher = db.define('user_voucher', {
     defaultValue: false,
     allowNull: false,
   },
-  status: {
-    type: DataTypes.SMALLINT,
-    defaultValue: 0,
-    allowNull: false,
-  }
 }, {
   paranoid: true,
   timestamps: false,
 });
+
+const UserVoucherStatus = db.define('user_voucher_status', {
+  name: {
+    type: DataTypes.STRING(32),
+    allowNull: false,
+    validate: {
+      notNull: {
+        msg: "User's voucher status name cannot be null!",
+      },
+    },
+  },
+}, {
+  paranoid: false,
+  timestamps: false,
+});
+
+UserVoucher.belongsTo(UserVoucherStatus, {foreignKey: {name: "status"}});
 
 User.belongsToMany(Voucher, { through: UserVoucher });
 Voucher.belongsToMany(User, { through: UserVoucher });
@@ -1375,6 +1387,18 @@ module.exports = {
         role.addPermission(perm[0]);
       })
     });
+  };
+
+  // Create statuses
+  let voucher_statuses = {
+    0: "Not sent",
+    1: "Not activated",
+    2: "Activated",
+    3: "Used"
+  };
+
+  for (let i = 0; i < voucher_statuses.length; i++) {
+    UserVoucherStatus.findOrCreate({where: {name: voucher_statuses[i]}});
   }
 
   // Create associations
