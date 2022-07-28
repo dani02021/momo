@@ -4047,16 +4047,16 @@ module.exports = {
     try {
       query = await db.query(
               `SELECT
-                promotions.name,
-                user_vouchers.status
+                promotions.name AS name,
+                user_voucher_statuses.name AS status
               FROM promotions
               JOIN vouchers ON vouchers."promotionId" = promotions.id
                 JOIN user_vouchers on user_vouchers."voucherId" = vouchers.id
+              JOIN user_voucher_statuses ON user_vouchers.status = user_voucher_statuses.id
               WHERE
                 user_vouchers."userId"  = $1`,
                 {
                   type: 'SELECT',
-                  plain: true,
                   bind: [term]
                 }
       );

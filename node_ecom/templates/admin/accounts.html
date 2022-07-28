@@ -96,7 +96,7 @@
                 <% } else { %>
                 <td><b></b></td>
                 <% } %>
-                <td><b><a style="color: #f5a623" href="#" data-bs-toggle="modal" data-bs-target="#promotion<%= users[i].id %>">See Promotions</a></b></td>
+                <td><b><a style="color: #f5a623" href="#" onclick="getPromotions(<%= users[i].id %>);" data-bs-toggle="modal" data-bs-target="#promotion<%= users[i].id %>">See Promotions</a></b></td>
               </tr>
               <% } %>
             </tbody>
@@ -159,7 +159,7 @@
         <h5 class="modal-title">Vouchers of <%= users[i].username %></h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-        <div class="modal-body">
+        <div id="promotionDiv<%= users[i].id %>" class="modal-body">
           <ul>
             <li>
             </li>
@@ -303,6 +303,46 @@
     option.value = e.options[e.selectedIndex].value + ', ' + q.value;
     option.selected = 'true'
     document.getElementById('add-order-items').add(option);
+  }
+
+  function getPromotions(id) {
+    $.ajax({
+        type: "GET",
+        url: `/api/v0/promotions/get?term=${id}`
+      }).done(function(data) {
+        console.log(data);
+        let dataArr = [];
+        
+        try {
+          dataArr = JSON.parse(data);
+        } catch (e) { }
+
+        $(`#promotion${id}`).modal('show');
+
+        let element = document.getElementById(`promotionDiv${id}`);
+
+        // Generate HTML
+
+        let html = "<ul>";
+        
+        for (let i = 0; i < dataArr.length; i++) {
+          let obj = dataArr[i];
+
+          html += "<li>";
+          
+          html += obj.name + " with status " + obj.status;
+
+          html += "</li>";
+        }
+
+        html += ""
+        
+        html += "</ul>";
+
+        element.innerHTML = html;
+      }).fail(function(data) {
+        // Optionally alert the user of an error here...
+      });
   }
 
   function toAJAX() {

@@ -1381,21 +1381,21 @@ module.exports = {
     'promotions.delete',
   ];
 
-  for (let i = 0; i < permissions.length; i++) {
-    Permission.findOrCreate({ where: { name: permissions[i] } }).then(perm => {
-      Role.findOne({ where: { name: 'Admin' } }).then(role => {
-        role.addPermission(perm[0]);
-      })
-    });
-  };
+  // for (let i = 0; i < permissions.length; i++) {
+  //   Permission.findOrCreate({ where: { name: permissions[i] } }).then(perm => {
+  //     Role.findOne({ where: { name: 'Admin' } }).then(role => {
+  //       role.addPermission(perm[0]);
+  //     })
+  //   });
+  // };
 
   // Create statuses
-  let voucher_statuses = {
-    0: "Not sent",
-    1: "Not activated",
-    2: "Activated",
-    3: "Used"
-  };
+  let voucher_statuses = [
+    "Not sent",
+    "Not activated",
+    "Activated",
+    "Used"
+  ];
 
   for (let i = 0; i < voucher_statuses.length; i++) {
     UserVoucherStatus.findOrCreate({where: {name: voucher_statuses[i]}});
