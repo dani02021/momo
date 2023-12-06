@@ -1,7 +1,7 @@
 package bg.telebidpro.momo;
 
 import org.json.simple.JSONObject;
-import static bg.telebidpro.momo.Assert.*;
+import static bg.telebidpro.momo.error.Assert.*;
 
 public class Book {
     private String author;

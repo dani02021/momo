@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 
-import static bg.telebidpro.momo.Assert.*;
+import static bg.telebidpro.momo.error.Assert.*;
 
 public class Bookshelf {
 
@@ -146,6 +146,6 @@ public class Bookshelf {
     }
 
     public String getHelpMessage() {
-        return "Please select an option:\n(0) Print Help\n(1) Add bg.telebidpro.momo.Book\n(2) Remove bg.telebidpro.momo.Book\n(3) Update bg.telebidpro.momo.Book\n(4) List Books\n(5) Print Template";
+        return "Please select an option:\n(0) Print Help\n(1) Add Book\n(2) Remove Book\n(3) Update Book\n(4) List Books\n(5) Print Template";
     }
 }

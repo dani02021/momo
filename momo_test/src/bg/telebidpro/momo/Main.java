@@ -1,9 +1,14 @@
 package bg.telebidpro.momo;
 
+import bg.telebidpro.momo.input.InputType;
+import bg.telebidpro.momo.input.Konsole;
+
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.util.HashMap;
 import java.util.Scanner;
+import java.util.function.Function;
 
 // Press Shift twice to open the Search Everywhere dialog and type `show whitespaces`,
 // then press Enter. You can now see whitespace characters in your code.
@@ -12,6 +17,11 @@ public class Main {
     public static File booksFile = new File("./books.json");
     public static Connection conn;
     public static Scanner scanner;
+    public static HashMap<Integer, Function> KONSOLE_COMMAND_TABLE = new HashMap<Integer, Function>() {{
+        put(1, Konsole::addBook);
+        put(2, Konsole::getBook);
+    }};
+
     public static void main(String[] args) {
         while (true) {
         try {
@@ -30,56 +40,22 @@ public class Main {
                 scanner = new Scanner(System.in);
             }
 
-            System.out.println(bookshelf.getHelpMessage());
+            Konsole konsole = new Konsole(scanner, bookshelf, getKonsoleCommands());
+
+            konsole.printHelpMessage(System.out);
 
             while (true) {
-                int action = scanner.nextInt();
+                int action = konsole.waitForInput(Konsole.InputType.INTEGER);
 
-                if(action == 1) {
-                    System.out.println("Please choose a book author!");
-                    String author = scanner.next();
-                    System.out.println("Please choose a book name!");
-                    String name = scanner.next();
-                    scanner.nextLine();
-                    System.out.println("Please choose a book isbn!");
-                    String isbn = scanner.next();
-                    System.out.println("Please choose a book genre!");
-                    String genre = scanner.next();
-
-                    bookshelf.addBook(new Book(author,name,isbn,genre));
-                }
-                else if(action == 2) {
-                    System.out.println("Please choose a book name!");
-                    String name = scanner.next();
-
-                    bookshelf.removeBook(bookshelf.getBook(name).getName());
-                }
-                else if(action == 3) {
-                    System.out.println("Please choose a book name!");
-                    String name = scanner.next();
-                    System.out.println("Please choose a new book name!");
-                    String newName = scanner.next();
-
-                    Book updatedBook = bookshelf.getBook(name);
-                    updatedBook.setName(newName);
-
-                    bookshelf.updateBook(name, updatedBook);
-                }
-                else if(action == 4) {
-                    System.out.println(bookshelf.listBooks());
-                }
-                else if(action == 5) {
-                    System.out.println("Please choose a book name!");
-                    String name = scanner.next();
-
-                    System.out.println(bookshelf.parseTemplate(Bookshelf.DERFAULT_TEMPLATE, bookshelf.getBook(name)));
-                }
-                System.out.println(bookshelf.getHelpMessage());
+                konsole.runAction(action);
             }
         } catch(Exception e) {
             System.err.println("DID YOU BREAK ME!!");
             e.printStackTrace();
         }
         }
+    }
+
+    private static HashMap getKonsoleCommands() {
     }
 }

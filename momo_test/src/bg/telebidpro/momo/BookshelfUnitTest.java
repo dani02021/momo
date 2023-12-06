@@ -4,15 +4,18 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
-import static org.junit.Assert.*;
+import static bg.telebidpro.momo.error.Assert.AssertException;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.*;
-import static bg.telebidpro.momo.error.Assert.*;
 
-public class BookshelfTest {
+public class BookshelfUnitTest {
     private static Bookshelf bookshelf;
+    private static Book book;
     private static Bookshelf bookshelfSpy;
 
     @Before
@@ -20,6 +23,7 @@ public class BookshelfTest {
         Connection conn = mock();
         bookshelf = new Bookshelf(conn);
         bookshelfSpy = spy(bookshelf);
+        book = mock();
     }
 
     @After
@@ -30,16 +34,18 @@ public class BookshelfTest {
     @Test
     public void testGetBook() throws SQLException, AssertException {
         ArrayList<Book> al = new ArrayList<>();
-        al.add(new Book("Momo", "Gustavo", "gus", "momo"));
+        al.add(book);
 
         doReturn(al).when(bookshelfSpy).getBookSequel("Gustavo");
 
         Book book = bookshelfSpy.getBook("Gustavo");
 
+        doReturn("Gustavo").when(book).getName();
+
         assertEquals("Does not equal", book.getName(), "Gustavo");
     }
 
-    @Test(expected = SQLException.class)
+    @Test(expected = AssertException.class)
     public void testGetBookErr() throws SQLException, AssertException {
         ArrayList<Book> al = new ArrayList<>();
 
@@ -51,17 +57,13 @@ public class BookshelfTest {
     @Test
     // This test is pretty useless :O
     public void testAddBook() throws SQLException, AssertException {
-        Book book = new Book("Momo", "Gustavo", "gus", "momo");
-
         doReturn(1).when(bookshelfSpy).addBookSequel(book);
 
         bookshelfSpy.addBook(book);
     }
 
-    @Test(expected = SQLException.class)
+    @Test(expected = AssertException.class)
     public void testAddBookErr() throws SQLException, AssertException {
-        Book book = new Book("Momo", "Gustavo", "gus", "momo");
-
         doReturn(0).when(bookshelfSpy).addBookSequel(book);
 
         bookshelfSpy.addBook(book);
@@ -74,7 +76,7 @@ public class BookshelfTest {
         bookshelfSpy.removeBook("Gustavo");
     }
 
-    @Test(expected = SQLException.class)
+    @Test(expected = AssertException.class)
     public void testRemoveBookErr() throws SQLException, AssertException {
         doReturn(0).when(bookshelfSpy).removeBookSequel("Gustavo");
 
@@ -84,14 +86,13 @@ public class BookshelfTest {
     @Test
     // Pretty useless
     public void testUpdateBook() throws SQLException, AssertException {
-        doReturn(1).when(bookshelfSpy).updateBookSequel("Gustavo", new Book("Momo", "Gustavo", "gus", "momo"));
+        doReturn(1).when(bookshelfSpy).updateBookSequel("Gustavo", book);
 
-        bookshelfSpy.updateBook("Gustavo", new Book("Momo", "Gustavo", "gus", "momo"));
+        bookshelfSpy.updateBook("Gustavo", book);
     }
 
-    @Test(expected = SQLException.class)
+    @Test(expected = AssertException.class)
     public void testUpdateBookErr() throws SQLException, AssertException {
-        Book book = new Book("Momo", "Gustavo", "gus", "momo");
         doReturn(0).when(bookshelfSpy).updateBookSequel("Gustavo", book);
 
         bookshelfSpy.updateBook("Gustavo", book);
@@ -100,9 +101,11 @@ public class BookshelfTest {
     @Test
     // Pretty useless
     public void testListBooks() throws SQLException, AssertException {
+        Book book1 = mock();
+
         ArrayList<Book> al = new ArrayList<>();
-        al.add(new Book("Momo", "Gustavo", "gus", "momo"));
-        al.add(new Book("Bobo", "Mostavo", "amon", "momo"));
+        al.add(book);
+        al.add(book1);
         doReturn(al).when(bookshelfSpy).listBooksSequel();
 
         bookshelfSpy.listBooks();
@@ -111,7 +114,10 @@ public class BookshelfTest {
     @Test
     public void testParseTemplate() throws SQLException, AssertException {
         String template = "This book is ##book## and this author is ##author##";
-        String parsedTemplate = bookshelfSpy.parseTemplate(template, new Book("Momo", "Gustavo", "gus", "momo"));
+
+        doReturn("Momo").when(book).getName();
+        doReturn("Sancho").when(book).getAuthor();
+        String parsedTemplate = bookshelfSpy.parseTemplate(template, book);
 
         assertFalse("Template contains ##book##", parsedTemplate.contains("##book##"));
         assertFalse("Template contains ##author##", parsedTemplate.contains("##author##"));

@@ -5,7 +5,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import static bg.telebidpro.momo.Assert.*;
+import static bg.telebidpro.momo.error.Assert.*;
 
 public class BookTest {
 
