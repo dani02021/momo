@@ -37,6 +37,8 @@ public class Konsole {
             default:
                 ASSERT(false, "Still not implemented " + type);
         }
+
+        return null;
     }
 
     public void runAction(int action) throws AssertException, SQLException {
